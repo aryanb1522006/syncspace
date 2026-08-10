@@ -1,0 +1,72 @@
+name: SyncSpace CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: syncspace-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.10-alpine
+        env:
+          POSTGRES_DB: syncspace
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d syncspace"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/syncspace
+      DATABASE_SSL_MODE: disable
+      JWT_SECRET: ci-only-secret-that-is-longer-than-thirty-two-characters
+      CLIENT_ORIGIN: http://localhost:5173
+      STORAGE_DRIVER: local
+      METRICS_ENABLED: false
+      RUN_DB_TESTS: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm validate:config
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - run: pnpm test
+      - run: pnpm build
+      - name: Start API
+        run: |
+          pnpm --filter @syncspace/server start > api.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:4000/api/health/ready; then exit 0; fi
+            sleep 1
+          done
+          cat api.log
+          exit 1
+      - run: pnpm --filter @syncspace/server smoke:api
+      - uses: actions/upload-artifact@v4
+        with:
+          name: syncspace-client-dist
+          path: client/dist
+          if-no-files-found: error

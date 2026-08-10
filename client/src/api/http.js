@@ -1,0 +1,20 @@
+const baseUrl = import.meta.env.VITE_API_URL ?? '/api';
+
+export async function request(path, options = {}) {
+  const token = localStorage.getItem('syncspace-token');
+  const isForm = options.body instanceof FormData;
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...options,
+    headers: {
+      ...(isForm ? {} : { 'Content-Type': 'application/json' }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers
+    }
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error?.message ?? `Request failed (${response.status})`);
+  }
+  if (response.status === 204) return null;
+  return response.json();
+}

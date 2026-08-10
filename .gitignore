@@ -1,0 +1,13 @@
+node_modules/
+.env
+client/dist/
+server/uploads/*
+!server/uploads/.gitkeep
+coverage/
+*.log
+.DS_Store
+.env.production
+backups/*
+!backups/.gitkeep
+deploy/secrets/*
+!deploy/secrets/.gitkeep

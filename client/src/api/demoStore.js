@@ -1,0 +1,154 @@
+const seed = {
+  users: [
+    { id: 1, email: 'isha@northstar.edu', password: 'demo1234', role: 'student', collegeId: 1, profileId: 1, name: 'Isha Mehta' },
+    { id: 4, email: 'arjun@northstar.edu', password: 'demo1234', role: 'owner', collegeId: 1, profileId: 4, name: 'Arjun Rao' }
+  ],
+  profile: {
+    id: 1, user_id: 1, name: 'Isha Mehta', email: 'isha@northstar.edu', department: 'Computer Science',
+    year: 3, bio: 'Frontend engineer who cares about inclusive interfaces.', interests: ['Climate Tech', 'EdTech'],
+    availability_hours_per_week: 12,
+    skills: [
+      { id: 1, name: 'React', category: 'Web', proficiency: 5 },
+      { id: 2, name: 'TypeScript', category: 'Web', proficiency: 4 },
+      { id: 3, name: 'UI/UX Design', category: 'Design', proficiency: 4 },
+      { id: 4, name: 'Figma', category: 'Design', proficiency: 3 }
+    ]
+  },
+  skills: [
+    { id: 1, name: 'React', category: 'Web' }, { id: 2, name: 'TypeScript', category: 'Web' },
+    { id: 3, name: 'UI/UX Design', category: 'Design' }, { id: 4, name: 'Figma', category: 'Design' },
+    { id: 5, name: 'Node.js', category: 'Backend' }, { id: 6, name: 'PostgreSQL', category: 'Data' },
+    { id: 7, name: 'Machine Learning', category: 'AI' }, { id: 8, name: 'Data Science', category: 'Data' }
+  ],
+  projects: [
+    {
+      id: 1, title: 'GreenGrid', domain: 'Climate Tech', description: 'Turn live campus energy data into actions students can see.',
+      longDescription: 'GreenGrid connects campus meter readings to a clear student dashboard. The first milestone is a live energy loop for one academic block, followed by practical nudges that make usage patterns understandable.',
+      teamSize: 4, memberCount: 2, deadline: '2026-09-12', commitmentHoursPerWeek: 10, owner_name: 'Arjun Rao',
+      skills: [{ id: 1, name: 'React', importance: 'required' }, { id: 5, name: 'Node.js', importance: 'required' }, { id: 3, name: 'UI/UX Design', importance: 'preferred' }, { id: 8, name: 'Data Science', importance: 'preferred' }],
+      match: { score: 92, breakdown: { contributions: { requiredSkills: 45, preferredSkills: 17, domainInterest: 15, availability: 15 } } }
+    },
+    {
+      id: 2, title: 'StudyCircle', domain: 'EdTech', description: 'Smart peer study groups built around pace, courses, and availability.',
+      longDescription: 'StudyCircle helps students find a study rhythm that fits. Teams are matched around course overlap, preferred pace, and the hours they can reliably protect each week.',
+      teamSize: 5, memberCount: 3, deadline: '2026-08-28', commitmentHoursPerWeek: 8, owner_name: 'Arjun Rao',
+      skills: [{ id: 1, name: 'React', importance: 'required' }, { id: 6, name: 'PostgreSQL', importance: 'required' }, { id: 7, name: 'Machine Learning', importance: 'preferred' }],
+      match: { score: 86, breakdown: { contributions: { requiredSkills: 42, preferredSkills: 14, domainInterest: 15, availability: 15 } } }
+    },
+    {
+      id: 3, title: 'CampusCart', domain: 'Civic Tech', description: 'A trusted exchange for borrowing and reusing useful campus gear.',
+      longDescription: 'CampusCart is a simple campus-only exchange for lab kits, calculators, books, and project equipment—with lightweight trust signals and clear handoff coordination.',
+      teamSize: 4, memberCount: 1, deadline: '2026-10-03', commitmentHoursPerWeek: 6, owner_name: 'Naina Bose',
+      skills: [{ id: 2, name: 'TypeScript', importance: 'required' }, { id: 3, name: 'UI/UX Design', importance: 'required' }],
+      match: { score: 78, breakdown: { contributions: { requiredSkills: 38, preferredSkills: 10, domainInterest: 15, availability: 15 } } }
+    }
+  ],
+  applications: [{ id: 1, projectId: 2, title: 'StudyCircle', status: 'pending' }],
+  notifications: [
+    { id: 1, message: 'StudyCircle viewed your application.', is_read: false, created_at: '2026-08-10T12:00:00Z' },
+    { id: 2, message: 'GreenGrid added a new workspace task.', is_read: false, created_at: '2026-08-10T10:00:00Z' }
+  ],
+  team: {
+    id: 1, project_id: 1, project_title: 'GreenGrid', project_status: 'open',
+    members: [
+      { id: 1, name: 'Isha Mehta', role_label: 'Frontend', initials: 'IM' },
+      { id: 2, name: 'Kabir Shah', role_label: 'ML & data', initials: 'KS' }
+    ],
+    tasks: [
+      { id: 1, title: 'Build dashboard shell', assigned_to: 1, assignee_name: 'Isha Mehta', status: 'todo', due_date: '2026-09-12' },
+      { id: 2, title: 'Connect meter API', assigned_to: 2, assignee_name: 'Kabir Shah', status: 'todo', due_date: '2026-09-13' },
+      { id: 3, title: 'Interview facilities team', assigned_to: null, assignee_name: null, status: 'todo', due_date: '2026-09-14' },
+      { id: 4, title: 'Draft recommendation logic', assigned_to: 1, assignee_name: 'Isha Mehta', status: 'in_progress', due_date: null },
+      { id: 5, title: 'Map empty states', assigned_to: 2, assignee_name: 'Kabir Shah', status: 'in_progress', due_date: null },
+      { id: 6, title: 'Define data schema', assigned_to: 1, assignee_name: 'Isha Mehta', status: 'done', due_date: '2026-09-09' },
+      { id: 7, title: 'Set up repository', assigned_to: 2, assignee_name: 'Kabir Shah', status: 'done', due_date: '2026-09-08' },
+      { id: 8, title: 'Project brief', assigned_to: 1, assignee_name: 'Isha Mehta', status: 'done', due_date: '2026-09-07' },
+      { id: 9, title: 'Agree on tech stack', assigned_to: 2, assignee_name: 'Kabir Shah', status: 'done', due_date: '2026-09-06' }
+    ]
+  }
+};
+
+const key = 'syncspace-demo-v1';
+const clone = (value) => JSON.parse(JSON.stringify(value));
+
+function load() {
+  if (typeof localStorage === 'undefined') return clone(seed);
+  const saved = localStorage.getItem(key);
+  return saved ? JSON.parse(saved) : clone(seed);
+}
+
+function save(state) {
+  if (typeof localStorage !== 'undefined') localStorage.setItem(key, JSON.stringify(state));
+}
+
+const wait = (value) => new Promise((resolve) => setTimeout(() => resolve(clone(value)), 140));
+
+export const demoApi = {
+  async login({ email, password }) {
+    const state = load();
+    const user = state.users.find((item) => item.email === email.toLowerCase() && item.password === password);
+    if (!user) throw new Error('Use a demo account and password demo1234.');
+    return wait({ token: `demo-token-${user.role}`, user });
+  },
+  async register(input) {
+    const user = { id: Date.now(), email: input.email, role: input.role, collegeId: 1, profileId: 1, name: input.name };
+    return wait({ token: `demo-token-${user.role}`, user });
+  },
+  async getMe() { return wait({ student: load().profile }); },
+  async updateProfile(id, input) {
+    const state = load();
+    state.profile = { ...state.profile, ...input, availability_hours_per_week: input.availabilityHoursPerWeek ?? state.profile.availability_hours_per_week };
+    save(state);
+    return wait({ student: state.profile });
+  },
+  async uploadResume() {
+    return wait({ proposedSkills: [{ skillId: 5, name: 'Node.js', matchedAlias: 'node.js' }, { skillId: 6, name: 'PostgreSQL', matchedAlias: 'postgres' }], message: 'Review these skills before saving them.' });
+  },
+  async updateSkills(id, skills) {
+    const state = load();
+    const lookup = new Map(state.skills.map((skill) => [skill.id, skill]));
+    state.profile.skills = skills.map(({ skillId, proficiency }) => ({ ...lookup.get(Number(skillId)), proficiency }));
+    save(state);
+    return wait({ student: state.profile });
+  },
+  async listSkills() { return wait({ skills: load().skills }); },
+  async listProjects() { return wait({ projects: load().projects }); },
+  async recommendations() { return wait({ recommendations: load().projects }); },
+  async getProject(id) {
+    const project = load().projects.find((item) => Number(item.id) === Number(id));
+    if (!project) throw new Error('Project not found');
+    return wait({ project });
+  },
+  async apply(id) {
+    const state = load();
+    const project = state.projects.find((item) => Number(item.id) === Number(id));
+    if (!state.applications.some((item) => Number(item.projectId) === Number(id))) {
+      state.applications.push({ id: Date.now(), projectId: Number(id), title: project.title, status: 'pending' });
+      save(state);
+    }
+    return wait({ application: state.applications.at(-1) });
+  },
+  async getTeam() { return wait({ team: load().team }); },
+  async createTask(teamId, input) {
+    const state = load();
+    const member = state.team.members.find((item) => Number(item.id) === Number(input.assignedTo));
+    const task = { id: Date.now(), team_id: Number(teamId), title: input.title, status: input.status ?? 'todo', assigned_to: input.assignedTo ?? null, assignee_name: member?.name ?? null, due_date: input.dueDate ?? null };
+    state.team.tasks.push(task); save(state); return wait({ task });
+  },
+  async updateTask(id, input) {
+    const state = load();
+    const task = state.team.tasks.find((item) => Number(item.id) === Number(id));
+    Object.assign(task, input);
+    if (input.assignedTo !== undefined) {
+      task.assigned_to = input.assignedTo;
+      task.assignee_name = state.team.members.find((item) => Number(item.id) === Number(input.assignedTo))?.name ?? null;
+    }
+    save(state); return wait({ task });
+  },
+  async notifications() { return wait({ notifications: load().notifications }); },
+  async readNotification(id) {
+    const state = load();
+    const notification = state.notifications.find((item) => Number(item.id) === Number(id));
+    notification.is_read = true; save(state); return wait({ notification });
+  }
+};

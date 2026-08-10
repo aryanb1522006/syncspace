@@ -1,0 +1,28 @@
+import { demoApi } from './demoStore.js';
+import { request } from './http.js';
+
+export const demoMode = (import.meta.env.VITE_DEMO_MODE ?? 'true') !== 'false';
+const use = (demo, real) => demoMode ? demo() : real();
+const json = (value) => JSON.stringify(value);
+
+export const api = {
+  login: (input) => use(() => demoApi.login(input), () => request('/auth/login', { method: 'POST', body: json(input) })),
+  register: (input) => use(() => demoApi.register(input), () => request('/auth/register', { method: 'POST', body: json(input) })),
+  getMe: () => use(() => demoApi.getMe(), () => request('/students/me')),
+  updateProfile: (id, input) => use(() => demoApi.updateProfile(id, input), () => request(`/students/${id}`, { method: 'PUT', body: json(input) })),
+  uploadResume: (id, file) => use(() => demoApi.uploadResume(file), () => {
+    const body = new FormData(); body.append('resume', file);
+    return request(`/students/${id}/resume`, { method: 'POST', body });
+  }),
+  updateSkills: (id, skills) => use(() => demoApi.updateSkills(id, skills), () => request(`/students/${id}/skills`, { method: 'PUT', body: json({ skills }) })),
+  listSkills: () => use(() => demoApi.listSkills(), () => request('/students/skills/dictionary')),
+  listProjects: (search = '') => use(() => demoApi.listProjects(), () => request(`/projects${search}`)),
+  recommendations: () => use(() => demoApi.recommendations(), () => request('/recommendations/projects')),
+  getProject: (id) => use(() => demoApi.getProject(id), () => request(`/projects/${id}`)),
+  apply: (id) => use(() => demoApi.apply(id), () => request(`/projects/${id}/apply`, { method: 'POST' })),
+  getTeam: (id) => use(() => demoApi.getTeam(id), () => request(`/teams/${id}`)),
+  createTask: (id, input) => use(() => demoApi.createTask(id, input), () => request(`/teams/${id}/tasks`, { method: 'POST', body: json(input) })),
+  updateTask: (id, input) => use(() => demoApi.updateTask(id, input), () => request(`/tasks/${id}`, { method: 'PUT', body: json(input) })),
+  notifications: () => use(() => demoApi.notifications(), () => request('/notifications')),
+  readNotification: (id) => use(() => demoApi.readNotification(id), () => request(`/notifications/${id}/read`, { method: 'PUT' }))
+};

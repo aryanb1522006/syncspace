@@ -1,0 +1,25 @@
+{
+  "name": "syncspace",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Campus project and teammate matching platform",
+  "scripts": {
+    "dev": "pnpm --parallel --filter ./server --filter ./client dev",
+    "dev:server": "pnpm --filter ./server dev",
+    "dev:client": "pnpm --filter ./client dev",
+    "test": "pnpm --filter ./server test && pnpm --filter ./client test",
+    "build": "pnpm --filter ./client build",
+    "validate:config": "node scripts/validate-config.js",
+    "smoke:api": "pnpm --filter ./server smoke:api",
+    "db:migrate": "pnpm --filter ./server db:migrate",
+    "db:seed": "pnpm --filter ./server db:seed"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.16.0",
+  "devDependencies": {
+    "yaml": "^2.9.0"
+  }
+}

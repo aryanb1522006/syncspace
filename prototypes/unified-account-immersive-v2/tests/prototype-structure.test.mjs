@@ -53,6 +53,18 @@ test("new animation uses floating projects and moving signal points", () => {
   assert.match(constellation, /setScrollProgress\(value\)/);
 });
 
+test("Firefox and unavailable WebGL receive an animated compatibility scene", () => {
+  assert.match(constellation, /canvas\.getContext\("webgl2"/);
+  assert.match(constellation, /createCompatibilityScene/);
+  assert.match(constellation, /webglcontextlost/);
+  assert.match(constellation, /rendererReason/);
+  assert.match(joinStyles, /constellation-shell--fallback/);
+  assert.match(joinStyles, /@keyframes fallback-project-float/);
+  assert.match(joinStyles, /@keyframes fallback-join-glow/);
+  assert.match(constellation, /canvas\.getBoundingClientRect\(\)/);
+  assert.match(constellation, /if \(width === viewportWidth && height === viewportHeight\) return/);
+});
+
 test("landing sections retain one-time scroll-triggered reveals", () => {
   assert.equal((html.match(/data-scroll-reveal=/g) ?? []).length, 4);
   assert.match(main, /new IntersectionObserver/);

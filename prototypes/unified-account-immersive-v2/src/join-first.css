@@ -17,6 +17,7 @@
 .constellation-shell {
   scroll-margin-top: 92px;
   overflow: visible;
+  min-width: 0;
 }
 
 .node-label--you {
@@ -93,6 +94,85 @@
 .project-label--lavender { color: var(--lavender); }
 .project-label--coral { color: var(--coral); }
 
+.constellation-shell--fallback {
+  --fallback-scroll: 0;
+  overflow: hidden;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 68% 50%, rgb(213 255 85 / 15%), transparent 10rem),
+    radial-gradient(circle at 24% 50%, rgb(199 242 221 / 9%), transparent 8rem);
+}
+
+.constellation-shell--fallback::before,
+.constellation-shell--fallback::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  border: 1px solid rgb(213 255 85 / 24%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: fallback-orbit-pulse 3.8s ease-in-out infinite;
+}
+
+.constellation-shell--fallback::before {
+  left: 68%;
+  top: 50%;
+  width: 230px;
+  height: 230px;
+  translate: -50% -50%;
+}
+
+.constellation-shell--fallback::after {
+  left: 68%;
+  top: 50%;
+  width: 360px;
+  height: 360px;
+  translate: -50% -50%;
+  border-color: rgb(199 242 221 / 12%);
+  animation-delay: -1.9s;
+}
+
+.constellation-shell--fallback #constellation-canvas {
+  display: none;
+}
+
+.constellation-shell--fallback [data-fallback-node="you"] { left: 22%; top: 50%; }
+.constellation-shell--fallback [data-fallback-node="join"] { left: 68%; top: 50%; }
+.constellation-shell--fallback [data-fallback-node="greenGrid"] { left: 16%; top: 19%; }
+.constellation-shell--fallback [data-fallback-node="studyCircle"] { left: 79%; top: 18%; }
+.constellation-shell--fallback [data-fallback-node="campusMobility"] { left: 10%; top: 72%; }
+.constellation-shell--fallback [data-fallback-node="openLab"] { left: 43%; top: 83%; }
+.constellation-shell--fallback [data-fallback-node="localLens"] { left: 86%; top: 74%; }
+
+.constellation-shell--fallback .project-label {
+  animation: fallback-project-float 4.2s ease-in-out infinite;
+  animation-delay: calc(var(--fallback-index, 0) * -0.47s);
+}
+
+.constellation-shell--fallback [data-fallback-node="studyCircle"] { --fallback-index: 1; }
+.constellation-shell--fallback [data-fallback-node="campusMobility"] { --fallback-index: 2; }
+.constellation-shell--fallback [data-fallback-node="openLab"] { --fallback-index: 3; }
+.constellation-shell--fallback [data-fallback-node="localLens"] { --fallback-index: 4; }
+
+.constellation-shell--fallback .node-label--join {
+  animation: fallback-join-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes fallback-project-float {
+  0%, 100% { transform: translate3d(0, calc(var(--fallback-scroll) * -12px), 0); }
+  50% { transform: translate3d(0, calc(-10px + var(--fallback-scroll) * -12px), 0); }
+}
+
+@keyframes fallback-orbit-pulse {
+  0%, 100% { opacity: 0.35; scale: 0.92; }
+  50% { opacity: 0.9; scale: 1.04; }
+}
+
+@keyframes fallback-join-glow {
+  0%, 100% { box-shadow: 0 0 0 10px rgb(213 255 85 / 5%), 0 0 36px rgb(213 255 85 / 18%); }
+  50% { box-shadow: 0 0 0 18px rgb(213 255 85 / 4%), 0 0 58px rgb(213 255 85 / 34%); }
+}
+
 .immersive-landing .route-list {
   box-shadow: 0 24px 90px rgb(0 0 0 / 12%);
 }
@@ -135,6 +215,11 @@
   #constellation-canvas {
     min-height: 610px;
   }
+
+  .constellation-shell--fallback [data-fallback-node="greenGrid"] { left: 20%; }
+  .constellation-shell--fallback [data-fallback-node="studyCircle"] { left: 77%; }
+  .constellation-shell--fallback [data-fallback-node="campusMobility"] { left: 15%; }
+  .constellation-shell--fallback [data-fallback-node="localLens"] { left: 81%; }
 }
 
 @media (max-width: 560px) {
@@ -170,5 +255,27 @@
   .node-label--you {
     width: 62px;
     height: 62px;
+  }
+
+  .constellation-shell--fallback::after {
+    width: 250px;
+    height: 250px;
+  }
+
+  .constellation-shell--fallback [data-fallback-node="you"] { left: 22%; top: 48%; }
+  .constellation-shell--fallback [data-fallback-node="join"] { left: 69%; top: 48%; }
+  .constellation-shell--fallback [data-fallback-node="greenGrid"] { left: 24%; top: 16%; }
+  .constellation-shell--fallback [data-fallback-node="studyCircle"] { left: 76%; top: 17%; }
+  .constellation-shell--fallback [data-fallback-node="campusMobility"] { left: 20%; top: 73%; }
+  .constellation-shell--fallback [data-fallback-node="openLab"] { left: 50%; top: 86%; }
+  .constellation-shell--fallback [data-fallback-node="localLens"] { left: 80%; top: 72%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constellation-shell--fallback::before,
+  .constellation-shell--fallback::after,
+  .constellation-shell--fallback .project-label,
+  .constellation-shell--fallback .node-label--join {
+    animation: none;
   }
 }

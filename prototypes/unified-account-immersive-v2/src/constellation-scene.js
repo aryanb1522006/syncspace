@@ -108,6 +108,29 @@ function createPulseRing(radius, color, opacity) {
   );
 }
 
+function createCompatibilityScene(canvas, labels, reason = "webgl-unavailable") {
+  const shell = canvas?.closest(".constellation-shell");
+  if (!shell) return { setScrollProgress() {} };
+
+  canvas.hidden = true;
+  shell.classList.add("constellation-shell--fallback");
+  shell.dataset.renderer = "css-fallback";
+  shell.dataset.rendererReason = reason;
+
+  Object.entries(labels).forEach(([key, label]) => {
+    if (!label) return;
+    label.style.removeProperty("left");
+    label.style.removeProperty("top");
+    label.dataset.fallbackNode = key;
+  });
+
+  return {
+    setScrollProgress(value) {
+      shell.style.setProperty("--fallback-scroll", THREE.MathUtils.clamp(value, 0, 1).toFixed(3));
+    },
+  };
+}
+
 export function createConstellationScene(canvas, labels) {
   if (!canvas) return { setScrollProgress() {} };
 
@@ -116,7 +139,20 @@ export function createConstellationScene(canvas, labels) {
   const camera = new THREE.PerspectiveCamera(37, 1, 0.1, 100);
   camera.position.set(0, 0, 14.6);
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  let renderer;
+  try {
+    const context = canvas.getContext("webgl2", {
+      alpha: true,
+      antialias: true,
+      depth: true,
+      powerPreference: "default",
+    });
+    if (!context) return createCompatibilityScene(canvas, labels);
+    renderer = new THREE.WebGLRenderer({ canvas, context, antialias: true, alpha: true });
+  } catch {
+    return createCompatibilityScene(canvas, labels);
+  }
+
   renderer.setClearColor(colors.ink, 0);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -166,10 +202,20 @@ export function createConstellationScene(canvas, labels) {
   const pointerTarget = { x: 0, y: 0 };
   let scrollProgress = 0;
   let pageVisible = true;
+  let rendererAvailable = true;
+  let animationFrameId;
+  let compatibilityScene;
+  let viewportWidth = 1;
+  let viewportHeight = 1;
 
   function resize() {
-    const width = Math.max(canvas.clientWidth, 1);
-    const height = Math.max(canvas.clientHeight, 1);
+    const bounds = canvas.getBoundingClientRect();
+    const width = Math.max(Math.round(bounds.width), 1);
+    const height = Math.max(Math.round(bounds.height), 1);
+    if (width === viewportWidth && height === viewportHeight) return;
+
+    viewportWidth = width;
+    viewportHeight = height;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -179,8 +225,8 @@ export function createConstellationScene(canvas, labels) {
     const label = labels[key];
     if (!label) return;
     const projected = object.getWorldPosition(new THREE.Vector3()).project(camera);
-    label.style.left = `${(projected.x * 0.5 + 0.5) * canvas.clientWidth}px`;
-    label.style.top = `${(-projected.y * 0.5 + 0.5) * canvas.clientHeight}px`;
+    label.style.left = `${(projected.x * 0.5 + 0.5) * viewportWidth}px`;
+    label.style.top = `${(-projected.y * 0.5 + 0.5) * viewportHeight}px`;
   }
 
   function updateScene(elapsed) {
@@ -216,8 +262,10 @@ export function createConstellationScene(canvas, labels) {
   }
 
   function render(timestamp) {
-    requestAnimationFrame(render);
+    if (!rendererAvailable) return;
+    animationFrameId = requestAnimationFrame(render);
     if (!pageVisible) return;
+    resize();
     timer.update(timestamp);
     const elapsed = timer.getElapsed();
     field.rotation.y += (pointerTarget.x * 0.085 - field.rotation.y) * 0.036;
@@ -226,7 +274,20 @@ export function createConstellationScene(canvas, labels) {
     waveField.position.x = reduceMotion ? 0 : Math.sin(elapsed * 0.1) * 0.14;
     particles.rotation.y = reduceMotion ? 0 : elapsed * -0.009;
     updateScene(elapsed);
-    renderer.render(scene, camera);
+    try {
+      renderer.render(scene, camera);
+    } catch {
+      activateCompatibilityScene("render-failed");
+    }
+  }
+
+  function activateCompatibilityScene(reason) {
+    if (!rendererAvailable) return;
+    rendererAvailable = false;
+    window.cancelAnimationFrame(animationFrameId);
+    renderer.dispose();
+    compatibilityScene = createCompatibilityScene(canvas, labels, reason);
+    compatibilityScene.setScrollProgress(scrollProgress);
   }
 
   const shell = canvas.closest(".constellation-shell");
@@ -243,14 +304,28 @@ export function createConstellationScene(canvas, labels) {
     pageVisible = !document.hidden;
   });
 
-  new ResizeObserver(resize).observe(canvas);
+  canvas.addEventListener(
+    "webglcontextlost",
+    (event) => {
+      event.preventDefault();
+      activateCompatibilityScene("context-lost");
+    },
+    { once: true },
+  );
+
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(resize).observe(canvas);
+  } else {
+    window.addEventListener("resize", resize, { passive: true });
+  }
   resize();
   updateScene(0);
-  requestAnimationFrame(render);
+  animationFrameId = requestAnimationFrame(render);
 
   return {
     setScrollProgress(value) {
       scrollProgress = THREE.MathUtils.clamp(value, 0, 1);
+      compatibilityScene?.setScrollProgress(scrollProgress);
     },
   };
 }

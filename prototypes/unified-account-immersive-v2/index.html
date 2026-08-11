@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="An isolated immersive SyncSpace concept for discovering, joining, and posting student projects." />
+    <title>SyncSpace — Find a project worth joining</title>
+  </head>
+  <body>
+    <div id="landing-view" class="immersive-landing">
+      <div class="ambient-grid" aria-hidden="true"></div>
+      <header class="site-header" data-animate="header">
+        <a class="brand brand--landing" href="#top" aria-label="SyncSpace home">
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="19" cy="24" r="14"></circle><circle cx="29" cy="24" r="14"></circle></svg>
+          <span>SyncSpace</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary navigation">
+          <a href="#project-examples">Explore</a>
+          <a href="#how-it-works">How it works</a>
+          <button class="button button--quiet button--dark" type="button" data-auth-intent="join">Sign up now</button>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <h1 id="hero-title">Find the project that makes you want to show up.</h1>
+            <p>Meet student builders, explore work that matches your skills, or start the idea you wish already existed.</p>
+            <div class="hero-actions">
+              <button class="button button--primary button--landing-primary" type="button" data-auth-intent="join">Explore projects <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+              <button class="button button--outline button--dark" type="button" data-auth-intent="post">Post your idea <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+            </div>
+          </div>
+
+          <div class="constellation-shell" id="project-examples" aria-label="Interactive map of five example projects leading toward Join">
+            <canvas id="constellation-canvas" aria-hidden="true"></canvas>
+            <p class="interaction-hint"><span aria-hidden="true">↔</span> Move to explore project paths</p>
+            <button class="node-label node-label--you" type="button" data-node-label="you" data-auth-intent="join">You</button>
+            <button class="node-label node-label--join" type="button" data-node-label="join" data-auth-intent="join">Join</button>
+            <button class="project-label project-label--lime" type="button" data-project-label="greenGrid" data-auth-intent="join"><strong>GreenGrid</strong><small>Climate Tech</small></button>
+            <button class="project-label project-label--lavender" type="button" data-project-label="studyCircle" data-auth-intent="join"><strong>StudyCircle</strong><small>EdTech</small></button>
+            <button class="project-label project-label--coral" type="button" data-project-label="campusMobility" data-auth-intent="join"><strong>Campus Mobility</strong><small>Mobility</small></button>
+            <button class="project-label project-label--lavender" type="button" data-project-label="openLab" data-auth-intent="join"><strong>OpenLab</strong><small>Research</small></button>
+            <button class="project-label project-label--mint" type="button" data-project-label="localLens" data-auth-intent="join"><strong>LocalLens</strong><small>Community</small></button>
+          </div>
+          <a class="scroll-cue" href="#how-it-works">Scroll to see how it works <span aria-hidden="true">↓</span></a>
+        </section>
+
+        <section class="action-switchboard" id="how-it-works" aria-labelledby="switchboard-title">
+          <div class="path-origin" aria-hidden="true"><span></span><i></i></div>
+          <div class="section-heading" data-scroll-reveal="up">
+            <h2 id="switchboard-title">Join something promising—or start what’s missing.</h2>
+            <p>Discovering a team comes first. Posting your own idea stays one click away.</p>
+          </div>
+          <div class="route-list" data-scroll-reveal="up">
+            <button class="route route--mint" type="button" data-auth-intent="join">
+              <span class="route-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+              <span class="route-copy"><strong>Join a project</strong><span>Explore real ideas and contribute the skills a team needs.</span></span>
+              <svg class="route-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </button>
+            <button class="route route--lime" type="button" data-auth-intent="post">
+              <span class="route-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Zm9.8-12.8 3 3M4 22h16"></path></svg></span>
+              <span class="route-copy"><strong>Post your idea</strong><span>Describe what you want to build and find collaborators.</span></span>
+              <svg class="route-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="privacy-band" id="contact-privacy" aria-labelledby="privacy-title">
+          <div class="privacy-copy" data-scroll-reveal="left">
+            <h2 id="privacy-title">Meet the people behind the project.</h2>
+            <p>Once an application is accepted, the project owner and collaborators can see one another’s email address. Pending applicants never see private team contacts.</p>
+            <button class="text-link text-link--landing" type="button" data-auth-intent="join">Sign up now <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+          </div>
+          <div class="contact-stage" data-scroll-reveal="right">
+            <div class="contact-branches" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="contact-example" aria-label="Example accepted team contacts">
+              <p class="contact-kicker">Team-only contact details</p>
+              <div class="contact-team"><span class="team-mark">GG</span><span><strong>GreenGrid</strong><small>Accepted team</small></span></div>
+              <div class="contact-person"><span class="avatar avatar--lavender">AR</span><span><strong>Arjun Rao · Owner</strong><small>arjun@northstar.edu</small></span></div>
+              <div class="contact-person"><span class="avatar avatar--coral">IM</span><span><strong>Isha Mehta · Collaborator</strong><small>isha@northstar.edu</small></span></div>
+              <p class="contact-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10V8a6 6 0 0 1 12 0v2M5 10h14v11H5z"></path></svg>Accepted teammates only</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <a class="brand brand--landing" href="#top" aria-label="SyncSpace home"><svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="19" cy="24" r="14"></circle><circle cx="29" cy="24" r="14"></circle></svg><span>SyncSpace</span></a>
+        <p>Immersive test concept. No production data is changed.</p>
+      </footer>
+    </div>
+
+    <div id="workspace-view" class="workspace" hidden>
+      <aside class="workspace-sidebar">
+        <a class="brand brand--inverse" href="#" data-return-home><svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="19" cy="24" r="14"></circle><circle cx="29" cy="24" r="14"></circle></svg><span>SyncSpace</span></a>
+        <nav class="workspace-nav" aria-label="Account navigation">
+          <button type="button" data-workspace-nav="Discover"><span aria-hidden="true">◌</span>Discover</button>
+          <button class="is-selected" type="button" data-workspace-nav="My projects"><span aria-hidden="true">▣</span>My projects</button>
+          <button type="button" data-workspace-nav="Applications"><span aria-hidden="true">◇</span>Applications</button>
+          <button type="button" data-workspace-nav="Teams"><span aria-hidden="true">◎</span>Teams</button>
+          <button type="button" data-workspace-nav="Profile"><span aria-hidden="true">○</span>Profile</button>
+        </nav>
+        <div class="workspace-user"><span class="avatar avatar--lime">IM</span><span><strong>Isha Mehta</strong><small>Student builder</small></span><button type="button" data-sign-out aria-label="Sign out">↗</button></div>
+      </aside>
+
+      <main class="workspace-main">
+        <button class="mobile-home" type="button" data-return-home>← Concept home</button>
+        <header class="workspace-heading"><div><h1>Your SyncSpace</h1><p>Join a team that fits, or lead the idea you want to see.</p></div><span class="account-chip">Isha Mehta</span></header>
+        <section class="workspace-routes" aria-label="Account actions">
+          <button class="workspace-route workspace-route--join" type="button" data-open-action="join"><span class="workspace-route-icon" aria-hidden="true">J</span><span><strong>Join a project</strong><small>Find a team that needs your skills.</small></span><span class="route-arrow" aria-hidden="true">→</span></button>
+          <button class="workspace-route workspace-route--post" type="button" data-open-action="post"><span class="workspace-route-icon" aria-hidden="true">P</span><span><strong>Post your idea</strong><small>Share what you want to build and invite collaborators.</small></span><span class="route-arrow" aria-hidden="true">→</span></button>
+        </section>
+        <section class="team-contacts" aria-labelledby="contacts-title">
+          <div class="team-contacts-heading"><div><h2 id="contacts-title">Team contacts</h2><p>Accepted members of GreenGrid</p></div><button class="text-link" type="button" data-view-team>View team</button></div>
+          <div class="contact-rail" id="contact-rail"></div>
+          <p class="privacy-note">Emails appear only after an application is accepted. Only members of the same team can see them.</p>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="modal" id="sign-in-dialog" aria-labelledby="sign-in-title">
+      <form method="dialog" class="modal-card" id="sign-in-form">
+        <button class="modal-close" value="cancel" aria-label="Close sign in">×</button>
+        <div class="modal-heading"><span class="modal-mark" aria-hidden="true">SS</span><div><h2 id="sign-in-title">Start exploring</h2><p>Create your demo profile, then discover projects and meet teams.</p></div></div>
+        <label>Email<input name="email" type="email" value="isha@northstar.edu" required /></label>
+        <label>Password<input name="password" type="password" value="demo1234" required /></label>
+        <button class="button button--primary button--full" value="default" type="submit">Continue to SyncSpace</button>
+        <small>This demo profile stays in your browser and calls no API.</small>
+      </form>
+    </dialog>
+
+    <dialog class="modal action-dialog" id="action-dialog" aria-labelledby="action-dialog-title">
+      <div class="modal-card action-card"><button class="modal-close" type="button" data-close-action aria-label="Close action">×</button><div id="action-dialog-content"></div></div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -15,6 +15,7 @@ export async function createApplication(userId, projectId, collegeId) {
     if (project.status !== 'open') throw new AppError(409, 'This project is not accepting applications');
     if (new Date(project.deadline).getTime() <= Date.now()) throw new AppError(409, 'The project deadline has passed');
     if (project.member_count >= project.team_size) throw new AppError(409, 'The project team is full');
+    if (Number(project.owner_id) === Number(userId)) throw new AppError(409, 'You cannot apply to your own project');
 
     const { rows: existingMembership } = await client.query(
       `SELECT 1 FROM teams t JOIN team_members tm ON tm.team_id = t.id

@@ -45,37 +45,31 @@ test('expired JWT is rejected', async () => {
     .expect(401);
 });
 
-test('student role cannot create an owner-only project', async () => {
-  const token = jwt.sign({ role: 'student', collegeId: 1 }, env.jwtSecret, {
-    subject: '1', expiresIn: '5m'
-  });
-  const response = await request(app)
-    .post('/api/projects')
-    .set('Authorization', `Bearer ${token}`)
-    .send({})
-    .expect(403);
-  assert.match(response.body.error.message, /permissions/i);
+test('both legacy roles retain authenticated project creation capability', async () => {
+  for (const role of ['student', 'owner']) {
+    const token = jwt.sign({ role, collegeId: 1 }, env.jwtSecret, {
+      subject: role === 'student' ? '1' : '4', expiresIn: '5m'
+    });
+    const response = await request(app)
+      .post('/api/projects')
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(400);
+    assert.equal(response.body.error.message, 'Validation failed');
+  }
 });
 
-test('owner role cannot open the student application tracker', async () => {
-  const token = jwt.sign({ role: 'owner', collegeId: 1 }, env.jwtSecret, {
-    subject: '4', expiresIn: '5m'
-  });
-  await request(app)
-    .get('/api/applications')
-    .set('Authorization', `Bearer ${token}`)
-    .expect(403);
-});
-
-test('student role cannot decide an application', async () => {
-  const token = jwt.sign({ role: 'student', collegeId: 1 }, env.jwtSecret, {
-    subject: '1', expiresIn: '5m'
-  });
-  await request(app)
-    .put('/api/applications/1')
-    .set('Authorization', `Bearer ${token}`)
-    .send({ status: 'accepted' })
-    .expect(403);
+test('both legacy roles reach application decisions but still require valid input and ownership', async () => {
+  for (const role of ['student', 'owner']) {
+    const token = jwt.sign({ role, collegeId: 1 }, env.jwtSecret, {
+      subject: role === 'student' ? '1' : '4', expiresIn: '5m'
+    });
+    await request(app)
+      .put('/api/applications/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'not-a-decision' })
+      .expect(400);
+  }
 });
 
 test('registration validation rejects a weak request before database access', async () => {

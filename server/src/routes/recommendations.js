@@ -5,7 +5,7 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const router = Router();
 router.use(authenticate);
-router.get('/projects', requireRole('student'), asyncHandler(recommendProjects));
-router.get('/teammates/:projectId', requireRole('owner'), asyncHandler(recommendTeammates));
+router.get('/projects', requireRole('student', 'owner'), asyncHandler(recommendProjects));
+router.get('/teammates/:projectId', requireRole('student', 'owner'), asyncHandler(recommendTeammates));
 
 export default router;

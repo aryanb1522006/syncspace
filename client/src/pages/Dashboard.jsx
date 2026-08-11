@@ -5,8 +5,6 @@ import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { NotificationMenu } from '../components/NotificationMenu.jsx';
 import { ProjectRow } from '../components/ProjectRow.jsx';
-import { useAuth } from '../context/AuthContext.jsx';
-import { OwnerDashboard } from './OwnerDashboard.jsx';
 
 function WeekRail({ profile, applications }) {
   const latest = applications[0];
@@ -56,6 +54,5 @@ function StudentDashboard() {
 }
 
 export function Dashboard() {
-  const { user } = useAuth();
-  return user?.role === 'owner' ? <OwnerDashboard /> : <StudentDashboard />;
+  return <StudentDashboard />;
 }

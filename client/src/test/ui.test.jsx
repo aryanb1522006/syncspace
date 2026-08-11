@@ -2,7 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from '../App.jsx';
-import { Landing } from '../pages/Landing.jsx';
+import { Landing } from '../pages/ImmersiveLanding.jsx';
 import { ProjectRow } from '../components/ProjectRow.jsx';
 import { AuthProvider } from '../context/AuthContext.jsx';
 
@@ -24,9 +24,9 @@ function renderApp(path, user) {
 
 describe('SyncSpace UI', () => {
   it('renders the exact landing offer and primary action', () => {
-    render(<MemoryRouter><Landing /></MemoryRouter>);
-    expect(screen.getByRole('heading', { level: 1, name: /The right project\. The teammates you’re missing\./i })).toBeVisible();
-    expect(screen.getByRole('link', { name: /explore projects/i })).toHaveAttribute('href', '/register');
+    render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 1, name: /Find the project that makes you want to show up\./i })).toBeVisible();
+    expect(screen.getByRole('link', { name: /explore projects/i })).toHaveAttribute('href', '/register?intent=join');
   });
 
   it('renders a transparent match breakdown', () => {
@@ -36,11 +36,14 @@ describe('SyncSpace UI', () => {
     expect(screen.getByText('45/50')).toBeVisible();
   });
 
-  it('shows project owners their live project management surface', async () => {
-    renderApp('/dashboard', { id: 4, email: 'arjun@northstar.edu', role: 'owner', profile: { id: 4, name: 'Arjun Rao' } });
+  it('shows any authenticated creator their live project management surface', async () => {
+    renderApp('/projects/mine', { id: 4, email: 'arjun@northstar.edu', role: 'owner', profile: { id: 4, name: 'Arjun Rao' } });
     expect(await screen.findByRole('heading', { level: 1, name: 'Build the right team' })).toBeVisible();
     expect(screen.getAllByRole('link', { name: /create project/i }).length).toBeGreaterThan(0);
     expect(await screen.findAllByRole('link', { name: /review applications/i })).not.toHaveLength(0);
+    expect(screen.getAllByRole('link', { name: 'Discover' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Applications' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Post project' }).length).toBeGreaterThan(0);
   });
 
   it('shows students a live application status and accepted-team navigation', async () => {

@@ -29,10 +29,10 @@ const updateSchema = createSchema.partial().refine((body) => Object.keys(body).l
 
 router.get('/', asyncHandler(listProjects));
 router.get('/:id', asyncHandler(getProject));
-router.post('/:id/apply', requireRole('student'), asyncHandler(applyToProject));
-router.get('/:id/applications', requireRole('owner'), asyncHandler(getProjectApplications));
-router.post('/', requireRole('owner'), validate(createSchema), asyncHandler(createProject));
-router.put('/:id', requireRole('owner'), validate(updateSchema), asyncHandler(updateProject));
-router.delete('/:id', requireRole('owner'), asyncHandler(deleteProject));
+router.post('/:id/apply', requireRole('student', 'owner'), asyncHandler(applyToProject));
+router.get('/:id/applications', requireRole('student', 'owner'), asyncHandler(getProjectApplications));
+router.post('/', requireRole('student', 'owner'), validate(createSchema), asyncHandler(createProject));
+router.put('/:id', requireRole('student', 'owner'), validate(updateSchema), asyncHandler(updateProject));
+router.delete('/:id', requireRole('student', 'owner'), asyncHandler(deleteProject));
 
 export default router;

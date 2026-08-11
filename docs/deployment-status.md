@@ -1,6 +1,6 @@
 # SyncSpace Deployment Status
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 ## Public services
 
@@ -39,6 +39,13 @@ Last updated: 2026-08-11
 - [x] Add student application tracking backed by the API
 - [x] Add dynamic accessible-team navigation without hard-coded team IDs
 - [x] Verify the Phase 8 demo journey at desktop and mobile sizes
+- [x] Replace the production landing route with the approved immersive Three.js and Anime.js page
+- [x] Unify join and post capabilities under every authenticated account
+- [x] Preserve creator-only project mutation and applicant decision authorization
+- [x] Restrict team email contacts to creators and accepted collaborators
+- [x] Add server-verified Google Sign-In with exact `thapar.edu` checks
+- [x] Add `005_verified_identity.sql` and Google domain tests
+- [x] Verify Phase 9 locally: 25 server tests, 4 client tests, production build, browser motion and CTA pass
 
 ## Remaining deployment work
 
@@ -48,6 +55,12 @@ Last updated: 2026-08-11
 - [ ] Confirm Render automatically deploys the updated Express API
 - [ ] Confirm Appwrite Sites automatically deploys the updated React bundle
 - [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site
+- [ ] Create the Google OAuth web client and authorize the Appwrite and localhost origins
+- [ ] Set Render `GOOGLE_CLIENT_ID`, `AUTH_ALLOWED_EMAIL_DOMAIN=thapar.edu`, and `PASSWORD_AUTH_ENABLED=false`
+- [ ] Run migration `005_verified_identity.sql` against production PostgreSQL
+- [ ] Set Appwrite `VITE_GOOGLE_CLIENT_ID`, `VITE_AUTH_ALLOWED_EMAIL_DOMAIN=thapar.edu`, and `VITE_PASSWORD_AUTH_ENABLED=false`
+- [ ] Confirm one real Thapar Workspace account works and personal Gmail is rejected
+- [ ] Repeat the complete join + post workflow with one account on the public site
 
 ## Optional production hardening
 
@@ -70,6 +83,6 @@ The public Appwrite site returned HTTP 200, and the Render API returned HTTP 204
 
 No credentials, database URLs, JWTs, or storage secrets are recorded in this document.
 
-## Phase 8 development status
+## Phase 9 development status
 
-Role-based owner pages, live application tracking, accept/reject controls, and dynamic team navigation are complete and verified locally. The current public URL remains https://syncspace.appwrite.network, but these Phase 8 changes should be treated as pending on that URL until the GitHub push triggers successful Render and Appwrite deployments and the public end-to-end journey is repeated.
+The immersive landing replacement, unified account capabilities, creator-only authorization, protected team contact emails, and Thapar-restricted Google token verification are complete and verified locally. The current public URL remains https://syncspace.appwrite.network, but Phase 9 must be treated as pending there until the Google credentials and build variables are configured, migration 005 is applied, GitHub triggers successful Render and Appwrite deployments, and the public end-to-end checklist passes. See `docs/phases/phase-09-unified-account-identity.md`.

@@ -1,0 +1,20 @@
+{
+  "name": "syncspace-unified-account-concept",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Isolated SyncSpace landing and unified-account UI experiment.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "animejs": "4.5.0",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "vite": "8.2.1"
+  }
+}

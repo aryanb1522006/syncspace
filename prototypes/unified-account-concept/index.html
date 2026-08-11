@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="An isolated SyncSpace concept for posting and joining projects from one account."
+    />
+    <title>SyncSpace — Unified account concept</title>
+  </head>
+  <body>
+    <div id="landing-view">
+      <header class="site-header" data-animate="header">
+        <a class="brand" href="#top" aria-label="SyncSpace home">
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="19" cy="24" r="14"></circle>
+            <circle cx="29" cy="24" r="14"></circle>
+          </svg>
+          <span>SyncSpace</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary navigation">
+          <a href="#how-it-works">How it works</a>
+          <a href="#contact-privacy">Contact privacy</a>
+          <button class="button button--quiet" type="button" data-auth-intent="workspace">
+            Sign in
+          </button>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <h1 id="hero-title">One account. Build something—or join what’s already moving.</h1>
+            <p>
+              Post your idea, discover the right project, and meet your team without switching
+              roles.
+            </p>
+            <div class="hero-actions">
+              <button class="button button--primary" type="button" data-auth-intent="join">
+                Explore projects
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6"></path>
+                </svg>
+              </button>
+              <button class="button button--outline" type="button" data-auth-intent="post">
+                Post a project
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="orbit-shell" aria-label="You can post, join, and collaborate from one account">
+            <canvas id="orbit-canvas" aria-hidden="true"></canvas>
+            <div class="orbit-label orbit-label--you" data-orbit-label="you">You</div>
+            <div class="orbit-label orbit-label--post" data-orbit-label="post">Post</div>
+            <div class="orbit-label orbit-label--join" data-orbit-label="join">Join</div>
+            <div class="orbit-label orbit-label--collaborate" data-orbit-label="collaborate">
+              Collaborate
+            </div>
+          </div>
+        </section>
+
+        <section class="action-switchboard" id="how-it-works" aria-labelledby="switchboard-title" data-scroll-reveal="up">
+          <div class="section-heading">
+            <h2 id="switchboard-title">What do you want to do today?</h2>
+            <p>Your account keeps both paths open.</p>
+          </div>
+          <div class="route-list">
+            <button class="route route--lime" type="button" data-auth-intent="post">
+              <span class="route-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Zm9.8-12.8 3 3M4 22h16"></path></svg>
+              </span>
+              <span class="route-copy">
+                <strong>Post a project</strong>
+                <span>Share your idea and find the right collaborators.</span>
+              </span>
+              <svg class="route-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </button>
+            <button class="route route--mint" type="button" data-auth-intent="join">
+              <span class="route-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              </span>
+              <span class="route-copy">
+                <strong>Join a project</strong>
+                <span>Discover projects and contribute your skills.</span>
+              </span>
+              <svg class="route-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="privacy-band" id="contact-privacy" aria-labelledby="privacy-title">
+          <div class="privacy-copy" data-scroll-reveal="left">
+            <h2 id="privacy-title">A direct line to the people actually on your team.</h2>
+            <p>
+              Once an application is accepted, the project owner and collaborators can see one
+              another’s email address. Pending applicants never see private team contacts.
+            </p>
+            <button class="text-link" type="button" data-auth-intent="workspace">
+              Preview the unified account
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </button>
+          </div>
+          <div class="contact-example" aria-label="Example accepted team contacts" data-scroll-reveal="right">
+            <div class="contact-team">
+              <span class="team-mark">GG</span>
+              <span><strong>GreenGrid</strong><small>Accepted team</small></span>
+            </div>
+            <div class="contact-person">
+              <span class="avatar avatar--lime">AR</span>
+              <span><strong>Arjun Rao · Owner</strong><small>arjun@northstar.edu</small></span>
+            </div>
+            <div class="contact-person">
+              <span class="avatar avatar--lavender">IM</span>
+              <span><strong>Isha Mehta · Collaborator</strong><small>isha@northstar.edu</small></span>
+            </div>
+            <p class="contact-note">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10V8a6 6 0 0 1 12 0v2M5 10h14v11H5z"></path></svg>
+              Team-only contact details
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <a class="brand" href="#top" aria-label="SyncSpace home">
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="19" cy="24" r="14"></circle><circle cx="29" cy="24" r="14"></circle></svg>
+          <span>SyncSpace</span>
+        </a>
+        <p>Test concept only. No production data is changed.</p>
+      </footer>
+    </div>
+
+    <div id="workspace-view" class="workspace" hidden>
+      <aside class="workspace-sidebar">
+        <a class="brand brand--inverse" href="#" data-return-home>
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="19" cy="24" r="14"></circle><circle cx="29" cy="24" r="14"></circle></svg>
+          <span>SyncSpace</span>
+        </a>
+        <nav class="workspace-nav" aria-label="Account navigation">
+          <button type="button" data-workspace-nav="Discover">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m15 9-2 4-4 2 2-4 4-2Z"></path></svg>
+            Discover
+          </button>
+          <button class="is-selected" type="button" data-workspace-nav="My projects">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 2h9v11H3z"></path></svg>
+            My projects
+          </button>
+          <button type="button" data-workspace-nav="Applications">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"></path></svg>
+            Applications
+          </button>
+          <button type="button" data-workspace-nav="Teams">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.9"></path></svg>
+            Teams
+          </button>
+          <button type="button" data-workspace-nav="Profile">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
+            Profile
+          </button>
+        </nav>
+        <div class="workspace-user">
+          <span class="avatar avatar--lime">IM</span>
+          <span><strong>Isha Mehta</strong><small>One account</small></span>
+          <button type="button" data-sign-out aria-label="Sign out">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6M15 12H3M15 4h5v16h-5"></path></svg>
+          </button>
+        </div>
+      </aside>
+
+      <main class="workspace-main">
+        <button class="mobile-home" type="button" data-return-home>← Concept home</button>
+        <header class="workspace-heading">
+          <div>
+            <h1>Your SyncSpace</h1>
+            <p>One account for ideas you lead and teams you join.</p>
+          </div>
+          <span class="account-chip">Isha Mehta</span>
+        </header>
+
+        <section class="workspace-routes" aria-label="Account actions">
+          <button class="workspace-route workspace-route--post" type="button" data-open-action="post">
+            <span class="workspace-route-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Zm9.8-12.8 3 3"></path></svg>
+            </span>
+            <span><strong>Post a project</strong><small>Share your idea and invite collaborators.</small></span>
+            <svg class="route-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          </button>
+          <button class="workspace-route workspace-route--join" type="button" data-open-action="join">
+            <span class="workspace-route-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.9"></path></svg>
+            </span>
+            <span><strong>Join a project</strong><small>Find a team that needs your skills.</small></span>
+            <svg class="route-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          </button>
+        </section>
+
+        <section class="team-contacts" aria-labelledby="contacts-title">
+          <div class="team-contacts-heading">
+            <div>
+              <h2 id="contacts-title">Team contacts</h2>
+              <p>Accepted members of GreenGrid</p>
+            </div>
+            <button class="text-link" type="button" data-view-team>View team</button>
+          </div>
+          <div class="contact-rail" id="contact-rail"></div>
+          <p class="privacy-note">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10V8a6 6 0 0 1 12 0v2M5 10h14v11H5z"></path></svg>
+            Emails appear only after an application is accepted. Only members of the same team can
+            see them.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="modal" id="sign-in-dialog" aria-labelledby="sign-in-title">
+      <form method="dialog" class="modal-card" id="sign-in-form">
+        <button class="modal-close" value="cancel" aria-label="Close sign in">×</button>
+        <div class="modal-heading">
+          <span class="modal-mark" aria-hidden="true">SS</span>
+          <div>
+            <h2 id="sign-in-title">Sign in once</h2>
+            <p>Then post, join, and collaborate from the same account.</p>
+          </div>
+        </div>
+        <label>Email<input name="email" type="email" value="isha@northstar.edu" required /></label>
+        <label>Password<input name="password" type="password" value="demo1234" required /></label>
+        <button class="button button--primary button--full" value="default" type="submit">
+          Sign in to the concept
+        </button>
+        <small>This mock sign-in stays in your browser and calls no API.</small>
+      </form>
+    </dialog>
+
+    <dialog class="modal action-dialog" id="action-dialog" aria-labelledby="action-dialog-title">
+      <div class="modal-card action-card">
+        <button class="modal-close" type="button" data-close-action aria-label="Close action">×</button>
+        <div id="action-dialog-content"></div>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

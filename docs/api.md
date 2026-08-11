@@ -16,14 +16,21 @@ Authenticated endpoints expect `Authorization: Bearer <token>`. Responses use JS
 
 ## Authentication
 
+When `AUTH_ALLOWED_EMAIL_DOMAIN` is configured, public password signup is disabled so an unverified address cannot bypass the institution boundary. Google Sign-In verifies the token signature, audience, expiration, `email_verified`, exact email domain, and Google Workspace hosted domain on the server.
+
 ```bash
 curl -X POST http://localhost:4000/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"new@northstar.edu","password":"strongpass","role":"student","name":"New Student","department":"Computer Science","year":3}'
+  -d '{"email":"new@northstar.edu","password":"strongpass","name":"New Student","department":"Computer Science","year":3}'
 
 curl -X POST http://localhost:4000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"isha@northstar.edu","password":"demo1234"}'
+
+# Send the credential returned by Google Identity Services.
+curl -X POST http://localhost:4000/api/auth/google \
+  -H "Content-Type: application/json" \
+  -d '{"credential":"GOOGLE_ID_TOKEN"}'
 ```
 
 Keep the returned `token` and send it as a bearer token in the examples below.

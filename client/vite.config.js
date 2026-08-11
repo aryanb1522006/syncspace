@@ -7,6 +7,13 @@ export default defineConfig({
     port: 5173,
     proxy: { '/api': 'http://localhost:4000' }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: { three: ['three'], anime: ['animejs'] }
+      }
+    }
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.js'

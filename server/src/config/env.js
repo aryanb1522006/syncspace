@@ -16,6 +16,9 @@ const asNumber = (value, fallback) => {
 
 const storageDriver = process.env.STORAGE_DRIVER ?? 'local';
 if (!['local', 's3'].includes(storageDriver)) throw new Error('STORAGE_DRIVER must be local or s3');
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() || null;
+const allowedEmailDomain = process.env.AUTH_ALLOWED_EMAIL_DOMAIN?.trim().toLowerCase().replace(/^@/, '') || null;
+const passwordAuthEnabled = asBoolean(process.env.PASSWORD_AUTH_ENABLED, true);
 
 if (isProduction) {
   for (const key of requiredInProduction) {
@@ -24,6 +27,12 @@ if (isProduction) {
   if (process.env.JWT_SECRET.length < 32) throw new Error('JWT_SECRET must contain at least 32 characters in production');
   if (asBoolean(process.env.METRICS_ENABLED, true) && !process.env.METRICS_TOKEN) {
     throw new Error('METRICS_TOKEN is required when production metrics are enabled');
+  }
+  if (Boolean(googleClientId) !== Boolean(allowedEmailDomain)) {
+    throw new Error('GOOGLE_CLIENT_ID and AUTH_ALLOWED_EMAIL_DOMAIN must be configured together in production');
+  }
+  if (!passwordAuthEnabled && !googleClientId) {
+    throw new Error('At least one production sign-in method must be enabled');
   }
 }
 
@@ -48,6 +57,9 @@ export const env = Object.freeze({
   databaseConnectionTimeoutMs: asNumber(process.env.DATABASE_CONNECTION_TIMEOUT_MS, 5000),
   databaseStatementTimeoutMs: asNumber(process.env.DATABASE_STATEMENT_TIMEOUT_MS, 15000),
   jwtSecret: process.env.JWT_SECRET ?? 'development-only-change-me-please',
+  googleClientId,
+  allowedEmailDomain,
+  passwordAuthEnabled,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   clientOrigins: (process.env.CLIENT_ORIGIN ?? 'http://localhost:5173').split(',').map((origin) => origin.trim()),
   uploadDir: process.env.UPLOAD_DIR ?? 'uploads',

@@ -22,14 +22,11 @@ export function AppShell({ children, rightRail, className = '' }) {
   }, []);
 
   const teamRoute = teams.length === 1 ? `/team/${teams[0].id}` : '/teams';
-  const nav = user?.role === 'owner' ? [
-    { to: '/dashboard', label: 'My projects', icon: FolderKanban },
-    { to: '/projects/new', label: 'Create project', icon: PlusCircle },
-    { to: teamRoute, label: teams.length > 1 ? `Teams (${teams.length})` : 'My team', icon: UsersRound, team: true },
-    { to: '/profile', label: 'Profile', icon: UserRound }
-  ] : [
+  const nav = [
     { to: '/dashboard', label: 'Discover', icon: Compass },
     { to: '/applications', label: 'Applications', icon: FileText },
+    { to: '/projects/mine', label: 'My projects', icon: FolderKanban },
+    { to: '/projects/new', label: 'Post project', icon: PlusCircle },
     { to: teamRoute, label: teams.length > 1 ? `Teams (${teams.length})` : 'My team', icon: UsersRound, team: true },
     { to: '/profile', label: 'Profile', icon: UserRound }
   ];

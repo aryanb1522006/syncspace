@@ -49,10 +49,10 @@ const seed = {
     { id: 2, message: 'GreenGrid added a new workspace task.', is_read: false, created_at: '2026-08-10T10:00:00Z' }
   ],
   teams: [{
-    id: 1, project_id: 1, project_title: 'GreenGrid', project_status: 'open', owner_id: 4, teamSize: 4, domain: 'Climate Tech',
+    id: 1, project_id: 1, project_title: 'GreenGrid', project_status: 'open', owner_id: 4, ownerId: 4, ownerName: 'Arjun Rao', ownerEmail: 'arjun@northstar.edu', teamSize: 4, domain: 'Climate Tech',
     members: [
-      { id: 1, name: 'Isha Mehta', role_label: 'Frontend', initials: 'IM' },
-      { id: 2, name: 'Kabir Shah', role_label: 'ML & data', initials: 'KS' }
+      { id: 1, name: 'Isha Mehta', email: 'isha@northstar.edu', role_label: 'Frontend', initials: 'IM' },
+      { id: 2, name: 'Kabir Shah', email: 'kabir@northstar.edu', role_label: 'ML & data', initials: 'KS' }
     ],
     tasks: [
       { id: 1, title: 'Build dashboard shell', assigned_to: 1, assignee_name: 'Isha Mehta', status: 'todo', due_date: '2026-09-12' },
@@ -91,7 +91,7 @@ export const demoApi = {
     return wait({ token: `demo-token-${user.role}`, user });
   },
   async register(input) {
-    const user = { id: Date.now(), email: input.email, role: input.role, collegeId: 1, profileId: 1, name: input.name };
+    const user = { id: Date.now(), email: input.email, role: 'student', collegeId: 1, profileId: 1, name: input.name, capabilities: ['join_projects', 'post_projects'] };
     return wait({ token: `demo-token-${user.role}`, user });
   },
   async getMe() { return wait({ student: load().profile }); },

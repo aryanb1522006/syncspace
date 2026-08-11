@@ -34,7 +34,7 @@ export function OwnerDashboard() {
   const pending = useMemo(() => projects.reduce((total, project) => total + Number(project.pendingApplicationCount ?? 0), 0), [projects]);
 
   return <AppShell rightRail={<OwnerRail projects={projects} />}>
-    <header className="page-header"><div><span className="eyebrow">Project owner</span><h1>Build the right team</h1><p>Create projects, review live applications, and move accepted students into a workspace.</p></div><Button to="/projects/new">Create project</Button></header>
+    <header className="page-header"><div><span className="eyebrow">Projects you lead</span><h1>Build the right team</h1><p>Create projects, review live applications, and move accepted students into a workspace.</p></div><Button to="/projects/new">Create project</Button></header>
     <div className="owner-summary"><article><BriefcaseBusiness /><strong>{projects.length}</strong><span>projects</span></article><article><Clock3 /><strong>{pending}</strong><span>awaiting review</span></article><article><UsersRound /><strong>{projects.reduce((total, project) => total + Number(project.memberCount ?? 0), 0)}</strong><span>team members</span></article></div>
     {loading ? <div className="loading">Loading your projects…</div> : error ? <div className="empty-panel"><h2>Projects could not be loaded</h2><p>{error}</p><Button onClick={refresh}>Try again</Button></div> : <div className="owner-project-list">
       {projects.map((project) => <article className="owner-project-card" key={project.id}>

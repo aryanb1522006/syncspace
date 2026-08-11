@@ -9,7 +9,7 @@ export async function recommendProjects(req, res) {
   if (!context) throw new AppError(404, 'Student profile not found');
 
   const recommendations = context.projects
-    .filter((project) => isEligible(context.student, project))
+    .filter((project) => Number(project.ownerId) !== req.user.id && isEligible(context.student, project))
     .map((project) => ({
       ...project,
       match: computeMatchScore(

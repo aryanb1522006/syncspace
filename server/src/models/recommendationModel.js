@@ -9,7 +9,7 @@ export async function getStudentRecommendationContext(userId, collegeId) {
   const [{ rows: studentSkills }, { rows: projects }, { rows: applications }, { rows: memberships }] = await Promise.all([
     query('SELECT skill_id AS "skillId", proficiency FROM student_skills WHERE student_id = $1', [profile.id]),
     query(
-      `SELECT p.id, p.title, p.description, p.domain, p.team_size AS "teamSize",
+      `SELECT p.id, p.owner_id AS "ownerId", p.title, p.description, p.domain, p.team_size AS "teamSize",
         p.commitment_hours_per_week AS "commitmentHoursPerWeek", p.deadline, p.status,
         COALESCE((SELECT COUNT(*) FROM teams t JOIN team_members tm ON tm.team_id = t.id
           WHERE t.project_id = p.id), 0)::int AS "memberCount",
@@ -58,7 +58,7 @@ export async function getTeammateRecommendationContext(projectId, collegeId) {
         EXISTS (SELECT 1 FROM teams t JOIN team_members tm ON tm.team_id = t.id
           WHERE t.project_id = $1 AND tm.student_id = sp.id) AS "isMember"
        FROM student_profiles sp JOIN users u ON u.id = sp.user_id
-       WHERE u.college_id = $2 AND u.role = 'student'`,
+       WHERE u.college_id = $2`,
       [projectId, collegeId]
     )
   ]);

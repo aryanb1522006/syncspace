@@ -26,6 +26,8 @@ Copy `.env.production.example` to `.env.production` and replace every placeholde
 - `MINIO_ROOT_PASSWORD` or managed S3 credentials
 - `METRICS_TOKEN`
 
+Also configure `GOOGLE_CLIENT_ID`, `AUTH_ALLOWED_EMAIL_DOMAIN=thapar.edu`, and `PASSWORD_AUTH_ENABLED=false` for Google-only production access. The OAuth client ID is not secret, but it must match `VITE_GOOGLE_CLIENT_ID` in the client build. Production startup rejects a Google client ID without a domain restriction, or a domain restriction without a Google client ID.
+
 Never commit `.env.production` or `deploy/secrets/metrics-token`. The API refuses to boot in production if the database URL, client origin, JWT secret, S3 settings, or metrics token are missing. The JWT secret must be at least 32 characters.
 
 If the database password contains URL-reserved characters, percent-encode it in `DATABASE_URL`; keep the original value in `POSTGRES_PASSWORD` for the database container.
@@ -59,7 +61,7 @@ Run the mutation-heavy smoke journey against staging after each deployment. It c
 2. Provision PostgreSQL and run `pnpm db:migrate`; only run `pnpm db:seed` in demo or staging environments.
 3. Provision a private S3-compatible bucket and configure endpoint, region, credentials, and bucket name. AWS S3 can omit `S3_ENDPOINT` and `S3_FORCE_PATH_STYLE`.
 4. Configure every value from `.env.production.example` in the platform secret store.
-5. Route `/api` to Express or set `VITE_API_URL` to the public API origin before building the client.
+5. Route `/api` to Express or set `VITE_API_URL` to the public API origin before building the client. Set `VITE_GOOGLE_CLIENT_ID`, `VITE_AUTH_ALLOWED_EMAIL_DOMAIN`, and `VITE_PASSWORD_AUTH_ENABLED` before that build.
 6. Configure health probes to `/api/health/live` and `/api/health/ready`.
 7. Run the smoke journey against staging, promote the same images, and then run read-only health checks in production.
 

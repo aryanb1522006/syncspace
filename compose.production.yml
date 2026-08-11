@@ -68,6 +68,9 @@ services:
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-20}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-2h}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      AUTH_ALLOWED_EMAIL_DOMAIN: ${AUTH_ALLOWED_EMAIL_DOMAIN:-thapar.edu}
+      PASSWORD_AUTH_ENABLED: ${PASSWORD_AUTH_ENABLED:-false}
       CLIENT_ORIGIN: https://${SITE_DOMAIN:?SITE_DOMAIN is required}
       TRUST_PROXY: "true"
       DEFAULT_COLLEGE_ID: ${DEFAULT_COLLEGE_ID:-1}
@@ -115,6 +118,10 @@ services:
     build:
       context: .
       dockerfile: client/Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:?VITE_GOOGLE_CLIENT_ID is required}
+        VITE_AUTH_ALLOWED_EMAIL_DOMAIN: ${VITE_AUTH_ALLOWED_EMAIL_DOMAIN:-thapar.edu}
+        VITE_PASSWORD_AUTH_ENABLED: ${VITE_PASSWORD_AUTH_ENABLED:-false}
     restart: unless-stopped
     depends_on:
       api:

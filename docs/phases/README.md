@@ -10,5 +10,6 @@
 | 6 | QA, README, final handoff | Complete | 16 tests; production build; README, API guide, and fidelity ledger |
 | 7 | Production hardening and delivery automation | Complete in repository | 22 tests pass; 5 YAML files validate; real-API production build passes |
 | 8 | Role-based owner pages and live application workflow | Complete in repository | 22 server tests and 4 client tests pass; desktop and mobile browser journey passes |
+| 9 | Immersive landing, unified capabilities, and verified Thapar Google identity | Complete in repository | 25 server tests and 4 client tests pass; production build and browser motion/CTA pass |
 
 Each phase has a separate document containing its decisions, delivered scope, verification evidence, and known constraints.

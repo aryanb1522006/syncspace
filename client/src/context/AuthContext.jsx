@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
     user,
     login: async (input) => commit(await api.login(input)),
     register: async (input) => commit(await api.register(input)),
+    googleLogin: async (credential) => commit(await api.googleLogin(credential)),
     logout: () => {
       localStorage.removeItem('syncspace-token');
       localStorage.removeItem('syncspace-user');

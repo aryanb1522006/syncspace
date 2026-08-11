@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
 import { Landing } from '../pages/ImmersiveLanding.jsx';
 import { ProjectRow } from '../components/ProjectRow.jsx';
@@ -26,7 +26,25 @@ describe('SyncSpace UI', () => {
   it('renders the exact landing offer and primary action', () => {
     render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
     expect(screen.getByRole('heading', { level: 1, name: /Find the project that makes you want to show up\./i })).toBeVisible();
-    expect(screen.getByRole('link', { name: /explore projects/i })).toHaveAttribute('href', '/register?intent=join');
+    expect(screen.getAllByRole('link', { name: /explore projects/i })[0]).toHaveAttribute('href', '/register?intent=join');
+    expect(screen.getByRole('heading', { level: 2, name: /From idea to working team/i })).toBeVisible();
+    expect(screen.getByText('Verified Thapar access')).toBeVisible();
+    expect(screen.getByText('Live application status')).toBeVisible();
+  });
+
+  it('never hides critical landing content when optional motion APIs are unavailable', () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+    const view = render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
+
+    try {
+      expect(screen.getByRole('banner')).not.toHaveStyle({ opacity: '0' });
+      expect(screen.getByRole('heading', { level: 1 })).not.toHaveStyle({ opacity: '0' });
+      expect(view.container.querySelector('.constellation-shell')).not.toHaveStyle({ opacity: '0' });
+    } finally {
+      view.unmount();
+      window.matchMedia = originalMatchMedia;
+    }
   });
 
   it('renders a transparent match breakdown', () => {

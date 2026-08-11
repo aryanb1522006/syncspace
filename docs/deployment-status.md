@@ -46,8 +46,14 @@ Last updated: 2026-08-12
 - [x] Add server-verified Google Sign-In with exact `thapar.edu` checks
 - [x] Add `005_verified_identity.sql` and Google domain tests
 - [x] Verify Phase 9 locally: 25 server tests, 4 client tests, production build, browser motion and CTA pass
+- [x] Diagnose the deployed landing page content being left at opacity zero
+- [x] Make all critical landing content visible without depending on Anime.js completion
+- [x] Add the complete Discover -> Apply -> Review -> Build -> Deliver feature journey
+- [x] Verify Phase 10 locally: 5 client tests, production build, desktop/mobile rendering, reveal state, and CTA navigation
 
 ## Remaining deployment work
+
+- [ ] Commit and push Phase 10, confirm Appwrite redeploys, and repeat the landing smoke test on the public URL
 
 - [ ] Confirm that the database password exposed in setup screenshots was rotated and that Render uses the replacement URI
 - [ ] Commit and push this deployment status document to GitHub

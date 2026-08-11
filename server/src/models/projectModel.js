@@ -1,17 +1,22 @@
 import { query, withTransaction } from '../config/db.js';
 
 const projectSelect = `
-  SELECT p.*, u.email AS owner_email, sp.name AS owner_name,
+  SELECT p.*, p.owner_id AS "ownerId", p.team_size AS "teamSize",
+    p.commitment_hours_per_week AS "commitmentHoursPerWeek", p.created_at AS "createdAt",
+    u.email AS owner_email, sp.name AS owner_name,
     COALESCE(json_agg(DISTINCT jsonb_build_object('id', s.id, 'name', s.name, 'category', s.category,
       'importance', ps.importance)) FILTER (WHERE s.id IS NOT NULL), '[]') AS skills,
-    COUNT(DISTINCT tm.student_id)::int AS member_count
+    COUNT(DISTINCT tm.student_id)::int AS "memberCount",
+    COUNT(DISTINCT a.id)::int AS "applicationCount",
+    (COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'pending'))::int AS "pendingApplicationCount"
   FROM projects p
   JOIN users u ON u.id = p.owner_id
   LEFT JOIN student_profiles sp ON sp.user_id = u.id
   LEFT JOIN project_skills ps ON ps.project_id = p.id
   LEFT JOIN skills s ON s.id = ps.skill_id
   LEFT JOIN teams t ON t.project_id = p.id
-  LEFT JOIN team_members tm ON tm.team_id = t.id`;
+  LEFT JOIN team_members tm ON tm.team_id = t.id
+  LEFT JOIN applications a ON a.project_id = p.id`;
 
 export async function getProjectById(id, collegeId) {
   const { rows } = await query(
@@ -21,9 +26,13 @@ export async function getProjectById(id, collegeId) {
   return rows[0] ?? null;
 }
 
-export async function listProjects({ skill, domain, collegeId }) {
+export async function listProjects({ skill, domain, collegeId, ownerId }) {
   const params = [collegeId];
   const filters = ['p.college_id = $1'];
+  if (ownerId) {
+    params.push(ownerId);
+    filters.push(`p.owner_id = $${params.length}`);
+  }
   if (domain) {
     params.push(domain);
     filters.push(`LOWER(p.domain) = LOWER($${params.length})`);

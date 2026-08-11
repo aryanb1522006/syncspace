@@ -33,12 +33,34 @@ export async function createApplication(userId, projectId, collegeId) {
   });
 }
 
-export async function listProjectApplications(projectId, ownerId) {
-  const { rows: [project] } = await query('SELECT owner_id FROM projects WHERE id = $1', [projectId]);
+export async function listStudentApplications(userId, collegeId) {
+  const { rows } = await query(
+    `SELECT a.id, a.project_id AS "projectId", a.status, a.applied_at AS "appliedAt",
+      p.title, p.description, p.domain, p.deadline,
+      CASE WHEN a.status = 'accepted' THEN t.id ELSE NULL END AS "teamId"
+     FROM applications a
+     JOIN student_profiles sp ON sp.id = a.student_id
+     JOIN projects p ON p.id = a.project_id
+     LEFT JOIN teams t ON t.project_id = p.id
+     WHERE sp.user_id = $1 AND p.college_id = $2
+     ORDER BY a.applied_at DESC`,
+    [userId, collegeId]
+  );
+  return rows;
+}
+
+export async function listProjectApplications(projectId, ownerId, collegeId) {
+  const { rows: [project] } = await query(
+    'SELECT owner_id FROM projects WHERE id = $1 AND college_id = $2',
+    [projectId, collegeId]
+  );
   if (!project) throw new AppError(404, 'Project not found');
   if (Number(project.owner_id) !== Number(ownerId)) throw new AppError(403, 'Only the project owner can view applications');
   const { rows } = await query(
-    `SELECT a.*, sp.name, sp.department, sp.year, sp.bio, sp.availability_hours_per_week,
+    `SELECT a.id, a.project_id AS "projectId", a.status, a.applied_at AS "appliedAt",
+      CASE WHEN a.status = 'accepted' THEN (SELECT id FROM teams WHERE project_id = a.project_id) ELSE NULL END AS "teamId",
+      sp.id AS "studentId", sp.name, sp.department, sp.year, sp.bio,
+      sp.availability_hours_per_week AS "availabilityHoursPerWeek",
       COALESCE(json_agg(json_build_object('id', s.id, 'name', s.name, 'proficiency', ss.proficiency))
         FILTER (WHERE s.id IS NOT NULL), '[]') AS skills
      FROM applications a JOIN student_profiles sp ON sp.id = a.student_id

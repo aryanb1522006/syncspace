@@ -1,5 +1,5 @@
 import { getTaskById, createTask as createTaskRecord, updateTask as updateTaskRecord } from '../models/taskModel.js';
-import { canAccessTeam, getTeamById, isTeamMember } from '../models/teamModel.js';
+import { canAccessTeam, getTeamById, isTeamMember, listAccessibleTeams } from '../models/teamModel.js';
 import { AppError } from '../utils/AppError.js';
 
 async function requireTeamAccess(teamId, userId, collegeId) {
@@ -12,6 +12,10 @@ export async function getTeam(req, res) {
   const team = await getTeamById(id, req.user.collegeId);
   if (!team) throw new AppError(404, 'Team not found');
   res.json({ team });
+}
+
+export async function listTeams(req, res) {
+  res.json({ teams: await listAccessibleTeams(req.user.id, req.user.collegeId) });
 }
 
 export async function createTask(req, res) {

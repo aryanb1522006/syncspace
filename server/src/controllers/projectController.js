@@ -28,7 +28,8 @@ export async function listProjects(req, res) {
   const projects = await listProjectRecords({
     skill: req.query.skill,
     domain: req.query.domain,
-    collegeId: req.user.collegeId
+    collegeId: req.user.collegeId,
+    ownerId: req.query.mine === 'true' && req.user.role === 'owner' ? req.user.id : undefined
   });
   res.json({ projects });
 }

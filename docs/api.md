@@ -62,11 +62,17 @@ curl http://localhost:4000/api/recommendations/projects \
 
 curl -X POST http://localhost:4000/api/projects/1/apply \
   -H "Authorization: Bearer $TOKEN"
+
+curl http://localhost:4000/api/applications \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Project owners can inspect applicants and rank candidates who complement the current team:
 
 ```bash
+curl "http://localhost:4000/api/projects?mine=true" \
+  -H "Authorization: Bearer $OWNER_TOKEN"
+
 curl http://localhost:4000/api/projects/1/applications \
   -H "Authorization: Bearer $OWNER_TOKEN"
 
@@ -84,6 +90,9 @@ Accepting the first applicant creates a team in the same database transaction. L
 ## Team workspace and notifications
 
 ```bash
+curl http://localhost:4000/api/teams \
+  -H "Authorization: Bearer $TOKEN"
+
 curl http://localhost:4000/api/teams/1 \
   -H "Authorization: Bearer $TOKEN"
 

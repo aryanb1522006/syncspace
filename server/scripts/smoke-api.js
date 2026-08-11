@@ -61,6 +61,10 @@ const { application } = await request(`/projects/${project.id}/apply`, {
   method: 'POST',
   token: student.token
 });
+const studentApplications = await request('/applications', { token: student.token });
+if (!studentApplications.applications.some((item) => Number(item.id) === Number(application.id))) {
+  throw new Error('The student application tracker did not include the new application');
+}
 const inbox = await request(`/projects/${project.id}/applications`, { token: owner.token });
 if (!inbox.applications.some((item) => Number(item.id) === Number(application.id))) {
   throw new Error('The owner application inbox did not include the new application');
@@ -72,6 +76,14 @@ const { result } = await request(`/applications/${application.id}`, {
   body: JSON.stringify({ status: 'accepted' })
 });
 const workspace = await request(`/teams/${result.teamId}`, { token: student.token });
+const [studentTeams, ownerTeams] = await Promise.all([
+  request('/teams', { token: student.token }),
+  request('/teams', { token: owner.token })
+]);
+if (!studentTeams.teams.some((item) => Number(item.id) === Number(result.teamId)) ||
+    !ownerTeams.teams.some((item) => Number(item.id) === Number(result.teamId))) {
+  throw new Error('The accepted team was not visible in dynamic team navigation');
+}
 const { task } = await request(`/teams/${result.teamId}/tasks`, {
   method: 'POST',
   token: student.token,

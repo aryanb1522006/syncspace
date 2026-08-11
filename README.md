@@ -13,6 +13,8 @@ SyncSpace helps college students discover worthwhile campus projects and find te
 - Explainable project recommendations with a weighted score breakdown
 - Complementary teammate ranking based on uncovered project skills
 - Application review with transactional team creation and capacity enforcement
+- Role-based owner dashboard, project publishing, and browser accept/reject controls
+- Live student application tracking and dynamic accessible-team navigation
 - Team workspace with membership, progress, tasks, assignments, and notifications
 - Responsive React interface with a built-in demo data adapter
 
@@ -96,4 +98,4 @@ Required skills carry more weight than preferred skills. The response also inclu
 
 ## Current deployment status
 
-The project now includes production images, a self-hosted Compose baseline, private S3-compatible resume storage, strict secret validation, automatic TLS configuration, metrics and alert rules, backup tooling, PostgreSQL-backed CI, and an API smoke journey. It is not deployed because no hosting account, DNS zone, alert receiver, or production credentials were supplied. Follow [the production runbook](docs/production-runbook.md) after choosing those resources.
+The public prototype is hosted on Appwrite Sites with its Express API on Render and PostgreSQL plus private object storage on Supabase. Phase 8's owner and application workflow is complete in the repository and will reach the public services after the next GitHub push and successful automatic deployments. See [the deployment status](docs/deployment-status.md) for the live checklist.

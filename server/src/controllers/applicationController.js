@@ -1,4 +1,9 @@
-import { applicationWorkflowRepository, createApplication, listProjectApplications } from '../models/applicationModel.js';
+import {
+  applicationWorkflowRepository,
+  createApplication,
+  listProjectApplications,
+  listStudentApplications
+} from '../models/applicationModel.js';
 import { decideApplication } from '../services/teamWorkflow.js';
 
 export async function applyToProject(req, res) {
@@ -7,7 +12,12 @@ export async function applyToProject(req, res) {
 }
 
 export async function getProjectApplications(req, res) {
-  const applications = await listProjectApplications(Number(req.params.id), req.user.id);
+  const applications = await listProjectApplications(Number(req.params.id), req.user.id, req.user.collegeId);
+  res.json({ applications });
+}
+
+export async function getMyApplications(req, res) {
+  const applications = await listStudentApplications(req.user.id, req.user.collegeId);
   res.json({ applications });
 }
 

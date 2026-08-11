@@ -34,11 +34,20 @@ Last updated: 2026-08-11
 - [x] Confirm `GreenGrid` and `StudyCircle` render through the deployed frontend
 - [x] Confirm the public Appwrite site returns HTTP 200
 - [x] Confirm the Render API accepts CORS preflight requests from the Appwrite origin
+- [x] Complete Phase 8 role-based owner pages in the repository
+- [x] Add owner project creation and live application review controls
+- [x] Add student application tracking backed by the API
+- [x] Add dynamic accessible-team navigation without hard-coded team IDs
+- [x] Verify the Phase 8 demo journey at desktop and mobile sizes
 
 ## Remaining deployment work
 
 - [ ] Confirm that the database password exposed in setup screenshots was rotated and that Render uses the replacement URI
 - [ ] Commit and push this deployment status document to GitHub
+- [ ] Commit and push the Phase 8 application and owner workflow changes
+- [ ] Confirm Render automatically deploys the updated Express API
+- [ ] Confirm Appwrite Sites automatically deploys the updated React bundle
+- [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site
 
 ## Optional production hardening
 
@@ -60,3 +69,7 @@ The deployed frontend was subsequently verified to authenticate against the live
 The public Appwrite site returned HTTP 200, and the Render API returned HTTP 204 to a CORS preflight from `https://syncspace.appwrite.network` with that exact allowed origin. The deployed dashboard displayed both seeded projects.
 
 No credentials, database URLs, JWTs, or storage secrets are recorded in this document.
+
+## Phase 8 development status
+
+Role-based owner pages, live application tracking, accept/reject controls, and dynamic team navigation are complete and verified locally. The current public URL remains https://syncspace.appwrite.network, but these Phase 8 changes should be treated as pending on that URL until the GitHub push triggers successful Render and Appwrite deployments and the public end-to-end journey is repeated.

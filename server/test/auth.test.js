@@ -57,6 +57,27 @@ test('student role cannot create an owner-only project', async () => {
   assert.match(response.body.error.message, /permissions/i);
 });
 
+test('owner role cannot open the student application tracker', async () => {
+  const token = jwt.sign({ role: 'owner', collegeId: 1 }, env.jwtSecret, {
+    subject: '4', expiresIn: '5m'
+  });
+  await request(app)
+    .get('/api/applications')
+    .set('Authorization', `Bearer ${token}`)
+    .expect(403);
+});
+
+test('student role cannot decide an application', async () => {
+  const token = jwt.sign({ role: 'student', collegeId: 1 }, env.jwtSecret, {
+    subject: '1', expiresIn: '5m'
+  });
+  await request(app)
+    .put('/api/applications/1')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ status: 'accepted' })
+    .expect(403);
+});
+
 test('registration validation rejects a weak request before database access', async () => {
   const response = await request(app)
     .post('/api/auth/register')

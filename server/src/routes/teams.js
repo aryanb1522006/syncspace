@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createTask, getTeam } from '../controllers/teamController.js';
+import { createTask, getTeam, listTeams } from '../controllers/teamController.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { validate } from '../middleware/validation.js';
@@ -15,6 +15,7 @@ const taskSchema = z.object({
   dueDate: z.coerce.date().optional()
 });
 
+router.get('/', asyncHandler(listTeams));
 router.get('/:id', asyncHandler(getTeam));
 router.post('/:id/tasks', validate(taskSchema), asyncHandler(createTask));
 

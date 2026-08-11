@@ -1,7 +1,13 @@
 import { query, withTransaction } from '../config/db.js';
 
 export const findUserByEmail = async (email) => {
-  const { rows } = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+  const { rows } = await query(
+    `SELECT u.*, json_build_object('id', sp.id, 'name', sp.name) AS profile
+     FROM users u
+     JOIN student_profiles sp ON sp.user_id = u.id
+     WHERE u.email = $1`,
+    [email.toLowerCase()]
+  );
   return rows[0] ?? null;
 };
 

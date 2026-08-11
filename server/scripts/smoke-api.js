@@ -25,7 +25,6 @@ const register = (role, name) => request('/auth/register', {
   body: JSON.stringify({
     email: `${role}-${runId}@smoke.syncspace.test`,
     password,
-    role,
     name,
     department: 'Quality Engineering',
     year: 3

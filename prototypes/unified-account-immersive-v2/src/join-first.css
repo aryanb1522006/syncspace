@@ -1,0 +1,174 @@
+.immersive-landing .hero {
+  grid-template-columns: minmax(500px, 0.84fr) minmax(560px, 1.16fr);
+}
+
+.immersive-landing .hero h1 {
+  max-width: 690px;
+  font-size: clamp(3.75rem, 5.15vw, 5.25rem);
+  font-weight: 760;
+  line-height: 1.01;
+  letter-spacing: -0.068em;
+}
+
+.immersive-landing .hero-copy > p {
+  max-width: 570px;
+}
+
+.constellation-shell {
+  scroll-margin-top: 92px;
+  overflow: visible;
+}
+
+.node-label--you {
+  width: 76px;
+  height: 76px;
+  color: var(--mint);
+  background: rgb(6 23 19 / 88%);
+  box-shadow: 0 0 0 8px rgb(199 242 221 / 5%), 0 0 32px rgb(199 242 221 / 18%);
+  font-size: 0.95rem;
+}
+
+.node-label--join {
+  width: 98px;
+  height: 98px;
+  color: var(--lime);
+  background: rgb(6 23 19 / 92%);
+  box-shadow: 0 0 0 10px rgb(213 255 85 / 5%), 0 0 44px rgb(213 255 85 / 24%);
+  font-size: 1.12rem;
+}
+
+.project-label {
+  position: absolute;
+  z-index: 4;
+  translate: -50% -50%;
+  min-width: 148px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 13px;
+  padding: 11px 14px;
+  color: var(--white);
+  background: rgb(6 23 19 / 78%);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 18%);
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: border-color 180ms ease, background 180ms ease, translate 180ms ease;
+}
+
+.project-label::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -7px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--landing-bg);
+  border-radius: 50%;
+  translate: 0 -50%;
+  background: currentColor;
+  box-shadow: 0 0 14px currentColor;
+}
+
+.project-label strong {
+  color: currentColor;
+  font-size: 0.91rem;
+  letter-spacing: -0.02em;
+}
+
+.project-label small {
+  color: rgb(255 255 255 / 55%);
+  font-size: 0.73rem;
+}
+
+.project-label:hover,
+.project-label:focus-visible {
+  border-color: currentColor;
+  translate: -50% calc(-50% - 4px);
+  background: rgb(16 35 31 / 96%);
+}
+
+.project-label--lime { color: var(--lime); }
+.project-label--mint { color: var(--mint); }
+.project-label--lavender { color: var(--lavender); }
+.project-label--coral { color: var(--coral); }
+
+.immersive-landing .route-list {
+  box-shadow: 0 24px 90px rgb(0 0 0 / 12%);
+}
+
+.immersive-landing .route--mint {
+  background: linear-gradient(90deg, rgb(199 242 221 / 6%), transparent 70%);
+}
+
+.immersive-landing .route--lime {
+  background: linear-gradient(90deg, rgb(213 255 85 / 4%), transparent 70%);
+}
+
+.immersive-landing .privacy-band {
+  background: radial-gradient(circle at 82% 52%, rgb(199 242 221 / 6%), transparent 28rem);
+}
+
+.project-options {
+  max-height: min(54vh, 470px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+@media (max-width: 1100px) {
+  .immersive-landing .hero {
+    grid-template-columns: minmax(410px, 0.88fr) minmax(500px, 1.12fr);
+  }
+
+  .project-label {
+    min-width: 132px;
+    padding: 9px 11px;
+  }
+}
+
+@media (max-width: 900px) {
+  .immersive-landing .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .constellation-shell,
+  #constellation-canvas {
+    min-height: 610px;
+  }
+}
+
+@media (max-width: 560px) {
+  .immersive-landing .hero h1 {
+    font-size: clamp(3rem, 14vw, 4rem);
+  }
+
+  .constellation-shell,
+  #constellation-canvas {
+    min-height: 500px;
+  }
+
+  .project-label {
+    min-width: 98px;
+    max-width: 112px;
+    padding: 7px 8px;
+    border-radius: 9px;
+  }
+
+  .project-label strong {
+    font-size: 0.72rem;
+  }
+
+  .project-label small {
+    display: none;
+  }
+
+  .node-label--join {
+    width: 78px;
+    height: 78px;
+  }
+
+  .node-label--you {
+    width: 62px;
+    height: 62px;
+  }
+}

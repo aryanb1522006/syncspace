@@ -1,0 +1,20 @@
+{
+  "name": "syncspace-unified-account-immersive-v2",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Isolated immersive SyncSpace landing and unified-account UI experiment.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4175",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4175",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "animejs": "4.5.0",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "vite": "8.2.1"
+  }
+}

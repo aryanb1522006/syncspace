@@ -1,0 +1,607 @@
+.immersive-landing {
+  --landing-bg: #061713;
+  --landing-bg-soft: #0b211c;
+  --landing-line: rgb(199 242 221 / 30%);
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  color: var(--white);
+  background:
+    radial-gradient(circle at 70% 18%, rgb(213 255 85 / 8%), transparent 31rem),
+    radial-gradient(circle at 58% 78%, rgb(199 242 221 / 6%), transparent 36rem),
+    var(--landing-bg);
+}
+
+.ambient-grid {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image: radial-gradient(circle, rgb(213 255 85 / 28%) 0.8px, transparent 0.9px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, black 0, transparent 72%);
+}
+
+.immersive-landing .site-header,
+.immersive-landing .hero,
+.immersive-landing .action-switchboard,
+.immersive-landing .privacy-band,
+.immersive-landing .site-footer {
+  width: min(100% - 88px, 1480px);
+}
+
+.immersive-landing .site-header {
+  min-height: 88px;
+  border-bottom-color: rgb(255 255 255 / 18%);
+}
+
+.brand--landing {
+  color: var(--white);
+}
+
+.immersive-landing .brand-mark {
+  stroke: var(--lime);
+  filter: drop-shadow(0 0 12px rgb(213 255 85 / 24%));
+}
+
+.immersive-landing .site-nav {
+  color: var(--white);
+}
+
+.immersive-landing .site-nav a::after {
+  background: var(--lime);
+}
+
+.button--dark {
+  border-color: rgb(213 255 85 / 72%);
+  color: var(--lime);
+  background: rgb(6 23 19 / 72%);
+}
+
+.button--landing-primary {
+  color: var(--ink);
+  background: var(--lime);
+  box-shadow: 0 0 34px rgb(213 255 85 / 12%);
+}
+
+.immersive-landing .hero {
+  position: relative;
+  min-height: calc(100svh - 88px);
+  grid-template-columns: minmax(500px, 0.82fr) minmax(520px, 1.18fr);
+  gap: 0;
+  padding-block: 52px 76px;
+}
+
+.immersive-landing .hero-copy {
+  align-self: center;
+  padding-left: 10px;
+}
+
+.immersive-landing .hero h1 {
+  max-width: 700px;
+  color: var(--white);
+  font-size: clamp(3.7rem, 5.2vw, 5.35rem);
+  line-height: 0.98;
+  letter-spacing: -0.073em;
+}
+
+.immersive-landing .hero-copy > p {
+  max-width: 610px;
+  margin-top: 30px;
+  color: rgb(255 255 255 / 75%);
+  font-size: clamp(1.08rem, 1.35vw, 1.35rem);
+}
+
+.immersive-landing .hero-actions .button {
+  min-width: 220px;
+  min-height: 60px;
+}
+
+.constellation-shell {
+  position: relative;
+  min-height: 690px;
+  align-self: stretch;
+  isolation: isolate;
+}
+
+#constellation-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 690px;
+  display: block;
+  cursor: crosshair;
+  filter: drop-shadow(0 0 40px rgb(213 255 85 / 7%));
+}
+
+.node-label {
+  position: absolute;
+  z-index: 3;
+  translate: -50% -50%;
+  width: 76px;
+  height: 76px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--lime);
+  background: rgb(6 23 19 / 84%);
+  box-shadow: 0 0 0 9px rgb(213 255 85 / 5%), 0 0 28px rgb(213 255 85 / 18%);
+  font-weight: 850;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: scale 180ms ease, background 180ms ease;
+}
+
+.node-label:hover {
+  scale: 1.08;
+  background: rgb(16 35 31 / 95%);
+}
+
+.node-label--you {
+  width: 92px;
+  height: 92px;
+  color: var(--ink);
+  background: var(--lime);
+  box-shadow: 0 0 0 11px rgb(213 255 85 / 8%), 0 0 48px rgb(213 255 85 / 42%);
+  font-size: 1.12rem;
+}
+
+.node-label--join {
+  color: var(--mint);
+  box-shadow: 0 0 0 9px rgb(199 242 221 / 5%), 0 0 28px rgb(199 242 221 / 18%);
+}
+
+.interaction-hint {
+  position: absolute;
+  right: 22px;
+  bottom: 26px;
+  z-index: 4;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: rgb(255 255 255 / 54%);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.interaction-hint span {
+  color: var(--lime);
+  font-size: 1.15rem;
+}
+
+.scroll-cue {
+  position: absolute;
+  left: 10px;
+  bottom: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: rgb(255 255 255 / 56%);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.scroll-cue span {
+  color: var(--lime);
+  font-size: 1.1rem;
+}
+
+.immersive-landing .action-switchboard {
+  position: relative;
+  border: 0;
+  border-radius: 0;
+  padding: 164px 0 170px;
+  color: var(--white);
+  background: transparent;
+}
+
+.path-origin {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  width: 2px;
+  height: 104px;
+  background: linear-gradient(var(--lime), transparent);
+}
+
+.path-origin::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  translate: -50%;
+  background: var(--lime);
+  box-shadow: 0 0 24px var(--lime);
+}
+
+.path-origin span,
+.path-origin i {
+  position: absolute;
+  bottom: 0;
+  width: min(38vw, 500px);
+  height: 54px;
+  border-top: 1px solid var(--landing-line);
+}
+
+.path-origin span {
+  right: 0;
+  border-radius: 0 48px 0 0;
+}
+
+.path-origin i {
+  left: 0;
+  border-radius: 48px 0 0;
+}
+
+.immersive-landing .section-heading {
+  align-items: center;
+  flex-direction: column;
+  margin-bottom: 60px;
+  text-align: center;
+}
+
+.immersive-landing .section-heading h2,
+.immersive-landing .privacy-copy h2 {
+  color: var(--white);
+}
+
+.immersive-landing .section-heading h2 {
+  max-width: 850px;
+  font-size: clamp(3rem, 5vw, 5.2rem);
+}
+
+.immersive-landing .section-heading p {
+  margin-top: 18px;
+  color: rgb(255 255 255 / 62%);
+  font-size: 1.12rem;
+}
+
+.immersive-landing .route-list {
+  position: relative;
+  gap: 0;
+  border-block: 1px solid var(--landing-line);
+}
+
+.immersive-landing .route-list::before {
+  content: "";
+  position: absolute;
+  inset: 50% 50% auto;
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: var(--lime);
+  box-shadow: 0 0 22px rgb(213 255 85 / 75%);
+}
+
+.immersive-landing .route {
+  min-height: 178px;
+  border: 0;
+  border-radius: 0;
+  padding: 34px 44px;
+  color: var(--white);
+  background: transparent;
+  box-shadow: none;
+}
+
+.immersive-landing .route + .route {
+  border-left: 1px solid var(--landing-line);
+}
+
+.immersive-landing .route:hover {
+  transform: none;
+  background: rgb(255 255 255 / 3%);
+  box-shadow: inset 0 -2px var(--mint);
+}
+
+.immersive-landing .route--lime:hover {
+  box-shadow: inset 0 -2px var(--lime);
+}
+
+.immersive-landing .route-icon {
+  width: 74px;
+  height: 74px;
+  border-color: currentColor;
+  color: var(--lime);
+  background: rgb(213 255 85 / 4%);
+  box-shadow: 0 0 26px rgb(213 255 85 / 7%);
+}
+
+.immersive-landing .route--mint .route-icon {
+  color: var(--mint);
+  background: rgb(199 242 221 / 4%);
+}
+
+.immersive-landing .route-copy strong {
+  color: var(--white);
+  font-size: 1.65rem;
+}
+
+.immersive-landing .route-copy span {
+  max-width: 360px;
+  color: rgb(255 255 255 / 58%);
+}
+
+.immersive-landing .route-arrow {
+  color: var(--lime);
+}
+
+.immersive-landing .route--mint .route-arrow {
+  color: var(--mint);
+}
+
+.immersive-landing .privacy-band {
+  position: relative;
+  padding-block: 152px 180px;
+  border-top: 1px solid var(--landing-line);
+  grid-template-columns: 0.88fr 1.12fr;
+  gap: 88px;
+}
+
+.immersive-landing .privacy-copy > p {
+  color: rgb(255 255 255 / 64%);
+}
+
+.text-link--landing {
+  color: var(--lime);
+}
+
+.contact-stage {
+  position: relative;
+  min-height: 440px;
+  display: flex;
+  align-items: center;
+  padding-left: 120px;
+}
+
+.contact-branches {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 145px;
+  height: 180px;
+  translate: 0 -50%;
+}
+
+.contact-branches::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 62px;
+  height: 62px;
+  border: 1px solid var(--lime);
+  border-radius: 50%;
+  translate: 0 -50%;
+  box-shadow: 0 0 26px rgb(213 255 85 / 12%);
+}
+
+.contact-branches span {
+  position: absolute;
+  left: 60px;
+  width: 82px;
+  height: 1px;
+  transform-origin: left center;
+  background: var(--landing-line);
+}
+
+.contact-branches span:nth-child(1) { top: 47px; rotate: -17deg; background: var(--lavender); }
+.contact-branches span:nth-child(2) { top: 90px; background: var(--lime); }
+.contact-branches span:nth-child(3) { top: 132px; rotate: 17deg; background: var(--coral); }
+
+.immersive-landing .contact-example {
+  width: 100%;
+  border-color: rgb(199 242 221 / 68%);
+  border-radius: 28px;
+  color: var(--white);
+  background: rgb(6 23 19 / 62%);
+  box-shadow: 0 28px 80px rgb(0 0 0 / 25%);
+  backdrop-filter: blur(12px);
+}
+
+.contact-kicker {
+  margin: 0;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--landing-line);
+  color: var(--mint);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.immersive-landing .contact-team,
+.immersive-landing .contact-person {
+  border-bottom-color: var(--landing-line);
+  background: transparent;
+}
+
+.immersive-landing .contact-team small,
+.immersive-landing .contact-person small {
+  color: rgb(255 255 255 / 56%);
+}
+
+.immersive-landing .team-mark {
+  border-color: var(--lime);
+  background: rgb(213 255 85 / 9%);
+}
+
+.avatar--coral {
+  background: var(--coral);
+  color: var(--ink);
+}
+
+.immersive-landing .contact-note {
+  color: rgb(255 255 255 / 52%);
+}
+
+.immersive-landing .site-footer {
+  border-top-color: var(--landing-line);
+}
+
+.immersive-landing .site-footer p {
+  color: rgb(255 255 255 / 48%);
+}
+
+@media (max-width: 1100px) {
+  .immersive-landing .site-header,
+  .immersive-landing .hero,
+  .immersive-landing .action-switchboard,
+  .immersive-landing .privacy-band,
+  .immersive-landing .site-footer {
+    width: min(100% - 48px, 1000px);
+  }
+
+  .immersive-landing .hero {
+    grid-template-columns: minmax(430px, 0.9fr) 1.1fr;
+  }
+
+  .constellation-shell,
+  #constellation-canvas {
+    min-height: 580px;
+  }
+
+  .contact-stage {
+    padding-left: 72px;
+  }
+
+  .contact-branches {
+    scale: 0.72;
+    transform-origin: left center;
+  }
+}
+
+@media (max-width: 900px) {
+  .immersive-landing .site-header,
+  .immersive-landing .hero,
+  .immersive-landing .action-switchboard,
+  .immersive-landing .privacy-band,
+  .immersive-landing .site-footer {
+    width: min(100% - 32px, 720px);
+  }
+
+  .immersive-landing .hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    padding-top: 74px;
+  }
+
+  .immersive-landing .hero h1 {
+    font-size: clamp(3.2rem, 12vw, 5rem);
+  }
+
+  .constellation-shell,
+  #constellation-canvas {
+    min-height: 520px;
+  }
+
+  .scroll-cue {
+    display: none;
+  }
+
+  .immersive-landing .action-switchboard {
+    padding-block: 130px;
+  }
+
+  .immersive-landing .route-list {
+    grid-template-columns: 1fr;
+  }
+
+  .immersive-landing .route + .route {
+    border-left: 0;
+    border-top: 1px solid var(--landing-line);
+  }
+
+  .immersive-landing .route-list::before {
+    display: none;
+  }
+
+  .immersive-landing .privacy-band {
+    grid-template-columns: 1fr;
+    gap: 72px;
+  }
+
+  .contact-stage {
+    padding-left: 72px;
+  }
+}
+
+@media (max-width: 560px) {
+  .immersive-landing .site-header,
+  .immersive-landing .hero,
+  .immersive-landing .action-switchboard,
+  .immersive-landing .privacy-band,
+  .immersive-landing .site-footer {
+    width: min(100% - 24px, 520px);
+  }
+
+  .immersive-landing .hero-copy {
+    padding-left: 0;
+  }
+
+  .immersive-landing .hero h1 {
+    font-size: clamp(3rem, 14vw, 4rem);
+  }
+
+  .constellation-shell,
+  #constellation-canvas {
+    min-height: 410px;
+  }
+
+  .node-label {
+    width: 62px;
+    height: 62px;
+    font-size: 0.78rem;
+  }
+
+  .node-label--you {
+    width: 76px;
+    height: 76px;
+  }
+
+  .interaction-hint {
+    display: none;
+  }
+
+  .immersive-landing .section-heading h2 {
+    font-size: 3rem;
+  }
+
+  .immersive-landing .route {
+    min-height: 154px;
+    padding: 24px 18px;
+  }
+
+  .immersive-landing .route-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .immersive-landing .privacy-band {
+    padding-block: 110px;
+  }
+
+  .contact-stage {
+    min-height: auto;
+    padding-left: 0;
+  }
+
+  .contact-branches {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interaction-hint,
+  .scroll-cue {
+    display: none;
+  }
+}

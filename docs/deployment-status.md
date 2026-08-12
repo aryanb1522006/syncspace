@@ -75,6 +75,9 @@ Last updated: 2026-08-13
 - [x] Add stable user-ID teammate profile routes with backward-compatible profile-ID lookup
 - [x] Show teammate bio, department, year, availability, interests, and skills without weakening contact privacy
 - [x] Verify Phase 15 locally: 29 server tests, 13 client tests, production React build, and desktop/mobile browser QA
+- [x] Diagnose the public teammate-profile failure as a PostgreSQL `BIGINT` to JWT string-type mismatch
+- [x] Normalize authenticated user and college IDs before tenant authorization checks
+- [x] Verify the Phase 16 regression locally: 31 server tests pass and 2 database-only tests skip without credentials
 
 ## Remaining deployment work
 
@@ -94,6 +97,9 @@ Last updated: 2026-08-13
 - [ ] Confirm Render deploys `GET /api/students/by-user/:userId`
 - [ ] Confirm Appwrite deploys the four-item navigation and stable teammate links
 - [ ] Test creator and collaborator profile links from a real public team workspace
+- [ ] Commit and push Phase 16 production profile identity hotfix
+- [ ] Confirm Render redeploys the Phase 16 API (no Appwrite rebuild is required)
+- [ ] Sign in again and confirm `/profiles/users/11` loads from the public shared workspace
 - [ ] Commit and push this deployment status document to GitHub
 - [ ] Confirm Render automatically deploys the updated Express API
 - [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site

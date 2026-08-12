@@ -36,7 +36,7 @@ export async function getStudentByUser(req, res) {
 }
 
 async function sendVisibleStudent(req, res, student) {
-  if (!student || Number(student.college_id) !== req.user.collegeId) throw new AppError(404, 'Student profile not found');
+  if (!student || Number(student.college_id) !== Number(req.user.collegeId)) throw new AppError(404, 'Student profile not found');
   const contactVisible = await canViewStudentContact(req.user.id, student.id, req.user.collegeId);
   res.json({
     student: {

@@ -5,6 +5,8 @@ import request from 'supertest';
 import { app } from '../src/app.js';
 import { pool } from '../src/config/db.js';
 import { env } from '../src/config/env.js';
+import { authenticate } from '../src/middleware/auth.js';
+import { createAccessToken } from '../src/services/tokenService.js';
 
 after(() => pool.end());
 
@@ -43,6 +45,22 @@ test('expired JWT is rejected', async () => {
     .get('/api/students/me')
     .set('Authorization', `Bearer ${token}`)
     .expect(401);
+});
+
+test('authentication normalizes PostgreSQL bigint identity claims to numbers', async () => {
+  const token = jwt.sign({ role: 'student', collegeId: '1' }, env.jwtSecret, {
+    subject: '11', expiresIn: '5m'
+  });
+  const req = { headers: { authorization: `Bearer ${token}` } };
+  await new Promise((resolve, reject) => authenticate(req, {}, (error) => error ? reject(error) : resolve()));
+  assert.deepEqual(req.user, { id: 11, role: 'student', collegeId: 1 });
+});
+
+test('new access tokens serialize PostgreSQL bigint college IDs as numbers', () => {
+  const token = createAccessToken({ id: '11', role: 'student', college_id: '1' });
+  const payload = jwt.verify(token, env.jwtSecret);
+  assert.equal(payload.sub, '11');
+  assert.equal(payload.collegeId, 1);
 });
 
 test('both legacy roles retain authenticated project creation capability', async () => {

@@ -5,7 +5,8 @@ import request from 'supertest';
 import { app } from '../src/app.js';
 import { pool } from '../src/config/db.js';
 import { env } from '../src/config/env.js';
-import { authenticate } from '../src/middleware/auth.js';
+import { authenticate, requireAdmin } from '../src/middleware/auth.js';
+import { isAdminEmail } from '../src/services/adminIdentity.js';
 import { createAccessToken } from '../src/services/tokenService.js';
 
 after(() => pool.end());
@@ -53,14 +54,41 @@ test('authentication normalizes PostgreSQL bigint identity claims to numbers', a
   });
   const req = { headers: { authorization: `Bearer ${token}` } };
   await new Promise((resolve, reject) => authenticate(req, {}, (error) => error ? reject(error) : resolve()));
-  assert.deepEqual(req.user, { id: 11, role: 'student', collegeId: 1 });
+  assert.deepEqual(req.user, { id: 11, role: 'student', collegeId: 1, email: '', isAdmin: false });
 });
 
-test('new access tokens serialize PostgreSQL bigint college IDs as numbers', () => {
-  const token = createAccessToken({ id: '11', role: 'student', college_id: '1' });
+test('new access tokens serialize normalized identity claims', () => {
+  const token = createAccessToken({ id: '11', role: 'student', college_id: '1', email: 'Admin@Thapar.edu', email_verified: true });
   const payload = jwt.verify(token, env.jwtSecret);
   assert.equal(payload.sub, '11');
   assert.equal(payload.collegeId, 1);
+  assert.equal(payload.email, 'admin@thapar.edu');
+  assert.equal(payload.isAdmin, false, 'the configured allowlist remains the source of administrator authority');
+});
+
+test('administrator allowlist matching is exact and case-insensitive', () => {
+  const allowlist = ['abansal6_be24@thapar.edu'];
+  assert.equal(isAdminEmail('ABANSAL6_BE24@THAPAR.EDU', allowlist), true);
+  assert.equal(isAdminEmail('abansal6_be24@thapar.edu.attacker.test', allowlist), false);
+  assert.equal(isAdminEmail('other@thapar.edu', allowlist), false);
+});
+
+test('admin middleware rejects ordinary authenticated users', async () => {
+  const token = jwt.sign({ role: 'student', collegeId: 1, email: 'student@thapar.edu' }, env.jwtSecret, {
+    subject: '1', expiresIn: '5m'
+  });
+  const response = await request(app)
+    .get('/api/admin/projects')
+    .set('Authorization', `Bearer ${token}`)
+    .expect(403);
+  assert.match(response.body.error.message, /administrator access required/i);
+});
+
+test('requireAdmin permits only a server-derived administrator identity', async () => {
+  const allowed = { user: { isAdmin: true } };
+  await new Promise((resolve, reject) => requireAdmin(allowed, {}, (error) => error ? reject(error) : resolve()));
+  const denied = await new Promise((resolve) => requireAdmin({ user: { isAdmin: false } }, {}, resolve));
+  assert.equal(denied.status, 403);
 });
 
 test('both legacy roles retain authenticated project creation capability', async () => {

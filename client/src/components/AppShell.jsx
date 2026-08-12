@@ -1,4 +1,4 @@
-import { Compass, FileText, FolderKanban, LogOut, Moon, PlusCircle, Sun, UsersRound } from 'lucide-react';
+import { Compass, FileText, FolderKanban, LogOut, Moon, PlusCircle, ShieldCheck, Sun, UsersRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { api } from '../api/resources.js';
@@ -28,7 +28,8 @@ export function AppShell({ children, rightRail, className = '' }) {
     { to: '/dashboard', label: 'Discover', icon: Compass },
     { to: '/applications', label: 'Applications', icon: FileText },
     { to: '/projects/mine', label: 'My projects', icon: FolderKanban },
-    { to: teamRoute, label: teams.length > 1 ? `Teams (${teams.length})` : 'My team', icon: UsersRound, team: true }
+    { to: teamRoute, label: teams.length > 1 ? `Teams (${teams.length})` : 'My team', icon: UsersRound, team: true },
+    ...(user?.isAdmin ? [{ to: '/admin/projects', label: 'Admin control', icon: ShieldCheck }] : [])
   ];
   const name = user?.profile?.name ?? user?.name ?? user?.email?.split('@')[0] ?? 'SyncSpace member';
   const email = user?.email ?? '';
@@ -65,6 +66,6 @@ export function AppShell({ children, rightRail, className = '' }) {
     </div>
     {rightRail && <aside className="right-rail">{rightRail}</aside>}
     <NavLink className="mobile-post" to="/projects/new" aria-label="Post a project"><PlusCircle /></NavLink>
-    <nav className="mobile-nav" aria-label="Mobile application navigation">{renderNavItems()}</nav>
+    <nav className="mobile-nav" aria-label="Mobile application navigation" style={{ gridTemplateColumns: `repeat(${nav.length}, 1fr)` }}>{renderNavItems()}</nav>
   </div>;
 }

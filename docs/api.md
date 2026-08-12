@@ -127,3 +127,22 @@ curl -X PUT http://localhost:4000/api/notifications/3/read \
 ```
 
 The browser client polls notifications; no WebSocket service is required for the MVP.
+
+## Personal project administration
+
+These endpoints require a freshly issued verified-account token whose exact normalized email is present in the server `ADMIN_EMAILS` allowlist. Results and mutations remain scoped to the token's `collegeId`.
+
+```bash
+curl http://localhost:4000/api/admin/projects \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+curl http://localhost:4000/api/admin/audit \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+curl -X DELETE http://localhost:4000/api/admin/projects/42 \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"confirmation":"Exact project title","reason":"Duplicate or non-viable pilot listing"}'
+```
+
+Admin deletion is permanent. The exact project title and an 8-500 character reason are mandatory, and the audit entry is written in the same transaction before the project and its cascaded workspace data are removed. A non-admin token receives HTTP 403; a project from another college is returned as not found.

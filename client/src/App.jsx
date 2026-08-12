@@ -15,11 +15,17 @@ import { Register } from './pages/Register.jsx';
 import { Teams } from './pages/Teams.jsx';
 import { TeamWorkspace } from './pages/TeamWorkspace.jsx';
 const Landing = lazy(() => import('./pages/ImmersiveLanding.jsx').then((module) => ({ default: module.Landing })));
+const AdminProjects = lazy(() => import('./pages/AdminProjects.jsx').then((module) => ({ default: module.AdminProjects })));
 
 
 function Protected({ children }) {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" replace />;
+}
+
+function AdminOnly({ children }) {
+  const { user } = useAuth();
+  return user?.isAdmin ? children : <Navigate to="/dashboard" replace />;
 }
 
 
@@ -40,6 +46,7 @@ export default function App() {
     <Route path="/profiles/:id" element={<Protected><MemberProfile /></Protected>} />
     <Route path="/teams" element={<Protected><Teams /></Protected>} />
     <Route path="/team/:id" element={<Protected><TeamWorkspace /></Protected>} />
+    <Route path="/admin/projects" element={<Protected><AdminOnly><Suspense fallback={<div className="loading">Loading admin control...</div>}><AdminProjects /></Suspense></AdminOnly></Protected>} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>;
 }

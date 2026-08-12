@@ -4,6 +4,7 @@ import { createUserWithProfile, findOrCreateGoogleUser, findUserByEmail } from '
 import { verifyGoogleCredential } from '../services/googleIdentity.js';
 import { createAccessToken } from '../services/tokenService.js';
 import { AppError } from '../utils/AppError.js';
+import { isAdminEmail } from '../services/adminIdentity.js';
 
 const publicUser = (user) => ({
   id: Number(user.id),
@@ -13,6 +14,7 @@ const publicUser = (user) => ({
   profile: user.profile,
   emailVerified: Boolean(user.email_verified),
   authProvider: user.auth_provider ?? 'password',
+  isAdmin: Boolean(user.email_verified) && isAdminEmail(user.email),
   capabilities: ['join_projects', 'post_projects']
 });
 

@@ -1,7 +1,8 @@
 const seed = {
   users: [
     { id: 1, email: 'isha@northstar.edu', password: 'demo1234', role: 'student', collegeId: 1, profileId: 1, name: 'Isha Mehta' },
-    { id: 4, email: 'arjun@northstar.edu', password: 'demo1234', role: 'owner', collegeId: 1, profileId: 4, name: 'Arjun Rao' }
+    { id: 4, email: 'arjun@northstar.edu', password: 'demo1234', role: 'owner', collegeId: 1, profileId: 4, name: 'Arjun Rao' },
+    { id: 11, email: 'abansal6_be24@thapar.edu', password: 'demo1234', role: 'student', collegeId: 1, profileId: 11, name: 'Aryan Bansal', isAdmin: true }
   ],
   directory: [
     { id: 4, userId: 4, name: 'Arjun Rao', email: 'arjun@northstar.edu', department: 'Electrical Engineering', year: 4, bio: 'Building practical climate tools for campus teams.', interests: ['Climate Tech', 'IoT'], availabilityHoursPerWeek: 10, skills: [{ id: 5, name: 'Node.js', category: 'Backend', proficiency: 4 }, { id: 6, name: 'PostgreSQL', category: 'Data', proficiency: 4 }] },
@@ -50,6 +51,7 @@ const seed = {
     }
   ],
   applications: [{ id: 1, projectId: 2, title: 'StudyCircle', domain: 'EdTech', status: 'pending', appliedAt: '2026-08-10T12:00:00Z', studentId: 1, name: 'Isha Mehta', department: 'Computer Science', year: 3, bio: 'Frontend engineer who cares about inclusive interfaces.', availabilityHoursPerWeek: 12, skills: [{ id: 1, name: 'React', proficiency: 5 }, { id: 2, name: 'TypeScript', proficiency: 4 }] }],
+  adminAudit: [],
   notifications: [
     { id: 1, message: 'StudyCircle viewed your application.', is_read: false, created_at: '2026-08-10T12:00:00Z' },
     { id: 2, message: 'GreenGrid added a new workspace task.', is_read: false, created_at: '2026-08-10T10:00:00Z' }
@@ -190,6 +192,38 @@ export const demoApi = {
     state.teams = state.teams.filter((team) => Number(team.project_id) !== projectId);
     save(state);
     return wait({ deleted: true });
+  },
+  async adminProjects() {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    if (!user?.isAdmin) throw new Error('Administrator access required');
+    return wait({ projects: state.projects.map((project) => {
+      const owner = state.users.find((item) => Number(item.id) === Number(project.ownerId));
+      return { ...project, status: project.status ?? 'open', createdAt: project.createdAt ?? '2026-08-10T10:00:00Z', ownerName: project.owner_name, ownerEmail: owner?.email ?? 'owner@thapar.edu', teamCount: state.teams.some((team) => Number(team.project_id) === Number(project.id)) ? 1 : 0 };
+    }) });
+  },
+  async adminAudit() {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    if (!user?.isAdmin) throw new Error('Administrator access required');
+    return wait({ audit: state.adminAudit });
+  },
+  async adminDeleteProject(id, { confirmation, reason }) {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    if (!user?.isAdmin) throw new Error('Administrator access required');
+    const project = state.projects.find((item) => Number(item.id) === Number(id));
+    if (!project) throw new Error('Project not found');
+    if (confirmation !== project.title) throw new Error('Project title confirmation does not match');
+    if (reason.trim().length < 8) throw new Error('Reason must contain at least 8 characters');
+    const projectId = Number(id);
+    state.projects = state.projects.filter((item) => Number(item.id) !== projectId);
+    state.applications = state.applications.filter((item) => Number(item.projectId) !== projectId);
+    state.teams = state.teams.filter((team) => Number(team.project_id) !== projectId);
+    const audit = { id: Date.now(), action: 'project.delete', targetType: 'project', targetId: projectId, reason: reason.trim(), metadata: { title: project.title, ownerName: project.owner_name }, adminEmail: user.email, createdAt: new Date().toISOString() };
+    state.adminAudit.unshift(audit);
+    save(state);
+    return wait({ deletedProject: project, audit });
   },
   async recommendations() { return wait({ recommendations: load().projects }); },
   async getProject(id) {

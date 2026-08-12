@@ -111,6 +111,33 @@ describe('SyncSpace UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete project' }));
     await waitFor(() => expect(screen.queryByText('GreenGrid')).not.toBeInTheDocument());
   });
+  it('shows the personal admin control only to an allowlisted administrator', async () => {
+    renderApp('/admin/projects', { id: 11, email: 'abansal6_be24@thapar.edu', role: 'student', profileId: 11, name: 'Aryan Bansal', isAdmin: true });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Project control' })).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'Admin control' }).length).toBeGreaterThan(0);
+    expect(await screen.findByText('CampusCart')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Admin delete CampusCart' })).toBeVisible();
+  });
+
+  it('requires the exact title and a reason before an admin deletes another owner project', async () => {
+    renderApp('/admin/projects', { id: 11, email: 'abansal6_be24@thapar.edu', role: 'student', profileId: 11, name: 'Aryan Bansal', isAdmin: true });
+    fireEvent.click(await screen.findByRole('button', { name: 'Admin delete CampusCart' }));
+    expect(screen.getByRole('dialog', { name: 'Delete project' })).toBeVisible();
+    const destructive = screen.getByRole('button', { name: 'Delete permanently' });
+    expect(destructive).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Type the project title to confirm' }), { target: { value: 'CampusCart' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Reason for deletion' }), { target: { value: 'Duplicate pilot listing' } });
+    expect(destructive).toBeEnabled();
+    fireEvent.click(destructive);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Admin delete CampusCart' })).not.toBeInTheDocument());
+    expect(await screen.findByText('Deleted project')).toBeVisible();
+  });
+
+  it('does not expose the admin control to an ordinary user', async () => {
+    renderApp('/dashboard', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' }, isAdmin: false });
+    expect(await screen.findByRole('heading', { level: 1 })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Admin control' })).not.toBeInTheDocument();
+  });
   it('persists dark mode from the signed-in navigation', async () => {
     localStorage.setItem('syncspace-theme:v1', 'light');
     renderApp('/dashboard', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });

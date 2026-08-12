@@ -78,6 +78,10 @@ Last updated: 2026-08-13
 - [x] Diagnose the public teammate-profile failure as a PostgreSQL `BIGINT` to JWT string-type mismatch
 - [x] Normalize authenticated user and college IDs before tenant authorization checks
 - [x] Verify the Phase 16 regression locally: 31 server tests pass and 2 database-only tests skip without credentials
+- [x] Add exact-email, verified-account administrator authorization without hard-coding production identity
+- [x] Add tenant-scoped project moderation with exact-title confirmation, required reason, and durable audit history
+- [x] Add a responsive Project control screen hidden from ordinary accounts
+- [x] Document production chat-encryption alternatives while keeping the Web Crypto chat prototype outside `main`
 
 ## Remaining deployment work
 
@@ -100,6 +104,11 @@ Last updated: 2026-08-13
 - [ ] Commit and push Phase 16 production profile identity hotfix
 - [ ] Confirm Render redeploys the Phase 16 API (no Appwrite rebuild is required)
 - [ ] Sign in again and confirm `/profiles/users/11` loads from the public shared workspace
+- [ ] Apply `006_admin_controls.sql` to the production Supabase database
+- [ ] Set Render `ADMIN_EMAILS=abansal6_be24@thapar.edu` and redeploy the API
+- [ ] Sign out and sign in again with that verified Google account to receive the admin claim
+- [ ] Confirm **Admin control** is visible only to that account on the public site
+- [ ] Delete one disposable project and confirm its reason is retained in Recent admin activity
 - [ ] Commit and push this deployment status document to GitHub
 - [ ] Confirm Render automatically deploys the updated Express API
 - [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site

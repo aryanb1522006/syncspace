@@ -18,5 +18,6 @@
 | 14 | Editable skill proficiency, manual skill entry, dark contrast, and mobile landing polish | Complete in repository | 12 client tests pass; production build; desktop dark-mode and 390 x 844 mobile browser QA |
 | 15 | Stable teammate profiles and simplified signed-in navigation | Complete in repository | 29 server and 13 client tests pass; production build; desktop/mobile profile navigation QA |
 | 16 | Production profile identity hotfix | Complete in repository | 31 server tests pass; PostgreSQL string-valued JWT identity regressions covered |
+| 17 | Personal admin project control and deletion audit | Complete in repository | Server-enforced admin allowlist; tenant-scoped confirmed deletion; audit log; 16 client tests and production build |
 
 Each phase has a separate document containing its decisions, delivered scope, verification evidence, and known constraints.

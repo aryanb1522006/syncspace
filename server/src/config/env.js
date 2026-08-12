@@ -19,6 +19,10 @@ if (!['local', 's3'].includes(storageDriver)) throw new Error('STORAGE_DRIVER mu
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() || null;
 const allowedEmailDomain = process.env.AUTH_ALLOWED_EMAIL_DOMAIN?.trim().toLowerCase().replace(/^@/, '') || null;
 const passwordAuthEnabled = asBoolean(process.env.PASSWORD_AUTH_ENABLED, true);
+const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
 
 if (isProduction) {
   for (const key of requiredInProduction) {
@@ -33,6 +37,9 @@ if (isProduction) {
   }
   if (!passwordAuthEnabled && !googleClientId) {
     throw new Error('At least one production sign-in method must be enabled');
+  }
+  if (allowedEmailDomain && adminEmails.some((email) => !email.endsWith(`@${allowedEmailDomain}`))) {
+    throw new Error(`Every ADMIN_EMAILS entry must use @${allowedEmailDomain}`);
   }
 }
 
@@ -60,6 +67,7 @@ export const env = Object.freeze({
   googleClientId,
   allowedEmailDomain,
   passwordAuthEnabled,
+  adminEmails,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   clientOrigins: (process.env.CLIENT_ORIGIN ?? 'http://localhost:5173').split(',').map((origin) => origin.trim()),
   uploadDir: process.env.UPLOAD_DIR ?? 'uploads',

@@ -223,24 +223,68 @@
 }
 
 @media (max-width: 560px) {
+  .immersive-landing .site-header {
+    min-height: 68px;
+  }
+
+  .immersive-landing .site-nav {
+    gap: 10px;
+  }
+
+  .immersive-landing .site-nav .button--quiet {
+    min-height: 40px;
+    padding-inline: 13px;
+    font-size: 0.78rem;
+  }
+
+  .immersive-landing .hero {
+    padding-top: 44px;
+    padding-bottom: 18px;
+  }
+
   .immersive-landing .hero h1 {
-    font-size: clamp(3rem, 14vw, 4rem);
+    max-width: 350px;
+    font-size: clamp(2.35rem, 11vw, 3rem);
+    line-height: 1.02;
+    letter-spacing: -0.058em;
+  }
+
+  .immersive-landing .hero-copy > p {
+    margin-top: 20px;
+    font-size: 0.96rem;
+    line-height: 1.52;
+  }
+
+  .immersive-landing .hero-actions {
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .immersive-landing .hero-actions .button {
+    min-height: 50px;
+    font-size: 0.88rem;
   }
 
   .constellation-shell,
   #constellation-canvas {
-    min-height: 500px;
+    min-height: 370px;
+  }
+
+  .constellation-shell {
+    margin-top: 16px;
+    overflow: hidden;
+    border-radius: 24px;
   }
 
   .project-label {
-    min-width: 98px;
-    max-width: 112px;
-    padding: 7px 8px;
+    min-width: 82px;
+    max-width: 94px;
+    padding: 6px 7px;
     border-radius: 9px;
   }
 
   .project-label strong {
-    font-size: 0.72rem;
+    font-size: 0.66rem;
   }
 
   .project-label small {
@@ -248,13 +292,15 @@
   }
 
   .node-label--join {
-    width: 78px;
-    height: 78px;
+    width: 68px;
+    height: 68px;
+    font-size: 0.82rem;
   }
 
   .node-label--you {
-    width: 62px;
-    height: 62px;
+    width: 54px;
+    height: 54px;
+    font-size: 0.72rem;
   }
 
   .constellation-shell--fallback::after {

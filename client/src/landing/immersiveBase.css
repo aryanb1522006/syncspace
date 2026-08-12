@@ -572,12 +572,18 @@
   }
 
   .immersive-landing .section-heading h2 {
-    font-size: 3rem;
+    font-size: 2.3rem;
+    line-height: 1.02;
+  }
+
+  .immersive-landing .privacy-copy h2 {
+    font-size: 2.35rem;
+    line-height: 1.02;
   }
 
   .immersive-landing .route {
-    min-height: 154px;
-    padding: 24px 18px;
+    min-height: 132px;
+    padding: 20px 16px;
   }
 
   .immersive-landing .route-icon {
@@ -586,7 +592,7 @@
   }
 
   .immersive-landing .privacy-band {
-    padding-block: 110px;
+    padding-block: 84px;
   }
 
   .contact-stage {

@@ -15,5 +15,6 @@
 | 11 | 50-student pilot readiness and production data hygiene | Cleanup tooling complete; live apply pending | Dry-run selector; explicit confirmation; 4 safety tests; pilot launch gate |
 | 12 | Dark mode, trusted team contacts, and protected teammate profiles | Complete in repository | 29 server and 8 client tests pass; production build; desktop/mobile browser QA |
 | 13 | Owner project editing, confirmed deletion, and neutral dark-theme refinement | Complete in repository | 11 client tests pass; production build; desktop/mobile browser QA; owner/non-owner authorization UI coverage |
+| 14 | Editable skill proficiency, manual skill entry, dark contrast, and mobile landing polish | Complete in repository | 12 client tests pass; production build; desktop dark-mode and 390 x 844 mobile browser QA |
 
 Each phase has a separate document containing its decisions, delivered scope, verification evidence, and known constraints.

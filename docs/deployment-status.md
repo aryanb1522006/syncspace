@@ -65,6 +65,12 @@ Last updated: 2026-08-12
 - [x] Add creator-only project edit controls backed by the existing authorized update endpoint
 - [x] Add confirmed project deletion backed by the existing authorized delete endpoint
 - [x] Verify Phase 13 locally: 11 client tests, production React build, and desktop/mobile browser QA
+- [x] Replace fixed skill ratings with editable 1-5 proficiency controls
+- [x] Add manual dictionary-based skill entry alongside reviewed resume suggestions
+- [x] Fix dark-mode contrast for skill chips, controls, and lime primary actions
+- [x] Remove the duplicate My Projects right-rail create action
+- [x] Fit the landing typography and Three.js constellation to narrow mobile viewports
+- [x] Verify Phase 14 locally: 12 client tests, production React build, and desktop/mobile browser QA
 
 ## Remaining deployment work
 
@@ -77,6 +83,9 @@ Last updated: 2026-08-12
 - [ ] Commit and push Phase 13 project lifecycle controls
 - [ ] Confirm Appwrite deploys the project edit and delete controls
 - [ ] Edit and delete a disposable owner-created project on the public site
+- [ ] Commit and push Phase 14 profile-skill and responsive-polish changes
+- [ ] Confirm Appwrite deploys the Phase 14 React bundle
+- [ ] Verify manual skills, resume suggestions, dark contrast, and mobile landing fit on the public site
 - [ ] Commit and push this deployment status document to GitHub
 - [ ] Confirm Render automatically deploys the updated Express API
 - [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site

@@ -228,6 +228,9 @@ export function createConstellationScene(canvas, labels) {
     viewportWidth = width;
     viewportHeight = height;
     renderer.setSize(width, height, false);
+    const compact = width <= 560;
+    camera.position.z = compact ? 18.2 : 14.6;
+    field.scale.setScalar(compact ? 0.86 : 1);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
   }

@@ -63,8 +63,25 @@ describe('SyncSpace UI', () => {
     expect(screen.getAllByRole('link', { name: 'Discover' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: 'Applications' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Post a project/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Create a project' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Edit' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Delete GreenGrid' })).toBeVisible();
+  });
+
+  it('lets students set proficiency and add a skill manually alongside resume import', async () => {
+    renderApp('/profile', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    const reactLevel = await screen.findByRole('combobox', { name: 'React proficiency' });
+    expect(reactLevel).toHaveValue('5');
+    fireEvent.change(reactLevel, { target: { value: '4' } });
+    expect(await screen.findByText('Skill proficiency updated.')).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'React proficiency' })).toHaveValue('4'));
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Skill' }), { target: { value: '5' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Proficiency' }), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add skill' }));
+    expect(await screen.findByText('Skill added manually.')).toBeVisible();
+    expect(screen.getByRole('combobox', { name: 'Node.js proficiency' })).toHaveValue('2');
+    expect(screen.getByText('Read resume')).toBeVisible();
   });
 
   it('lets the project owner edit an existing project', async () => {

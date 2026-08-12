@@ -13,7 +13,6 @@ function OwnerRail({ projects }) {
     <div className="rail-top"><NotificationMenu /></div>
     <section><h2>Owner overview</h2><p>Applications refresh automatically while this page is open.</p></section>
     <section className="owner-rail-stats"><div><strong>{projects.length}</strong><span>projects</span></div><div><strong>{pending}</strong><span>pending</span></div><div><strong>{members}</strong><span>members</span></div></section>
-    <Button to="/projects/new">Create a project</Button>
   </>;
 }
 

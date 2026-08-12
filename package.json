@@ -13,7 +13,8 @@
     "validate:config": "node scripts/validate-config.js",
     "smoke:api": "pnpm --filter ./server smoke:api",
     "db:migrate": "pnpm --filter ./server db:migrate",
-    "db:seed": "pnpm --filter ./server db:seed"
+    "db:seed": "pnpm --filter ./server db:seed",
+    "db:cleanup:pilot": "pnpm --filter ./server db:cleanup:pilot"
   },
   "engines": {
     "node": ">=20"

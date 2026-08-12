@@ -65,6 +65,27 @@ Run the mutation-heavy smoke journey against staging after each deployment. It c
 6. Configure health probes to `/api/health/live` and `/api/health/ready`.
 7. Run the smoke journey against staging, promote the same images, and then run read-only health checks in production.
 
+## Pilot data cleanup
+
+Before inviting a real cohort, preview known seeded, QA, and smoke projects against the production database:
+
+~~~powershell
+$env:DATABASE_URL = "YOUR_ROTATED_SUPABASE_POOLER_URL"
+$env:DATABASE_SSL_MODE = "require"
+pnpm.cmd db:cleanup:pilot
+~~~
+
+Review every returned ID, title, owner, and cascade count. Apply the deletion only when the preview is fully understood:
+
+~~~powershell
+pnpm.cmd db:cleanup:pilot -- --apply --confirm=REMOVE_TEST_PROJECTS
+pnpm.cmd db:cleanup:pilot
+Remove-Item Env:DATABASE_URL
+Remove-Item Env:DATABASE_SSL_MODE
+~~~
+
+The second preview must report zero candidates. The cleanup intentionally leaves users, colleges, skills, resumes, and ordinary Thapar projects unchanged.
+
 ## Monitoring and alerts
 
 The metrics endpoint is `GET /api/metrics` and requires `Authorization: Bearer <METRICS_TOKEN>`. To use the included Prometheus profile:

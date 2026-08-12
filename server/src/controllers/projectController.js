@@ -2,6 +2,7 @@ import {
   createProject as createProjectRecord,
   deleteProject as deleteProjectRecord,
   getProjectById,
+  getProjectContactsForViewer,
   listProjects as listProjectRecords,
   updateProject as updateProjectRecord
 } from '../models/projectModel.js';
@@ -35,7 +36,12 @@ export async function listProjects(req, res) {
 }
 
 export async function getProject(req, res) {
-  res.json({ project: await visibleProject(req, Number(req.params.id)) });
+  const id = Number(req.params.id);
+  const project = await visibleProject(req, id);
+  const teamContacts = await getProjectContactsForViewer(id, req.user.id, req.user.collegeId);
+  res.json({
+    project: { ...project, teamContacts, canViewTeamContacts: teamContacts.length > 0 }
+  });
 }
 
 export async function updateProject(req, res) {

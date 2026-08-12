@@ -50,22 +50,35 @@ Last updated: 2026-08-12
 - [x] Make all critical landing content visible without depending on Anime.js completion
 - [x] Add the complete Discover -> Apply -> Review -> Build -> Deliver feature journey
 - [x] Verify Phase 10 locally: 5 client tests, production build, desktop/mobile rendering, reveal state, and CTA navigation
+- [x] Push Phase 10 and confirm the repaired landing page is live on Appwrite
+- [x] Redeploy Render with the Google-auth route and confirm a real Thapar sign-in works
+- [x] Remove the obsolete role field from the CI smoke payload and push commit d1ecf2e
+- [x] Add dry-run-first pilot cleanup tooling with four selector safety tests
+- [x] Add a persistent signed-in light/dark theme preference
+- [x] Simplify signed-in navigation and separate the post-project action
+- [x] Restrict project email contacts to creators and accepted collaborators
+- [x] Remove creator email from the general project-list response
+- [x] Add authorized project contact cards, workspace contact links, and minimal teammate profiles
+- [x] Add PostgreSQL relationship-authorization integration coverage
+- [x] Verify Phase 12 locally: 29 runnable server tests, 8 client tests, production build, and desktop/mobile browser QA
 
 ## Remaining deployment work
 
-- [ ] Commit and push Phase 10, confirm Appwrite redeploys, and repeat the landing smoke test on the public URL
-
 - [ ] Confirm that the database password exposed in setup screenshots was rotated and that Render uses the replacement URI
+- [ ] Commit and push Phase 12
+- [ ] Confirm Render deploys the relationship-aware API
+- [ ] Confirm Appwrite deploys the dark-mode and teammate-profile client
+- [ ] Confirm CI executes the accepted-team PostgreSQL authorization test
+- [ ] Test reciprocal teammate email/profile visibility with two real Thapar accounts
 - [ ] Commit and push this deployment status document to GitHub
-- [ ] Commit and push the Phase 8 application and owner workflow changes
 - [ ] Confirm Render automatically deploys the updated Express API
-- [ ] Confirm Appwrite Sites automatically deploys the updated React bundle
 - [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site
-- [ ] Create the Google OAuth web client and authorize the Appwrite and localhost origins
-- [ ] Set Render `GOOGLE_CLIENT_ID`, `AUTH_ALLOWED_EMAIL_DOMAIN=thapar.edu`, and `PASSWORD_AUTH_ENABLED=false`
-- [ ] Run migration `005_verified_identity.sql` against production PostgreSQL
-- [ ] Set Appwrite `VITE_GOOGLE_CLIENT_ID`, `VITE_AUTH_ALLOWED_EMAIL_DOMAIN=thapar.edu`, and `VITE_PASSWORD_AUTH_ENABLED=false`
-- [ ] Confirm one real Thapar Workspace account works and personal Gmail is rejected
+- [ ] Confirm a personal Gmail account is rejected by the production Google sign-in flow
+- [ ] Run the pilot cleanup dry run against Supabase and review every selected project
+- [ ] Apply the cleanup and confirm the second preview returns zero candidates
+- [ ] Confirm production college ID 1 is labeled for Thapar rather than the Northstar seed tenant
+- [ ] Complete a five-student dress rehearsal of the full workflow
+- [ ] Invite the first controlled cohort of 50 Thapar students
 - [ ] Repeat the complete join + post workflow with one account on the public site
 
 ## Optional production hardening

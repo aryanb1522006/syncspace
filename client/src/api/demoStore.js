@@ -3,6 +3,10 @@ const seed = {
     { id: 1, email: 'isha@northstar.edu', password: 'demo1234', role: 'student', collegeId: 1, profileId: 1, name: 'Isha Mehta' },
     { id: 4, email: 'arjun@northstar.edu', password: 'demo1234', role: 'owner', collegeId: 1, profileId: 4, name: 'Arjun Rao' }
   ],
+  directory: [
+    { id: 4, userId: 4, name: 'Arjun Rao', email: 'arjun@northstar.edu' },
+    { id: 2, userId: 2, name: 'Kabir Shah', email: 'kabir@northstar.edu' }
+  ],
   profile: {
     id: 1, user_id: 1, name: 'Isha Mehta', email: 'isha@northstar.edu', department: 'Computer Science',
     year: 3, bio: 'Frontend engineer who cares about inclusive interfaces.', interests: ['Climate Tech', 'EdTech'],
@@ -25,6 +29,7 @@ const seed = {
       id: 1, title: 'GreenGrid', domain: 'Climate Tech', description: 'Turn live campus energy data into actions students can see.',
       longDescription: 'GreenGrid connects campus meter readings to a clear student dashboard. The first milestone is a live energy loop for one academic block, followed by practical nudges that make usage patterns understandable.',
       teamSize: 4, memberCount: 2, deadline: '2026-09-12', commitmentHoursPerWeek: 10, ownerId: 4, owner_name: 'Arjun Rao', pendingApplicationCount: 0, applicationCount: 0,
+      ownerProfileId: 4,
       skills: [{ id: 1, name: 'React', importance: 'required' }, { id: 5, name: 'Node.js', importance: 'required' }, { id: 3, name: 'UI/UX Design', importance: 'preferred' }, { id: 8, name: 'Data Science', importance: 'preferred' }],
       match: { score: 92, breakdown: { contributions: { requiredSkills: 45, preferredSkills: 17, domainInterest: 15, availability: 15 } } }
     },
@@ -32,6 +37,7 @@ const seed = {
       id: 2, title: 'StudyCircle', domain: 'EdTech', description: 'Smart peer study groups built around pace, courses, and availability.',
       longDescription: 'StudyCircle helps students find a study rhythm that fits. Teams are matched around course overlap, preferred pace, and the hours they can reliably protect each week.',
       teamSize: 5, memberCount: 3, deadline: '2026-08-28', commitmentHoursPerWeek: 8, ownerId: 4, owner_name: 'Arjun Rao', pendingApplicationCount: 1, applicationCount: 1,
+      ownerProfileId: 4,
       skills: [{ id: 1, name: 'React', importance: 'required' }, { id: 6, name: 'PostgreSQL', importance: 'required' }, { id: 7, name: 'Machine Learning', importance: 'preferred' }],
       match: { score: 86, breakdown: { contributions: { requiredSkills: 42, preferredSkills: 14, domainInterest: 15, availability: 15 } } }
     },
@@ -50,6 +56,7 @@ const seed = {
   ],
   teams: [{
     id: 1, project_id: 1, project_title: 'GreenGrid', project_status: 'open', owner_id: 4, ownerId: 4, ownerName: 'Arjun Rao', ownerEmail: 'arjun@northstar.edu', teamSize: 4, domain: 'Climate Tech',
+    ownerProfileId: 4,
     members: [
       { id: 1, name: 'Isha Mehta', email: 'isha@northstar.edu', role_label: 'Frontend', initials: 'IM' },
       { id: 2, name: 'Kabir Shah', email: 'kabir@northstar.edu', role_label: 'ML & data', initials: 'KS' }
@@ -68,7 +75,7 @@ const seed = {
   }]
 };
 
-const key = 'syncspace-demo-v3';
+const key = 'syncspace-demo-v4';
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 function load() {
@@ -95,6 +102,25 @@ export const demoApi = {
     return wait({ token: `demo-token-${user.role}`, user });
   },
   async getMe() { return wait({ student: load().profile }); },
+  async getStudent(id) {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    const profileId = Number(id);
+    const profile = profileId === Number(state.profile.id)
+      ? { id: state.profile.id, userId: state.profile.user_id, name: state.profile.name, email: state.profile.email }
+      : state.directory.find((item) => Number(item.id) === profileId);
+    if (!profile) throw new Error('Student profile not found');
+    const viewerProfileId = Number(user?.profileId ?? user?.profile?.id);
+    const related = state.teams.some((team) => {
+      const viewerCanAccess = Number(team.owner_id) === Number(user?.id)
+        || team.members.some((member) => Number(member.profileId ?? member.id) === viewerProfileId);
+      const targetIsMember = Number(team.ownerProfileId) === profileId
+        || team.members.some((member) => Number(member.profileId ?? member.id) === profileId);
+      return viewerCanAccess && targetIsMember;
+    });
+    const contactVisible = Number(profile.userId) === Number(user?.id) || related;
+    return wait({ student: { id: profile.id, userId: profile.userId, name: profile.name, ...(contactVisible ? { email: profile.email } : {}), contactVisible } });
+  },
   async updateProfile(id, input) {
     const state = load();
     state.profile = { ...state.profile, ...input, availability_hours_per_week: input.availabilityHoursPerWeek ?? state.profile.availability_hours_per_week };
@@ -124,6 +150,7 @@ export const demoApi = {
     const lookup = new Map(state.skills.map((skill) => [Number(skill.id), skill]));
     const project = {
       id: Date.now(), ownerId: user?.id, owner_name: user?.name ?? user?.profile?.name ?? 'Project owner',
+      ownerProfileId: user?.profileId ?? user?.profile?.id,
       ...input, memberCount: 0, applicationCount: 0, pendingApplicationCount: 0,
       skills: input.skills.map(({ skillId, importance }) => ({ ...lookup.get(Number(skillId)), importance })),
       match: { score: 72, breakdown: { contributions: { requiredSkills: 32, preferredSkills: 10, domainInterest: 15, availability: 15 } } }
@@ -132,9 +159,21 @@ export const demoApi = {
   },
   async recommendations() { return wait({ recommendations: load().projects }); },
   async getProject(id) {
-    const project = load().projects.find((item) => Number(item.id) === Number(id));
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    const project = state.projects.find((item) => Number(item.id) === Number(id));
     if (!project) throw new Error('Project not found');
-    return wait({ project });
+    const team = state.teams.find((item) => Number(item.project_id) === Number(project.id));
+    const viewerProfileId = Number(user?.profileId ?? user?.profile?.id);
+    const canViewTeamContacts = Number(project.ownerId) === Number(user?.id)
+      || team?.members.some((member) => Number(member.profileId ?? member.id) === viewerProfileId);
+    const teamContacts = canViewTeamContacts ? [
+      { profileId: project.ownerProfileId, name: project.owner_name, email: team?.ownerEmail ?? state.directory.find((item) => Number(item.id) === Number(project.ownerProfileId))?.email, roleLabel: 'Creator' },
+      ...(team?.members ?? []).map((member) => ({
+        profileId: member.profileId ?? member.id, name: member.name, email: member.email, roleLabel: member.role_label ?? 'Collaborator'
+      }))
+    ].filter((contact) => contact.profileId && contact.email) : [];
+    return wait({ project: { ...project, teamContacts, canViewTeamContacts: teamContacts.length > 0 } });
   },
   async apply(id) {
     const state = load();
@@ -161,8 +200,10 @@ export const demoApi = {
       if (!team) {
         team = {
           id: Date.now(), project_id: project.id, project_title: project.title, project_status: project.status ?? 'open',
-          owner_id: project.ownerId, teamSize: project.teamSize, domain: project.domain,
-          members: [{ id: state.profile.id, user_id: state.profile.user_id, name: state.profile.name, role_label: 'Team member' }], tasks: []
+          owner_id: project.ownerId, ownerId: project.ownerId, ownerProfileId: project.ownerProfileId,
+          ownerName: project.owner_name, ownerEmail: state.directory.find((item) => Number(item.id) === Number(project.ownerProfileId))?.email,
+          teamSize: project.teamSize, domain: project.domain,
+          members: [{ id: state.profile.id, profileId: state.profile.id, user_id: state.profile.user_id, name: state.profile.name, email: state.profile.email, role_label: 'Team member' }], tasks: []
         };
         state.teams.push(team);
       }

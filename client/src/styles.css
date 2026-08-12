@@ -556,3 +556,197 @@ textarea { resize: vertical; line-height: 1.5; }
   .team-card { grid-template-columns: auto 1fr; }
   .team-card .button { grid-column: 2; }
 }
+/* Phase 12: signed-in theme, navigation, and teammate contacts */
+.app-shell {
+  --app-page: #f8faf9;
+  --app-surface: #fff;
+  --app-surface-raised: #fff;
+  --app-copy: #43514d;
+  --app-hover: #eef8d9;
+  min-height: 100vh;
+  color: var(--ink);
+  background: var(--app-page);
+}
+html[data-theme='dark'] .app-shell {
+  --ink: #edf8f3;
+  --muted: #9cb0a8;
+  --line: #29423a;
+  --soft: #14271f;
+  --app-page: #071711;
+  --app-surface: #0c2018;
+  --app-surface-raised: #112a20;
+  --app-copy: #b7c8c1;
+  --app-hover: #183422;
+  --shadow: 0 18px 45px rgba(0, 0, 0, .34);
+}
+.app-area { background: var(--app-page); }
+.sidebar, .right-rail, .notification__panel, .modal__panel { background: var(--app-surface); }
+.sidebar nav { gap: 5px; margin-top: 40px; }
+.sidebar nav a { min-height: 46px; color: var(--muted); }
+.sidebar nav a:hover { background: var(--soft); color: var(--ink); }
+.sidebar nav a.active { color: var(--ink); background: var(--app-hover); }
+.sidebar__post {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 15px 6px 0;
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: var(--lime);
+  color: #12231f;
+  font-size: 13px;
+  font-weight: 800;
+}
+.sidebar__post svg { width: 18px; }
+.sidebar__account { gap: 3px; }
+.sidebar__account .person { min-width: 0; margin-bottom: 5px; border-radius: 9px; }
+.sidebar__account .person:hover { background: var(--soft); }
+.person__copy { min-width: 0; display: grid; gap: 1px; }
+.person__copy strong, .person__copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person__copy strong { font-size: 12px; }
+.person__copy small { color: var(--muted); font-size: 9px; font-weight: 500; }
+.sidebar__utility { width: 100%; border-radius: 9px !important; color: var(--muted); }
+.sidebar__utility:hover { color: var(--ink); background: var(--soft); }
+.mobile-top__actions { display: flex; align-items: center; gap: 4px; }
+.mobile-post { display: none; }
+.app-shell .button--secondary,
+.app-shell input,
+.app-shell select,
+.app-shell textarea,
+.app-shell .project-row,
+.app-shell .rail-row,
+.app-shell .skill-picker > div,
+.app-shell .modal__panel {
+  background: var(--app-surface-raised);
+  color: var(--ink);
+}
+.app-shell .project-row,
+.app-shell .owner-project-card,
+.app-shell .candidate-card,
+.app-shell .team-card,
+.app-shell .project-detail__aside,
+.app-shell .profile-form > section,
+.app-shell .project-form > section,
+.app-shell .member-profile {
+  border-color: var(--line);
+  background: var(--app-surface);
+}
+.app-shell .project-row__identity > p,
+.app-shell .project-detail__main section > p,
+.app-shell .right-rail p,
+.app-shell .candidate-card__meta > span,
+.app-shell .task > div > div {
+  color: var(--app-copy);
+}
+.app-shell .score-ring {
+  background: radial-gradient(circle at center, var(--app-surface) 57%, transparent 59%), conic-gradient(var(--lime-strong) var(--score), var(--line) 0);
+}
+.app-shell .task-progress > span {
+  background: radial-gradient(circle at center, var(--app-surface) 57%, transparent 59%), conic-gradient(var(--lime-strong) var(--progress), var(--line) 0);
+}
+.app-shell .mini-avatar.unassigned { background: var(--app-surface); }
+html[data-theme='dark'] .app-shell .notification__panel button:hover,
+html[data-theme='dark'] .app-shell .notification__panel button.unread,
+html[data-theme='dark'] .app-shell .skill-picker > div.is-selected,
+html[data-theme='dark'] .app-shell .empty-panel {
+  background: var(--app-hover);
+}
+html[data-theme='dark'] .app-shell .notice-banner { border-color: #285e47; background: #102d22; color: #98dfbf; }
+html[data-theme='dark'] .app-shell .status--accepted,
+html[data-theme='dark'] .app-shell .status--active,
+html[data-theme='dark'] .app-shell .status--open { background: #163c2d; color: #9be2c1; }
+html[data-theme='dark'] .app-shell .status--forming { background: #2a2747; color: #c7c0ff; }
+html[data-theme='dark'] .app-shell .status--completed { background: #25332e; color: #c2d0ca; }
+
+.project-contacts > p { margin: -8px 0 16px; color: var(--muted) !important; font-size: 12px !important; }
+.project-contacts > div { display: grid; gap: 10px; }
+.project-contacts article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--app-surface);
+}
+.project-contacts article > span:nth-child(2) { min-width: 0; display: grid; gap: 3px; }
+.project-contacts strong { font-size: 13px; }
+.project-contacts small { color: var(--muted); font-size: 10px; }
+.project-contacts a { display: inline-flex; align-items: center; gap: 5px; color: #3c9273; font-size: 10px; font-weight: 700; }
+.project-contacts article > a { justify-self: end; color: var(--ink); }
+.project-contacts svg { width: 14px; }
+.profile-inline-link { display: block; width: max-content; margin-top: 5px; color: #3c9273; font-weight: 750; }
+.member-profile-links { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 0 0; }
+.member-profile-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--app-surface);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.member-profile-links a:hover { color: var(--ink); border-color: #62b795; }
+.member-profile-links svg { width: 13px; }
+
+.member-profile {
+  width: min(620px, 100%);
+  display: grid;
+  justify-items: center;
+  margin: 20px auto;
+  padding: 54px 34px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.member-profile > .avatar { width: 96px; height: 96px; margin-bottom: 25px; font-size: 25px; outline: 2px solid #5dc4a5; outline-offset: 6px; }
+.member-profile .eyebrow { margin-bottom: 7px; }
+.member-profile h1 { margin-bottom: 16px; font-size: clamp(38px, 5vw, 58px); letter-spacing: -.055em; }
+.member-profile__email { display: inline-flex; align-items: center; gap: 8px; padding: 12px 15px; border-radius: 9px; background: var(--soft); font-size: 14px; font-weight: 750; }
+.member-profile__email svg { width: 18px; color: #3c9273; }
+.member-profile__trust, .contact-privacy { display: flex; align-items: center; justify-content: center; gap: 7px; max-width: 390px; margin: 18px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.member-profile__trust svg, .contact-privacy svg { flex: 0 0 auto; width: 16px; }
+.member-profile .button { margin-top: 23px; }
+
+@media (max-width: 1000px) {
+  .sidebar__post span { display: none; }
+  .sidebar__post { padding: 0; }
+  .person__copy { display: none; }
+}
+@media (max-width: 760px) {
+  .mobile-top { background: var(--app-surface); }
+  .mobile-nav { grid-template-columns: repeat(5, 1fr); background: color-mix(in srgb, var(--app-surface) 96%, transparent); }
+  .mobile-nav a.active { color: var(--ink); background: var(--app-hover); }
+  .mobile-post {
+    position: fixed;
+    z-index: 45;
+    right: 16px;
+    bottom: 82px;
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #12231f;
+    border-radius: 50%;
+    background: var(--lime);
+    color: #12231f;
+    box-shadow: var(--shadow);
+  }
+  .mobile-post svg { width: 21px; }
+  .project-contacts article { grid-template-columns: auto 1fr; }
+  .project-contacts article > a { grid-column: 2; justify-self: start; }
+  .member-profile { padding: 42px 22px; }
+}
+
+html[data-theme='dark'] .app-shell .rail-plain { background: transparent; color: var(--ink); }
+html[data-theme='dark'] .app-shell .profile-ring { background: var(--app-surface-raised); }
+html[data-theme='dark'] .app-shell .filters label { border-color: var(--line); background: var(--app-surface); }
+html[data-theme='dark'] .app-shell .filters select { background: transparent; }
+html[data-theme='dark'] .app-shell .skills b { background: #1c3b2f; color: #dff7ec; }

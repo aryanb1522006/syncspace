@@ -3,7 +3,7 @@ import { query, withTransaction } from '../config/db.js';
 const projectSelect = `
   SELECT p.*, p.owner_id AS "ownerId", p.team_size AS "teamSize",
     p.commitment_hours_per_week AS "commitmentHoursPerWeek", p.created_at AS "createdAt",
-    u.email AS owner_email, sp.name AS owner_name,
+    sp.id AS "ownerProfileId", sp.name AS owner_name,
     COALESCE(json_agg(DISTINCT jsonb_build_object('id', s.id, 'name', s.name, 'category', s.category,
       'importance', ps.importance)) FILTER (WHERE s.id IS NOT NULL), '[]') AS skills,
     COUNT(DISTINCT tm.student_id)::int AS "memberCount",
@@ -93,3 +93,41 @@ export const deleteProject = async (id, collegeId) => {
   const { rowCount } = await query('DELETE FROM projects WHERE id = $1 AND college_id = $2', [id, collegeId]);
   return rowCount > 0;
 };
+export async function getProjectContactsForViewer(projectId, viewerUserId, collegeId) {
+  const { rows } = await query(
+    `WITH accessible AS (
+       SELECT p.id, p.owner_id, p.created_at, t.id AS team_id
+       FROM projects p
+       LEFT JOIN teams t ON t.project_id = p.id
+       WHERE p.id = $1
+         AND p.college_id = $3
+         AND (
+           p.owner_id = $2
+           OR EXISTS (
+             SELECT 1
+             FROM team_members access_tm
+             JOIN student_profiles access_sp ON access_sp.id = access_tm.student_id
+             WHERE access_tm.team_id = t.id AND access_sp.user_id = $2
+           )
+         )
+     )
+     SELECT owner_profile.id AS "profileId", owner_user.id AS "userId",
+       COALESCE(owner_profile.name, split_part(owner_user.email, '@', 1)) AS name,
+       owner_user.email, 'Creator'::text AS "roleLabel", accessible.created_at AS "joinedAt", 0 AS "sortOrder"
+     FROM accessible
+     JOIN users owner_user ON owner_user.id = accessible.owner_id
+     LEFT JOIN student_profiles owner_profile ON owner_profile.user_id = owner_user.id
+     UNION ALL
+     SELECT member_profile.id AS "profileId", member_user.id AS "userId",
+       member_profile.name, member_user.email, COALESCE(tm.role_label, 'Collaborator') AS "roleLabel",
+       tm.joined_at AS "joinedAt", 1 AS "sortOrder"
+     FROM accessible
+     JOIN team_members tm ON tm.team_id = accessible.team_id
+     JOIN student_profiles member_profile ON member_profile.id = tm.student_id
+     JOIN users member_user ON member_user.id = member_profile.user_id
+     WHERE member_user.id <> accessible.owner_id
+     ORDER BY "sortOrder", "joinedAt", "profileId"`,
+    [projectId, viewerUserId, collegeId]
+  );
+  return rows;
+}

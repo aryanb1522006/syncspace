@@ -10,7 +10,8 @@
     "test:coverage": "node --test --experimental-test-coverage",
     "smoke:api": "node scripts/smoke-api.js",
     "db:migrate": "node src/config/migrate.js",
-    "db:seed": "node seed/index.js"
+    "db:seed": "node seed/index.js",
+    "db:cleanup:pilot": "node scripts/cleanup-pilot-projects.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",

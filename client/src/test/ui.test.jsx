@@ -1,10 +1,11 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
 import { Landing } from '../pages/ImmersiveLanding.jsx';
 import { ProjectRow } from '../components/ProjectRow.jsx';
 import { AuthProvider } from '../context/AuthContext.jsx';
+import { ThemeProvider } from '../context/ThemeContext.jsx';
 
 const project = {
   id: 1, title: 'GreenGrid', domain: 'Climate Tech', description: 'Turn live campus energy data into actions students can see.',
@@ -13,13 +14,13 @@ const project = {
   match: { score: 92, breakdown: { contributions: { requiredSkills: 45, preferredSkills: 17, domainInterest: 15, availability: 15 } } }
 };
 
-beforeEach(() => localStorage.clear());
-afterEach(() => { cleanup(); localStorage.clear(); });
+beforeEach(() => { localStorage.clear(); delete document.documentElement.dataset.theme; });
+afterEach(() => { cleanup(); localStorage.clear(); delete document.documentElement.dataset.theme; });
 
 function renderApp(path, user) {
   localStorage.setItem('syncspace-user', JSON.stringify(user));
   localStorage.setItem('syncspace-token', `demo-token-${user.role}`);
-  return render(<MemoryRouter initialEntries={[path]}><AuthProvider><App /></AuthProvider></MemoryRouter>);
+  return render(<MemoryRouter initialEntries={[path]}><ThemeProvider><AuthProvider><App /></AuthProvider></ThemeProvider></MemoryRouter>);
 }
 
 describe('SyncSpace UI', () => {
@@ -61,7 +62,29 @@ describe('SyncSpace UI', () => {
     expect(await screen.findAllByRole('link', { name: /review applications/i })).not.toHaveLength(0);
     expect(screen.getAllByRole('link', { name: 'Discover' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: 'Applications' }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: 'Post project' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Post a project/i }).length).toBeGreaterThan(0);
+  });
+  it('persists dark mode from the signed-in navigation', async () => {
+    localStorage.setItem('syncspace-theme:v1', 'light');
+    renderApp('/dashboard', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    fireEvent.click((await screen.findAllByRole('button', { name: /Dark mode/i }))[0]);
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('syncspace-theme:v1')).toBe('dark');
+  });
+
+  it('shows accepted teammates as authorized project contacts with profile links', async () => {
+    renderApp('/projects/1', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    expect(await screen.findByRole('heading', { level: 2, name: 'Project contacts' })).toBeVisible();
+    expect(screen.getByText('arjun@northstar.edu')).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'View profile' })[0]).toHaveAttribute('href', '/profiles/4');
+  });
+
+  it('shows authorized contact details and member profile links in the shared workspace', async () => {
+    renderApp('/team/1', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'GreenGrid workspace' })).toBeVisible();
+    expect(screen.getByText(/arjun@northstar.edu/i)).toBeVisible();
+    expect(screen.getByRole('link', { name: /View Arjun Rao's profile/i })).toHaveAttribute('href', '/profiles/4');
+    expect(screen.getByRole('link', { name: /View Kabir Shah's profile/i })).toHaveAttribute('href', '/profiles/2');
   });
 
   it('shows students a live application status and accepted-team navigation', async () => {

@@ -27,7 +27,8 @@ export async function getTeamById(id, collegeId) {
     `SELECT t.id, t.project_id, t.project_id AS "projectId", p.title AS project_title,
        p.title AS "projectTitle", p.owner_id, p.owner_id AS "ownerId", p.status AS project_status,
        p.status AS "projectStatus", p.team_size AS "teamSize", p.domain,
-       owner_user.email AS "ownerEmail", owner_profile.name AS "ownerName"
+       owner_user.email AS "ownerEmail", owner_profile.id AS "ownerProfileId",
+       owner_profile.name AS "ownerName"
      FROM teams t JOIN projects p ON p.id = t.project_id
      JOIN users owner_user ON owner_user.id = p.owner_id
      LEFT JOIN student_profiles owner_profile ON owner_profile.user_id = owner_user.id
@@ -36,7 +37,8 @@ export async function getTeamById(id, collegeId) {
   if (!team) return null;
   const [{ rows: members }, { rows: tasks }] = await Promise.all([
     query(
-      `SELECT sp.id, sp.user_id, sp.name, sp.department, u.email, tm.role_label, tm.joined_at
+      `SELECT sp.id, sp.id AS "profileId", sp.user_id, sp.name, sp.department,
+         u.email, tm.role_label, tm.joined_at
        FROM team_members tm JOIN student_profiles sp ON sp.id = tm.student_id
        JOIN users u ON u.id = sp.user_id
        WHERE tm.team_id = $1 ORDER BY tm.joined_at`, [id]

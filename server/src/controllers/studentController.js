@@ -1,5 +1,6 @@
 import pdf from 'pdf-parse';
 import {
+  canViewStudentContact,
   getStudentById,
   getStudentByUserId,
   listSkillDictionary,
@@ -27,7 +28,16 @@ export async function getMe(req, res) {
 export async function getStudent(req, res) {
   const student = await getStudentById(Number(req.params.id));
   if (!student || Number(student.college_id) !== req.user.collegeId) throw new AppError(404, 'Student profile not found');
-  res.json({ student });
+  const contactVisible = await canViewStudentContact(req.user.id, student.id, req.user.collegeId);
+  res.json({
+    student: {
+      id: student.id,
+      userId: student.user_id,
+      name: student.name,
+      ...(contactVisible ? { email: student.email } : {}),
+      contactVisible
+    }
+  });
 }
 
 export async function updateProfile(req, res) {

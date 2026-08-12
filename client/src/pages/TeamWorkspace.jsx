@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Circle, Plus, UserRound, UsersRound } from 'lucide-react';
+import { ArrowLeft, Check, Circle, ExternalLink, Plus, UserRound, UsersRound } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/resources.js';
@@ -47,6 +47,7 @@ export function TeamWorkspace() {
   const openSpots = Math.max(teamSize - team.members.length, 0);
   const isOwner = Number(team.ownerId ?? team.owner_id) === Number(user?.id);
   const ownerName = team.ownerName ?? 'Project creator';
+  const ownerProfileId = team.ownerProfileId ?? team.owner_profile_id;
   const ownerInitials = ownerName.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
 
   return <AppShell className="workspace-shell" rightRail={<TeamRail team={team} isOwner={isOwner} />}>
@@ -54,6 +55,10 @@ export function TeamWorkspace() {
     <header className="workspace-head"><div><h1>{projectTitle} workspace</h1><p><i />{projectStatus} · {team.members.length} of {teamSize}</p></div><Button to={`/projects/${projectId}`}>View project</Button></header>
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="members-strip"><div className="member member--owner"><span className="avatar avatar--mint">{ownerInitials}</span><span><strong>{ownerName}</strong><small>Creator · {team.ownerEmail}</small></span></div>{team.members.map((member, index) => <div className="member" key={member.id}><span className={`avatar ${index % 2 ? 'avatar--lavender' : 'avatar--mint'}`}>{member.initials ?? member.name.split(' ').map((part) => part[0]).join('')}</span><span><strong>{member.name}</strong><small>{member.role_label || 'Collaborator'} · {member.email}</small></span></div>)}{openSpots > 0 && <div className="member member--open"><span><UserRound /></span><strong>{openSpots} {openSpots === 1 ? 'spot' : 'spots'} open</strong></div>}</div>
+    <div className="member-profile-links" aria-label="Team member profiles">
+      {ownerProfileId && <Link to={`/profiles/${ownerProfileId}`}><ExternalLink />View {ownerName}'s profile</Link>}
+      {team.members.map((member) => <Link key={member.id} to={`/profiles/${member.profileId ?? member.id}`}><ExternalLink />View {member.name}'s profile</Link>)}
+    </div>
     <div className="board-title"><h2>This week</h2><Button variant="secondary" onClick={() => setAdding(true)}><Plus />Add task</Button></div>
     <div className="task-board">{columns.map(([status, label]) => <section className={`task-column task-column--${status}`} key={status}><h3>{label} · {grouped[status].length}</h3>{grouped[status].map((task) => <article className="task" key={task.id}><button onClick={() => move(task)} aria-label={`Move ${task.title} to ${nextStatus[task.status]}`}>{task.status === 'done' ? <Check /> : <Circle />}</button><div><h4>{task.title}</h4><div><span className={`mini-avatar ${task.assigned_to ? '' : 'unassigned'}`}>{task.assigned_to ? task.assignee_name.split(' ').map((part) => part[0]).join('') : <UserRound />}</span><span>{task.assignee_name ?? 'Unassigned'}</span><time>{task.due_date ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(task.due_date)) : '—'}</time></div></div></article>)}</section>)}</div>
     {adding && <Modal title="Add a task" onClose={() => setAdding(false)}><form className="modal-form" onSubmit={add}><label>Task title<input autoFocus value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} minLength="2" required /></label><label>Assign to<select value={draft.assignedTo} onChange={(event) => setDraft((current) => ({ ...current, assignedTo: event.target.value }))}><option value="">Unassigned</option>{team.members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select></label><label>Due date<input type="date" value={draft.dueDate} onChange={(event) => setDraft((current) => ({ ...current, dueDate: event.target.value }))} /></label><div><Button type="button" variant="secondary" onClick={() => setAdding(false)}>Cancel</Button><Button type="submit">Add task</Button></div></form></Modal>}

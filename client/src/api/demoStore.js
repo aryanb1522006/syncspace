@@ -157,6 +157,32 @@ export const demoApi = {
     };
     state.projects.unshift(project); save(state); return wait({ project });
   },
+  async updateProject(id, input) {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    const project = state.projects.find((item) => Number(item.id) === Number(id));
+    if (!project) throw new Error('Project not found');
+    if (Number(project.ownerId) !== Number(user?.id)) throw new Error('Only the project owner can change this project');
+    const lookup = new Map(state.skills.map((skill) => [Number(skill.id), skill]));
+    Object.assign(project, input, {
+      ...(input.skills ? { skills: input.skills.map(({ skillId, importance }) => ({ ...lookup.get(Number(skillId)), importance })) } : {})
+    });
+    save(state);
+    return wait({ project });
+  },
+  async deleteProject(id) {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    const project = state.projects.find((item) => Number(item.id) === Number(id));
+    if (!project) throw new Error('Project not found');
+    if (Number(project.ownerId) !== Number(user?.id)) throw new Error('Only the project owner can change this project');
+    const projectId = Number(id);
+    state.projects = state.projects.filter((item) => Number(item.id) !== projectId);
+    state.applications = state.applications.filter((item) => Number(item.projectId) !== projectId);
+    state.teams = state.teams.filter((team) => Number(team.project_id) !== projectId);
+    save(state);
+    return wait({ deleted: true });
+  },
   async recommendations() { return wait({ recommendations: load().projects }); },
   async getProject(id) {
     const state = load();

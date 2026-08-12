@@ -7,6 +7,7 @@ Complete in the repository and verified locally. Production deployment remains p
 ## Delivered
 
 - A signed-in light/dark theme toggle that follows the saved preference and keeps the animated public landing page unchanged.
+- A neutral charcoal/black dark palette inspired by the supplied references, with lime reserved for brand accents and primary actions instead of tinting every surface green.
 - A cleaner five-item navigation structure with project posting promoted to a separate action.
 - A compact account block that shows the signed-in member and keeps theme/sign-out actions together.
 - Relationship-aware contact authorization in PostgreSQL:

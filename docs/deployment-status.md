@@ -55,12 +55,16 @@ Last updated: 2026-08-12
 - [x] Remove the obsolete role field from the CI smoke payload and push commit d1ecf2e
 - [x] Add dry-run-first pilot cleanup tooling with four selector safety tests
 - [x] Add a persistent signed-in light/dark theme preference
+- [x] Refine dark mode to a neutral black/charcoal palette while retaining the lime brand accent
 - [x] Simplify signed-in navigation and separate the post-project action
 - [x] Restrict project email contacts to creators and accepted collaborators
 - [x] Remove creator email from the general project-list response
 - [x] Add authorized project contact cards, workspace contact links, and minimal teammate profiles
 - [x] Add PostgreSQL relationship-authorization integration coverage
 - [x] Verify Phase 12 locally: 29 runnable server tests, 8 client tests, production build, and desktop/mobile browser QA
+- [x] Add creator-only project edit controls backed by the existing authorized update endpoint
+- [x] Add confirmed project deletion backed by the existing authorized delete endpoint
+- [x] Verify Phase 13 locally: 11 client tests, production React build, and desktop/mobile browser QA
 
 ## Remaining deployment work
 
@@ -70,6 +74,9 @@ Last updated: 2026-08-12
 - [ ] Confirm Appwrite deploys the dark-mode and teammate-profile client
 - [ ] Confirm CI executes the accepted-team PostgreSQL authorization test
 - [ ] Test reciprocal teammate email/profile visibility with two real Thapar accounts
+- [ ] Commit and push Phase 13 project lifecycle controls
+- [ ] Confirm Appwrite deploys the project edit and delete controls
+- [ ] Edit and delete a disposable owner-created project on the public site
 - [ ] Commit and push this deployment status document to GitHub
 - [ ] Confirm Render automatically deploys the updated Express API
 - [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site

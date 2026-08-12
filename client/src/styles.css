@@ -41,6 +41,8 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .button--secondary { background: #fff; }
 .button--lavender { background: var(--lavender); border-color: transparent; }
 .button--coral { background: var(--coral); border-color: transparent; }
+.button--danger { border-color: #d45b49; background: transparent; color: #b53b29; }
+.button--danger:hover { background: #fff0ed; }
 .button--link { border: 0; border-radius: 0; padding: 0; min-height: auto; background: transparent; border-bottom: 1px solid var(--ink); }
 .button--link:hover { box-shadow: none; }
 
@@ -428,6 +430,10 @@ textarea { resize: vertical; line-height: 1.5; }
 .modal__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
 .modal__header h2 { margin: 0; font-size: 22px; }
 .modal-form > div { display: flex; justify-content: flex-end; gap: 10px; padding-top: 7px; }
+.delete-confirmation { display: grid; gap: 14px; }
+.delete-confirmation p { margin: 0; color: var(--muted); line-height: 1.55; }
+.delete-confirmation__warning { color: #b53b29 !important; font-weight: 700; }
+.delete-confirmation__actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 8px; }
 
 @media (max-width: 1230px) {
   .app-shell { grid-template-columns: 190px minmax(0, 1fr) 230px; }
@@ -568,15 +574,15 @@ textarea { resize: vertical; line-height: 1.5; }
   background: var(--app-page);
 }
 html[data-theme='dark'] .app-shell {
-  --ink: #edf8f3;
-  --muted: #9cb0a8;
-  --line: #29423a;
-  --soft: #14271f;
-  --app-page: #071711;
-  --app-surface: #0c2018;
-  --app-surface-raised: #112a20;
-  --app-copy: #b7c8c1;
-  --app-hover: #183422;
+  --ink: #f4f4f4;
+  --muted: #a3a3a3;
+  --line: #343434;
+  --soft: #232323;
+  --app-page: #090909;
+  --app-surface: #141414;
+  --app-surface-raised: #1e1e1e;
+  --app-copy: #c2c2c2;
+  --app-hover: #282828;
   --shadow: 0 18px 45px rgba(0, 0, 0, .34);
 }
 .app-area { background: var(--app-page); }
@@ -653,12 +659,12 @@ html[data-theme='dark'] .app-shell .skill-picker > div.is-selected,
 html[data-theme='dark'] .app-shell .empty-panel {
   background: var(--app-hover);
 }
-html[data-theme='dark'] .app-shell .notice-banner { border-color: #285e47; background: #102d22; color: #98dfbf; }
+html[data-theme='dark'] .app-shell .notice-banner { border-color: #4a4f4c; background: #1b1e1c; color: #c8cdca; }
 html[data-theme='dark'] .app-shell .status--accepted,
 html[data-theme='dark'] .app-shell .status--active,
-html[data-theme='dark'] .app-shell .status--open { background: #163c2d; color: #9be2c1; }
+html[data-theme='dark'] .app-shell .status--open { background: #262a27; color: #caff62; }
 html[data-theme='dark'] .app-shell .status--forming { background: #2a2747; color: #c7c0ff; }
-html[data-theme='dark'] .app-shell .status--completed { background: #25332e; color: #c2d0ca; }
+html[data-theme='dark'] .app-shell .status--completed { background: #292c2a; color: #c9cecb; }
 
 .project-contacts > p { margin: -8px 0 16px; color: var(--muted) !important; font-size: 12px !important; }
 .project-contacts > div { display: grid; gap: 10px; }
@@ -749,4 +755,6 @@ html[data-theme='dark'] .app-shell .rail-plain { background: transparent; color:
 html[data-theme='dark'] .app-shell .profile-ring { background: var(--app-surface-raised); }
 html[data-theme='dark'] .app-shell .filters label { border-color: var(--line); background: var(--app-surface); }
 html[data-theme='dark'] .app-shell .filters select { background: transparent; }
-html[data-theme='dark'] .app-shell .skills b { background: #1c3b2f; color: #dff7ec; }
+html[data-theme='dark'] .app-shell .skills b { background: #292c2a; color: #dfe3e0; }
+html[data-theme='dark'] .app-shell .button--danger { border-color: #f08776; color: #ff9a8a; }
+html[data-theme='dark'] .app-shell .button--danger:hover { background: rgba(240, 135, 118, .12); }

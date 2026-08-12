@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
@@ -63,6 +63,34 @@ describe('SyncSpace UI', () => {
     expect(screen.getAllByRole('link', { name: 'Discover' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: 'Applications' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Post a project/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Edit' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Delete GreenGrid' })).toBeVisible();
+  });
+
+  it('lets the project owner edit an existing project', async () => {
+    renderApp('/projects/1/edit', { id: 4, email: 'arjun@northstar.edu', role: 'owner', profileId: 4, profile: { id: 4, name: 'Arjun Rao' } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Keep the project brief current' })).toBeVisible();
+    const name = screen.getByRole('textbox', { name: 'Project name' });
+    expect(name).toHaveValue('GreenGrid');
+    fireEvent.change(name, { target: { value: 'GreenGrid Campus' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'GreenGrid Campus' })).toBeVisible();
+  });
+
+  it('blocks non-owners from the project edit form', async () => {
+    renderApp('/projects/1/edit', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Project cannot be edited' })).toBeVisible();
+    expect(screen.getByText('Only the project owner can edit this project.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+  });
+
+  it('requires confirmation before an owner deletes a project', async () => {
+    renderApp('/projects/mine', { id: 4, email: 'arjun@northstar.edu', role: 'owner', profileId: 4, profile: { id: 4, name: 'Arjun Rao' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete GreenGrid' }));
+    expect(screen.getByRole('dialog', { name: 'Delete GreenGrid?' })).toBeVisible();
+    expect(screen.getByText('This action cannot be undone.')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete project' }));
+    await waitFor(() => expect(screen.queryByText('GreenGrid')).not.toBeInTheDocument());
   });
   it('persists dark mode from the signed-in navigation', async () => {
     localStorage.setItem('syncspace-theme:v1', 'light');

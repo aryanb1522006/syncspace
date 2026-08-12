@@ -18,6 +18,8 @@ export const api = {
   }),
   updateSkills: (id, skills) => use(() => demoApi.updateSkills(id, skills), () => request(`/students/${id}/skills`, { method: 'PUT', body: json({ skills }) })),
   listSkills: () => use(() => demoApi.listSkills(), () => request('/students/skills/dictionary')),
+  updateProject: (id, input) => use(() => demoApi.updateProject(id, input), () => request(`/projects/${id}`, { method: 'PUT', body: json(input) })),
+  deleteProject: (id) => use(() => demoApi.deleteProject(id), () => request(`/projects/${id}`, { method: 'DELETE' })),
   listProjects: (search = '') => use(() => demoApi.listProjects(search), () => request(`/projects${search}`)),
   createProject: (input) => use(() => demoApi.createProject(input), () => request('/projects', { method: 'POST', body: json(input) })),
   recommendations: () => use(() => demoApi.recommendations(), () => request('/recommendations/projects')),

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import { Applications } from './pages/Applications.jsx';
 import { CreateProject } from './pages/CreateProject.jsx';
+import { EditProject } from './pages/EditProject.jsx';
 import { Dashboard } from './pages/Dashboard.jsx';
 import { Login } from './pages/Login.jsx';
 import { MemberProfile } from './pages/MemberProfile.jsx';
@@ -31,6 +32,7 @@ export default function App() {
     <Route path="/applications" element={<Protected><Applications /></Protected>} />
     <Route path="/projects/mine" element={<Protected><OwnerDashboard /></Protected>} />
     <Route path="/projects/new" element={<Protected><CreateProject /></Protected>} />
+    <Route path="/projects/:id/edit" element={<Protected><EditProject /></Protected>} />
     <Route path="/projects/:id/applications" element={<Protected><OwnerApplications /></Protected>} />
     <Route path="/projects/:id" element={<Protected><ProjectDetail /></Protected>} />
     <Route path="/profile" element={<Protected><ProfileEdit /></Protected>} />

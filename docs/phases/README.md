@@ -14,5 +14,6 @@
 | 10 | Landing visibility repair and complete feature story | Complete in repository | 5 client tests; production build; desktop/mobile browser QA; CTA navigation |
 | 11 | 50-student pilot readiness and production data hygiene | Cleanup tooling complete; live apply pending | Dry-run selector; explicit confirmation; 4 safety tests; pilot launch gate |
 | 12 | Dark mode, trusted team contacts, and protected teammate profiles | Complete in repository | 29 server and 8 client tests pass; production build; desktop/mobile browser QA |
+| 13 | Owner project editing, confirmed deletion, and neutral dark-theme refinement | Complete in repository | 11 client tests pass; production build; desktop/mobile browser QA; owner/non-owner authorization UI coverage |
 
 Each phase has a separate document containing its decisions, delivered scope, verification evidence, and known constraints.

@@ -4,8 +4,8 @@ const seed = {
     { id: 4, email: 'arjun@northstar.edu', password: 'demo1234', role: 'owner', collegeId: 1, profileId: 4, name: 'Arjun Rao' }
   ],
   directory: [
-    { id: 4, userId: 4, name: 'Arjun Rao', email: 'arjun@northstar.edu' },
-    { id: 2, userId: 2, name: 'Kabir Shah', email: 'kabir@northstar.edu' }
+    { id: 4, userId: 4, name: 'Arjun Rao', email: 'arjun@northstar.edu', department: 'Electrical Engineering', year: 4, bio: 'Building practical climate tools for campus teams.', interests: ['Climate Tech', 'IoT'], availabilityHoursPerWeek: 10, skills: [{ id: 5, name: 'Node.js', category: 'Backend', proficiency: 4 }, { id: 6, name: 'PostgreSQL', category: 'Data', proficiency: 4 }] },
+    { id: 2, userId: 2, name: 'Kabir Shah', email: 'kabir@northstar.edu', department: 'Computer Science', year: 3, bio: 'ML and data collaborator interested in useful campus systems.', interests: ['Machine Learning', 'Climate Tech'], availabilityHoursPerWeek: 8, skills: [{ id: 7, name: 'Machine Learning', category: 'AI', proficiency: 4 }, { id: 8, name: 'Data Science', category: 'Data', proficiency: 4 }] }
   ],
   profile: {
     id: 1, user_id: 1, name: 'Isha Mehta', email: 'isha@northstar.edu', department: 'Computer Science',
@@ -56,10 +56,10 @@ const seed = {
   ],
   teams: [{
     id: 1, project_id: 1, project_title: 'GreenGrid', project_status: 'open', owner_id: 4, ownerId: 4, ownerName: 'Arjun Rao', ownerEmail: 'arjun@northstar.edu', teamSize: 4, domain: 'Climate Tech',
-    ownerProfileId: 4,
+    ownerProfileId: 4, ownerUserId: 4,
     members: [
-      { id: 1, name: 'Isha Mehta', email: 'isha@northstar.edu', role_label: 'Frontend', initials: 'IM' },
-      { id: 2, name: 'Kabir Shah', email: 'kabir@northstar.edu', role_label: 'ML & data', initials: 'KS' }
+      { id: 1, profileId: 1, user_id: 1, userId: 1, name: 'Isha Mehta', email: 'isha@northstar.edu', role_label: 'Frontend', initials: 'IM' },
+      { id: 2, profileId: 2, user_id: 2, userId: 2, name: 'Kabir Shah', email: 'kabir@northstar.edu', role_label: 'ML & data', initials: 'KS' }
     ],
     tasks: [
       { id: 1, title: 'Build dashboard shell', assigned_to: 1, assignee_name: 'Isha Mehta', status: 'todo', due_date: '2026-09-12' },
@@ -107,7 +107,7 @@ export const demoApi = {
     const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
     const profileId = Number(id);
     const profile = profileId === Number(state.profile.id)
-      ? { id: state.profile.id, userId: state.profile.user_id, name: state.profile.name, email: state.profile.email }
+      ? { ...state.profile, userId: state.profile.user_id, availabilityHoursPerWeek: state.profile.availability_hours_per_week }
       : state.directory.find((item) => Number(item.id) === profileId);
     if (!profile) throw new Error('Student profile not found');
     const viewerProfileId = Number(user?.profileId ?? user?.profile?.id);
@@ -119,7 +119,15 @@ export const demoApi = {
       return viewerCanAccess && targetIsMember;
     });
     const contactVisible = Number(profile.userId) === Number(user?.id) || related;
-    return wait({ student: { id: profile.id, userId: profile.userId, name: profile.name, ...(contactVisible ? { email: profile.email } : {}), contactVisible } });
+    return wait({ student: { ...profile, email: contactVisible ? profile.email : undefined, contactVisible } });
+  },
+  async getStudentByUserId(userId) {
+    const state = load();
+    const profile = Number(state.profile.user_id) === Number(userId)
+      ? state.profile
+      : state.directory.find((item) => Number(item.userId) === Number(userId));
+    if (!profile) throw new Error('Student profile not found');
+    return this.getStudent(profile.id);
   },
   async updateProfile(id, input) {
     const state = load();
@@ -194,9 +202,9 @@ export const demoApi = {
     const canViewTeamContacts = Number(project.ownerId) === Number(user?.id)
       || team?.members.some((member) => Number(member.profileId ?? member.id) === viewerProfileId);
     const teamContacts = canViewTeamContacts ? [
-      { profileId: project.ownerProfileId, name: project.owner_name, email: team?.ownerEmail ?? state.directory.find((item) => Number(item.id) === Number(project.ownerProfileId))?.email, roleLabel: 'Creator' },
+      { profileId: project.ownerProfileId, userId: project.ownerId, name: project.owner_name, email: team?.ownerEmail ?? state.directory.find((item) => Number(item.id) === Number(project.ownerProfileId))?.email, roleLabel: 'Creator' },
       ...(team?.members ?? []).map((member) => ({
-        profileId: member.profileId ?? member.id, name: member.name, email: member.email, roleLabel: member.role_label ?? 'Collaborator'
+        profileId: member.profileId ?? member.id, userId: member.userId ?? member.user_id, name: member.name, email: member.email, roleLabel: member.role_label ?? 'Collaborator'
       }))
     ].filter((contact) => contact.profileId && contact.email) : [];
     return wait({ project: { ...project, teamContacts, canViewTeamContacts: teamContacts.length > 0 } });

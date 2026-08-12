@@ -1,6 +1,6 @@
 # SyncSpace Deployment Status
 
-Last updated: 2026-08-12
+Last updated: 2026-08-13
 
 ## Public services
 
@@ -71,6 +71,10 @@ Last updated: 2026-08-12
 - [x] Remove the duplicate My Projects right-rail create action
 - [x] Fit the landing typography and Three.js constellation to narrow mobile viewports
 - [x] Verify Phase 14 locally: 12 client tests, production React build, and desktop/mobile browser QA
+- [x] Remove the redundant Profile item while retaining the signed-in name as the edit-profile link
+- [x] Add stable user-ID teammate profile routes with backward-compatible profile-ID lookup
+- [x] Show teammate bio, department, year, availability, interests, and skills without weakening contact privacy
+- [x] Verify Phase 15 locally: 29 server tests, 13 client tests, production React build, and desktop/mobile browser QA
 
 ## Remaining deployment work
 
@@ -86,6 +90,10 @@ Last updated: 2026-08-12
 - [ ] Commit and push Phase 14 profile-skill and responsive-polish changes
 - [ ] Confirm Appwrite deploys the Phase 14 React bundle
 - [ ] Verify manual skills, resume suggestions, dark contrast, and mobile landing fit on the public site
+- [ ] Commit and push Phase 15 stable teammate-profile changes
+- [ ] Confirm Render deploys `GET /api/students/by-user/:userId`
+- [ ] Confirm Appwrite deploys the four-item navigation and stable teammate links
+- [ ] Test creator and collaborator profile links from a real public team workspace
 - [ ] Commit and push this deployment status document to GitHub
 - [ ] Confirm Render automatically deploys the updated Express API
 - [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site

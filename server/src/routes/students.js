@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { downloadResume, getMe, getStudent, listSkills, updateProfile, updateSkills, uploadResume } from '../controllers/studentController.js';
+import { downloadResume, getMe, getStudent, getStudentByUser, listSkills, updateProfile, updateSkills, uploadResume } from '../controllers/studentController.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { validate } from '../middleware/validation.js';
@@ -27,6 +27,7 @@ const skillsSchema = z.object({
 
 router.get('/me', asyncHandler(getMe));
 router.get('/skills/dictionary', asyncHandler(listSkills));
+router.get('/by-user/:userId', asyncHandler(getStudentByUser));
 router.get('/:id/resume', asyncHandler(downloadResume));
 router.get('/:id', asyncHandler(getStudent));
 router.put('/:id', validate(profileSchema), asyncHandler(updateProfile));

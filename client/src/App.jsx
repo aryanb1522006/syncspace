@@ -36,6 +36,7 @@ export default function App() {
     <Route path="/projects/:id/applications" element={<Protected><OwnerApplications /></Protected>} />
     <Route path="/projects/:id" element={<Protected><ProjectDetail /></Protected>} />
     <Route path="/profile" element={<Protected><ProfileEdit /></Protected>} />
+    <Route path="/profiles/users/:userId" element={<Protected><MemberProfile /></Protected>} />
     <Route path="/profiles/:id" element={<Protected><MemberProfile /></Protected>} />
     <Route path="/teams" element={<Protected><Teams /></Protected>} />
     <Route path="/team/:id" element={<Protected><TeamWorkspace /></Protected>} />

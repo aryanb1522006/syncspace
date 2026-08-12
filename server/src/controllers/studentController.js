@@ -27,6 +27,15 @@ export async function getMe(req, res) {
 
 export async function getStudent(req, res) {
   const student = await getStudentById(Number(req.params.id));
+  return sendVisibleStudent(req, res, student);
+}
+
+export async function getStudentByUser(req, res) {
+  const student = await getStudentByUserId(Number(req.params.userId));
+  return sendVisibleStudent(req, res, student);
+}
+
+async function sendVisibleStudent(req, res, student) {
   if (!student || Number(student.college_id) !== req.user.collegeId) throw new AppError(404, 'Student profile not found');
   const contactVisible = await canViewStudentContact(req.user.id, student.id, req.user.collegeId);
   res.json({
@@ -34,6 +43,12 @@ export async function getStudent(req, res) {
       id: student.id,
       userId: student.user_id,
       name: student.name,
+      department: student.department,
+      year: student.year,
+      bio: student.bio,
+      interests: student.interests,
+      availabilityHoursPerWeek: student.availability_hours_per_week,
+      skills: student.skills,
       ...(contactVisible ? { email: student.email } : {}),
       contactVisible
     }

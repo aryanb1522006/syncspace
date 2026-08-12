@@ -11,6 +11,7 @@ export const api = {
   googleLogin: (credential) => request('/auth/google', { method: 'POST', body: json({ credential }) }),
   getMe: () => use(() => demoApi.getMe(), () => request('/students/me')),
   getStudent: (id) => use(() => demoApi.getStudent(id), () => request(`/students/${id}`)),
+  getStudentByUserId: (userId) => use(() => demoApi.getStudentByUserId(userId), () => request(`/students/by-user/${userId}`)),
   updateProfile: (id, input) => use(() => demoApi.updateProfile(id, input), () => request(`/students/${id}`, { method: 'PUT', body: json(input) })),
   uploadResume: (id, file) => use(() => demoApi.uploadResume(file), () => {
     const body = new FormData(); body.append('resume', file);

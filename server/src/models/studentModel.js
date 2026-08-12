@@ -17,8 +17,8 @@ export async function getStudentById(id) {
 }
 
 export async function getStudentByUserId(userId) {
-  const { rows } = await query('SELECT * FROM student_profiles WHERE user_id = $1', [userId]);
-  return rows[0] ?? null;
+  const { rows } = await query('SELECT id FROM student_profiles WHERE user_id = $1', [userId]);
+  return rows[0] ? getStudentById(rows[0].id) : null;
 }
 export async function canViewStudentContact(viewerUserId, targetStudentId, collegeId) {
   const { rows } = await query(

@@ -41,6 +41,10 @@ Keep the returned `token` and send it as a bearer token in the examples below.
 curl http://localhost:4000/api/students/me \
   -H "Authorization: Bearer $TOKEN"
 
+# Resolve a teammate through the stable user ID returned by project/team contacts.
+curl http://localhost:4000/api/students/by-user/2 \
+  -H "Authorization: Bearer $TOKEN"
+
 curl -X PUT http://localhost:4000/api/students/1 \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -57,6 +61,8 @@ curl -X PUT http://localhost:4000/api/students/1/skills \
 ```
 
 Resume upload returns proposed skill matches. The client presents them for review and only persists the selected list through the skills endpoint.
+
+Teammate profiles expose campus collaboration fields such as department, bio, interests, availability, and skills to authenticated users in the same college. Email is included only for the profile owner, a project creator, or accepted collaborators who share a team with that person.
 
 ## Projects and recommendations
 

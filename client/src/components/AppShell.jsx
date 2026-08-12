@@ -1,4 +1,4 @@
-import { Compass, FileText, FolderKanban, LogOut, Moon, PlusCircle, Sun, UserRound, UsersRound } from 'lucide-react';
+import { Compass, FileText, FolderKanban, LogOut, Moon, PlusCircle, Sun, UsersRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { api } from '../api/resources.js';
@@ -28,8 +28,7 @@ export function AppShell({ children, rightRail, className = '' }) {
     { to: '/dashboard', label: 'Discover', icon: Compass },
     { to: '/applications', label: 'Applications', icon: FileText },
     { to: '/projects/mine', label: 'My projects', icon: FolderKanban },
-    { to: teamRoute, label: teams.length > 1 ? `Teams (${teams.length})` : 'My team', icon: UsersRound, team: true },
-    { to: '/profile', label: 'Profile', icon: UserRound }
+    { to: teamRoute, label: teams.length > 1 ? `Teams (${teams.length})` : 'My team', icon: UsersRound, team: true }
   ];
   const name = user?.profile?.name ?? user?.name ?? user?.email?.split('@')[0] ?? 'SyncSpace member';
   const email = user?.email ?? '';

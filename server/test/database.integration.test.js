@@ -2,7 +2,7 @@ import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { pool, query, withTransaction } from '../src/config/db.js';
 import { getProjectContactsForViewer } from '../src/models/projectModel.js';
-import { canViewStudentContact } from '../src/models/studentModel.js';
+import { canViewStudentContact, getStudentByUserId } from '../src/models/studentModel.js';
 
 const enabled = process.env.RUN_DB_TESTS === 'true';
 
@@ -55,6 +55,8 @@ test('accepted team relationships gate profile email and project contacts', { sk
   const collaborator = byEmail.get('isha@northstar.edu');
   const unrelated = byEmail.get('kabir@northstar.edu');
   assert.ok(owner && collaborator && unrelated, 'expected seeded pilot identities');
+  const collaboratorProfile = await getStudentByUserId(collaborator.user_id);
+  assert.equal(Number(collaboratorProfile.id), Number(collaborator.profile_id), 'user id should resolve the stable profile record');
 
   let projectId;
   try {

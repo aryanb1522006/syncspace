@@ -63,6 +63,8 @@ describe('SyncSpace UI', () => {
     expect(screen.getAllByRole('link', { name: 'Discover' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: 'Applications' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Post a project/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Profile', exact: true })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Arjun Rao arjun@northstar.edu/i }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: 'Create a project' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Edit' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Delete GreenGrid' })).toBeVisible();
@@ -121,15 +123,24 @@ describe('SyncSpace UI', () => {
     renderApp('/projects/1', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
     expect(await screen.findByRole('heading', { level: 2, name: 'Project contacts' })).toBeVisible();
     expect(screen.getByText('arjun@northstar.edu')).toBeVisible();
-    expect(screen.getAllByRole('link', { name: 'View profile' })[0]).toHaveAttribute('href', '/profiles/4');
+    expect(screen.getAllByRole('link', { name: 'View profile' })[0]).toHaveAttribute('href', '/profiles/users/4');
   });
 
   it('shows authorized contact details and member profile links in the shared workspace', async () => {
     renderApp('/team/1', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
     expect(await screen.findByRole('heading', { level: 1, name: 'GreenGrid workspace' })).toBeVisible();
     expect(screen.getByText(/arjun@northstar.edu/i)).toBeVisible();
-    expect(screen.getByRole('link', { name: /View Arjun Rao's profile/i })).toHaveAttribute('href', '/profiles/4');
-    expect(screen.getByRole('link', { name: /View Kabir Shah's profile/i })).toHaveAttribute('href', '/profiles/2');
+    expect(screen.getByRole('link', { name: /View Arjun Rao's profile/i })).toHaveAttribute('href', '/profiles/users/4');
+    expect(screen.getByRole('link', { name: /View Kabir Shah's profile/i })).toHaveAttribute('href', '/profiles/users/2');
+  });
+
+  it('opens another accepted teammate profile by stable user id', async () => {
+    renderApp('/profiles/users/2', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Kabir Shah' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'kabir@northstar.edu' })).toHaveAttribute('href', 'mailto:kabir@northstar.edu');
+    expect(screen.getByText('ML and data collaborator interested in useful campus systems.')).toBeVisible();
+    expect(screen.getAllByText('Machine Learning').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Profile could not be loaded')).not.toBeInTheDocument();
   });
 
   it('shows students a live application status and accepted-team navigation', async () => {

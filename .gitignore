@@ -11,3 +11,11 @@ backups/*
 !backups/.gitkeep
 deploy/secrets/*
 !deploy/secrets/.gitkeep
+site/
+.venv-docs/
+*.aux
+*.fdb_latexmk
+*.fls
+*.out
+*.synctex.gz
+*.toc

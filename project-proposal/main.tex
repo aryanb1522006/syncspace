@@ -1,0 +1,147 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=0.72in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{xcolor}
+
+\hypersetup{colorlinks=true, urlcolor=blue!60!black, linkcolor=black}
+\setlist{nosep,leftmargin=*}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+\newcommand{\projecttitle}{SyncSpace: Explainable Campus Project and Teammate Matching for Thapar Students}
+\newcommand{\studentone}{Aryan Bansal}
+\newcommand{\rollone}{1024030690}
+\newcommand{\emailone}{abansal6\_be24@thapar.edu}
+\newcommand{\studenttwo}{Yashika}
+\newcommand{\rolltwo}{1024030680}
+\newcommand{\emailtwo}{\textbf{TODO: INSTITUTIONAL EMAIL}}
+\newcommand{\studentthree}{Rumani}
+\newcommand{\rollthree}{1024030678}
+\newcommand{\emailthree}{\textbf{TODO: INSTITUTIONAL EMAIL}}
+\newcommand{\instructor}{Raghav B. Venkataramaiyer}
+
+\begin{document}
+
+\begin{center}
+    {\Large\bfseries \projecttitle\par}
+    \vspace{3pt}
+    {\large UCS503: Software Engineering Semester Project Proposal\par}
+    \vspace{7pt}
+    \begin{tabular}{lll}
+        \toprule
+        Team member & Roll number & Email \\
+        \midrule
+        \studentone & \rollone & \emailone \\
+        \studenttwo & \rolltwo & \emailtwo \\
+        \studentthree & \rollthree & \emailthree \\
+        \bottomrule
+    \end{tabular}
+
+    \vspace{5pt}
+    Lab instructor: \instructor \hfill Date: 16 August 2026
+\end{center}
+
+\section{Elevator Pitch}
+
+\textbf{Gap:} Thapar students do not have one reliable workflow for discovering campus projects, finding complementary teammates, and tracking the decision to join. \textbf{Solution:} SyncSpace combines verified campus identity, explainable skill matching, project publishing, applications, owner decisions, protected contact exchange, and a shared task workspace under one account. \textbf{Impact:} A controlled 50-student pilot will measure whether students reach a suitable project or publish an idea faster, with less manual coordination and no unauthorized contact exposure.
+
+\section{Introduction and Problem Statement}
+
+Student project formation is commonly coordinated through class groups, personal networks, and direct messages. These channels favor students who already know one another and provide no consistent description of project scope, required skills, weekly commitment, capacity, or deadline. A student who wants to contribute cannot compare opportunities systematically or understand why a project is relevant. An owner must repeat the same brief, manually track applicants, and move accepted members to yet another tool. Application state and responsibility for the next action are often unclear.
+
+The specific software-engineering gap is therefore a fragmented and non-explainable team-formation workflow. A directory of project cards would be insufficient. The system also needs institutional identity, a structured student profile, a representation of proficiency and availability, transparent ranking, owner-authorized application decisions, capacity-safe team formation, controlled contact visibility, and a handoff into collaboration. These capabilities must work on typical student phones, protect resumes and email addresses, and prevent users from another tenant or an unrelated project from accessing team data.
+
+SyncSpace addresses this gap as a deployable web platform initially restricted to Thapar. A verified student uses one account to act as a collaborator, project owner, or both. Recommendations are deterministic rather than predictive: every score exposes skill coverage, interest alignment, availability, commitment fit, and remaining gaps. This keeps the semester project focused on requirements, architecture, authorization, database transactions, interface design, testing, continuous delivery, and measured user validation rather than unproven algorithmic novelty.
+
+\section{SMART Objectives}
+
+The primary objective is to deliver and validate one complete project-formation workflow for Thapar students within the semester. Specifically, the project shall:
+
+\begin{enumerate}
+    \item deliver by the first prototype a vertical slice in which a verified student completes a profile, discovers or publishes a project, applies, receives an owner decision, and opens an accepted-team workspace;
+    \item pilot the system with at least 50 Thapar students by the final evaluation and record workflow completion, time-to-first-value, critical errors, explanation comprehension, and short usefulness feedback;
+    \item maintain zero confirmed unauthorized project mutations, team-contact disclosures, or cross-college reads in the defined negative test suite;
+    \item expose all recommendation components and cover eligibility, normalization, ordering, and skill-gap behavior with deterministic automated tests; and
+    \item run migration, seed, server/client tests, production build, API smoke, and academic-documentation pipelines on every relevant change to the main branch.
+\end{enumerate}
+
+\section{Methodology}
+
+\subsection{Engineering design and technology}
+
+The project uses an iterative vertical-slice process. The React 19 and Vite client provides responsive light/dark interfaces. The Express 5 API owns validation, authentication, and authorization. PostgreSQL stores colleges, users, profiles, skills, projects, applications, teams, members, tasks, notifications, and moderation audit records. A storage adapter uses local disk for development and a private S3-compatible Supabase bucket in production. Google identity tokens are verified by the server and checked against the exact configured institutional domain. JWTs carry the authenticated identity, but ownership, membership, tenant, and administrator relationships are rechecked against server state.
+
+The architecture separates routes, controllers, services, and parameterized SQL models. The matching engine is pure and receives plain objects, allowing scores to be tested independently of PostgreSQL. Multi-step decisions such as accepting an applicant use transactions and row locks so capacity, membership, application state, and notification changes commit atomically. Contact email and profile information are returned only to the project creator and accepted collaborators. PDF resumes are private objects and are processed only to suggest skills that the student reviews before saving.
+
+\subsection{Module development and integration}
+
+Development proceeds through five integrated modules: (1) verified identity and student profile; (2) project publishing, lifecycle, and explainable discovery; (3) applications and capacity-safe owner decisions; (4) authorized member contacts, profiles, and task workspace; and (5) pilot administration, logging, and deployment operations. Each module is joined to the same account and college boundary. Optional encrypted chat remains outside the assessed core until its key lifecycle and moderation model are validated.
+
+\subsection{Testing and data collection}
+
+Unit tests cover scoring, skill extraction, identity, and authorization decisions. API/component tests cover schemas, login, resource ownership, UI visibility, and project lifecycle. SQL-backed integration tests verify tenant relationships, transactions, capacity, protected contacts, and retained moderation audits. GitHub Actions starts PostgreSQL, applies numbered migrations, seeds data, runs both suites, builds the production client, starts the API, and executes a smoke journey. Human acceptance testing shall recruit 50 students across at least two groups. Participants receive codes P01--P50; the evaluation stores task completion, time, errors, explanation comprehension, and a 1--5 usefulness response, but excludes tokens, email addresses, resume text, and object keys.
+
+\section{Timeline}
+
+\small
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+Week & Engineering task & Deliverable \\
+\midrule
+W1 & Problem framing and selection-criteria review & Gap and vertical-slice boundary \\
+W2 & Team/repository formation and template alignment & Course page and journals \\
+W3 & Elevator pitch, story cards, and backlog & Pitch and prioritized scope \\
+W4 & Proposal refinement & LaTeX proposal [CE] \\
+W5--W6 & Identity/profile and discover/publish increments & Tested integrated modules \\
+W7 & Apply, owner decision, and workspace integration & Deployed prototype/report [MST] \\
+W8 & Defect and feedback triage & Improvement plan [CE] \\
+W9--W10 & MST/stabilization & Evidence correction; no scope expansion \\
+W11 & Authorization and team-flow improvement & Relationship/capacity test evidence \\
+W12 & Rehearsal and design/test update & Progress review [CE] \\
+W13 & Schedule buffer & Resolve deployment/integration risks \\
+W14 & Controlled participant onboarding & Pilot dataset in progress \\
+W15 & Pilot-ready second prototype & Preliminary results [CE] \\
+W16 & High-severity fixes and repeated measures & Improved second prototype \\
+W17 & Final validation and reporting & Prototype, report, and seminar [EST] \\
+\bottomrule
+\end{tabularx}
+\normalsize
+
+\section{Resources and Budget}
+
+Resources include the three-student team, instructor, pilot volunteers, existing laptops/phones, GitHub, VS Code, Node.js/pnpm, PostgreSQL, React, Express, and browsers. Managed services currently use educational/free tiers: Appwrite Sites for the client, Render for the API, and Supabase for PostgreSQL and private object storage. No paid dataset, research engine, special laboratory hardware, or external funding is required for the prototype. Free-tier quotas and cold starts will be documented as constraints; the pilot will stop or reduce traffic before incurring paid usage.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Resource & Prototype cost & Control \\
+\midrule
+Open-source development stack & INR 0 & Versioned lockfile and CI \\
+Managed hosting/database/storage & INR 0 target & Monitor free-tier quotas \\
+Pilot devices/network & INR 0 project cost & Participants use existing devices \\
+Printing/presentation & INR 0--500 if chosen & Prefer digital submission \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Evaluation Criteria}
+
+The primary measure is \emph{time to first value}: the median time from successful sign-in until a participant submits one valid application or publishes one valid project, targeted at ten minutes or less. Supporting targets are at least 80\% onboarding completion, 75\% first-value completion, 80\% owner-decision and workspace-handoff completion, 75\% recommendation-explanation comprehension, 95\% successful critical-flow responses excluding deliberate validation errors, median usefulness of at least four out of five, and zero confirmed authorization disclosures. The report shall give actual numerators, denominators, medians, errors, and deviations rather than replacing missing observations with targets.
+
+\section{Feasibility, Scalability, and Risks}
+
+Time-to-value is supported by a demonstrable two-week vertical slice and weekly deployable increments. The engines are mature and already integrated; the project does not depend on training a model or discovering a research result. The stateless API, relational constraints, object storage, and explicit \texttt{college\_id} boundary can scale beyond one class, while the evaluated deployment remains one-college to control scope.
+
+Principal risks are insufficient pilot recruitment, free-tier cold starts, OAuth misconfiguration, inappropriate pilot content, privacy defects, and scope growth. Mitigations are recruitment through two groups, separate cold/warm measurements, pre-pilot identity checks, audited tenant moderation, negative authorization tests, and keeping chat/social features outside the core. If the official report templates change from their current TBA state, the team will sync upstream and transfer the evidence into the announced format.
+
+\section{Summary}
+
+SyncSpace is a locally relevant software-engineering project with a short path to user feedback, available engines, automated delivery, explicit privacy boundaries, and measurable success criteria. The semester result will be judged not by feature count but by a reproducible critical workflow, protected data, transparent matching, and honestly reported pilot evidence.
+
+\end{document}

@@ -1,0 +1,107 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=0.8in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{tabularx}
+
+\hypersetup{colorlinks=true, urlcolor=blue!60!black, linkcolor=black}
+\setlist{nosep,leftmargin=*}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries SyncSpace Prototype-Stage Progress Report\par}
+\vspace{3pt}
+{\large UCS503: Software Engineering\par}
+\vspace{6pt}
+Aryan Bansal (1024030690), Yashika (1024030680), Rumani (1024030678) \\
+Lab instructor: Raghav B. Venkataramaiyer \\
+Living draft prepared 16 August 2026
+\end{center}
+
+\begin{quote}
+\textbf{Template status.} The official UCS503 prototype-report template is currently marked TBA. This living report follows the linked report guidance and must be transferred into the announced upstream format before the W7 submission.
+\end{quote}
+
+\section{Executive Summary}
+
+SyncSpace is a deployed campus project and teammate-matching platform scoped to Thapar students. The current prototype connects verified identity, student profiles, explainable project ranking, project publishing, applications, owner accept/reject decisions, protected team contacts, member profiles, and shared tasks. The client is deployed on Appwrite Sites, the Express API on Render, and PostgreSQL plus private S3-compatible storage on Supabase. The project emphasizes a complete and authorized workflow rather than an experimental prediction model.
+
+The prototype is technically substantial but the course evaluation is not complete. Automated and manual development checks exist, while the proposed 50-student pilot and its outcome metrics remain future work. This report therefore separates implemented evidence from planned validation.
+
+\section{Objectives and Current Status}
+
+\begin{tabularx}{\textwidth}{@{}p{0.52\textwidth}p{0.15\textwidth}X@{}}
+\toprule
+Objective & Status & Evidence/remaining work \\
+\midrule
+Verified profile to discover/publish vertical slice & Implemented & Public React/API deployment and route tests \\
+Apply, owner decision, and accepted workspace & Implemented & Transactional team workflow and UI tests \\
+Explain every recommendation component & Implemented & Pure scoring module and expanded breakdown \\
+Prevent unauthorized mutation/contact/tenant access & Implemented in tests & Repeat with two real Thapar accounts \\
+Automate migration, seed, tests, build, and smoke & Implemented & GitHub Actions `SyncSpace CI` \\
+Pilot with at least 50 Thapar students & Not started & W14--W16 controlled protocol \\
+Meet proposed workflow and usefulness targets & Not measured & Report actual values after pilot \\
+\bottomrule
+\end{tabularx}
+
+\section{Implemented System Architecture}
+
+The React client communicates with a stateless Express API over HTTPS and JWT authentication. Express routes validate input with Zod, controllers enforce ownership/membership/tenant relationships, services coordinate multi-step workflows and adapters, and models issue parameterized PostgreSQL queries. Resume files use a local adapter in development and a private S3-compatible bucket in production. Google ID tokens are verified on the server, and the accepted institutional domain is compared exactly.
+
+The data model connects colleges, users, student profiles, skills, projects, applications, teams, members, tasks, notifications, and administrator audit logs. Application acceptance locks relevant records and commits the decision, team creation/membership, and notification together. Team contacts and member profiles are only returned to the creator or accepted collaborators. Administrator deletion is tenant-scoped and writes an actor/reason/project snapshot before the deletion commits.
+
+Detailed context, use-case, sequence, container, and domain models are published in the project documentation under `docs/course/design-and-uml.md`.
+
+\section{Module-by-Module Implementation}
+
+\subsection{Identity and profile}
+
+One account supports both joining and publishing. Production Google identity verification can restrict access to exact `thapar.edu` accounts. The profile includes department, year, availability, bio, interests, manually rated skills, and reviewed skill suggestions extracted from a private PDF resume.
+
+\subsection{Project discovery and ownership}
+
+Owners create structured briefs with capacity, dates, commitment, domain, and required/preferred skills. The lifecycle supports editing and deletion with server ownership checks. Students receive deterministic recommendation components: required and preferred skill coverage, interest alignment, availability, and commitment/eligibility reasons.
+
+\subsection{Application-to-team workflow}
+
+A student submits one application and sees its live state. An owner sees applicant details and accepts/rejects from the browser. Acceptance rechecks capacity in PostgreSQL and exposes the resulting team dynamically. The workspace shows authorized names, emails, profile links, membership roles, tasks, assignments, and progress.
+
+\subsection{Pilot operations}
+
+Health/readiness endpoints, structured logging, Prometheus metrics, alert examples, backup/restore scripts, and a dry-run-first pilot cleanup script support operation. A verified exact-email administrator can remove an inappropriate tenant project only after exact-title confirmation and a reason retained in an audit table.
+
+\section{Continuous Delivery and Verification}
+
+The main GitHub Actions job starts PostgreSQL, installs the locked pnpm workspace, validates configuration, applies every numbered migration, seeds the database, runs server and client tests, creates the production bundle, starts the API, performs a smoke journey, and uploads the client artifact. A separate documentation workflow builds this UCS503 project site strictly and publishes it to GitHub Pages.
+
+The latest repository verification before this draft recorded 34 passing server tests with three SQL-dependent tests skipped when local database credentials were absent, 16 passing client tests, and a successful production build. The CI environment supplies PostgreSQL so SQL-backed tests are expected to run rather than skip. These counts must be refreshed from the exact W7 commit and accompanied by the GitHub Actions URL before submission.
+
+\section{Planned Pilot Evaluation}
+
+The controlled pilot targets at least 50 Thapar students from two or more groups. The primary measure is median time from successful sign-in to one valid application or published project, targeted at ten minutes or less. Secondary targets cover onboarding, first-value completion, recommendation comprehension, owner decisions, workspace handoff, API reliability, usefulness, and zero authorization disclosures. Participant codes P01--P50 replace identity in the evaluation sheet; tokens, email addresses, resume text, and storage keys are excluded.
+
+No pilot result is claimed in this draft. Actual numerators, denominators, medians, device mix, failure codes, limitations, and objective deviations will replace this paragraph after W14--W16 observation.
+
+\section{Known Constraints and Improvement Plan}
+
+\begin{itemize}
+    \item Free-tier API cold starts can distort first-request timing; cold and warm measurements will be reported separately.
+    \item The current repository must be accepted as an adapted template or moved to an official fork without breaking deployment paths.
+    \item The three team members, roll numbers, and lab instructor are recorded; institutional emails for Yashika and Rumani and the official team-sheet declaration remain incomplete.
+    \item Migration 006 and the production admin allowlist require a controlled deployment drill before the pilot.
+    \item Two real Thapar accounts must repeat profile/contact authorization on the public deployment.
+    \item End-to-end encrypted chat remains a separate prototype because key recovery, member removal, multi-device use, and moderation are unresolved.
+\end{itemize}
+
+\section{Next Milestone}
+
+Before W7 the team will finalize the official proposal, activate and verify GitHub Pages, keep individual weekly journals, deploy/retest the administrator migration, conduct a five-student rehearsal, update this report with screenshots and exact CI results, and demonstrate the complete sign-in-to-workspace journey. The broader 50-student pilot follows only after the rehearsal has no high-severity privacy or workflow defect.
+
+\end{document}

@@ -1,0 +1,39 @@
+name: UCS503 Project Page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "journals/**"
+      - "project-proposal/**"
+      - "project-report-prototype-stage/**"
+      - "project-report-final/**"
+      - "mkdocs.yml"
+      - "requirements-course-docs.txt"
+      - ".github/workflows/course-docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: syncspace-course-docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: node scripts/verify-course-submission.js
+      - run: pip install -r requirements-course-docs.txt
+      - run: mkdocs build --strict
+      - run: mkdocs gh-deploy --force

@@ -1,0 +1,89 @@
+site_name: "SyncSpace | UCS503 Semester Project"
+site_description: "UCS503 semester-project documentation for SyncSpace"
+site_url: https://aryanb1522006.github.io/syncspace/
+repo_url: https://github.com/aryanb1522006/syncspace
+repo_name: aryanb1522006/syncspace
+
+theme:
+  name: material
+  features:
+    - navigation.footer
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: black
+      accent: lime
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: lime
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra_javascript:
+  - https://unpkg.com/mermaid@11/dist/mermaid.min.js
+  - javascripts/mermaid.js
+
+nav:
+  - Home: index.md
+  - Course submission:
+      - Compliance status: course/course-compliance.md
+      - Project overview: course/project-overview.md
+      - Requirements and user stories: course/requirements.md
+      - Architecture and UML: course/design-and-uml.md
+      - Agile backlog: course/backlog.md
+      - Testing and evaluation: course/testing-and-evaluation.md
+      - Weekly progress: course/weekly-progress.md
+  - Engineering evidence:
+      - Architecture: architecture.md
+      - API: api.md
+      - Quality assurance: qa.md
+      - Deployment status: deployment-status.md
+      - Production runbook: production-runbook.md
+      - Tenant boundary: tenant-boundary.md
+      - Design system: design-system.md
+      - Chat encryption decision: chat-encryption-options.md
+  - Build record:
+      - Phase index: phases/README.md
+      - Phase 1 - Foundation: phases/phase-01-foundation.md
+      - Phase 2 - Core API: phases/phase-02-core-api.md
+      - Phase 3 - Matching: phases/phase-03-matching.md
+      - Phase 4 - Team workflow: phases/phase-04-team-workflow.md
+      - Phase 5 - Frontend: phases/phase-05-frontend.md
+      - Phase 6 - Verification: phases/phase-06-verification.md
+      - Phase 7 - Production readiness: phases/phase-07-production-readiness.md
+      - Phase 8 - Owner application experience: phases/phase-08-owner-application-experience.md
+      - Phase 9 - Unified account identity: phases/phase-09-unified-account-identity.md
+      - Phase 10 - Landing repair: phases/phase-10-landing-repair.md
+      - Phase 11 - Pilot readiness: phases/phase-11-pilot-readiness.md
+      - Phase 12 - Dark mode and team profiles: phases/phase-12-dark-mode-team-profiles.md
+      - Phase 13 - Project lifecycle: phases/phase-13-project-lifecycle-controls.md
+      - Phase 14 - Profile skills and mobile polish: phases/phase-14-profile-skills-mobile-polish.md
+      - Phase 15 - Stable teammate profiles: phases/phase-15-stable-teammate-profiles.md
+      - Phase 16 - Production identity hotfix: phases/phase-16-production-profile-identity-hotfix.md
+      - Phase 17 - Admin control: phases/phase-17-personal-admin-control.md

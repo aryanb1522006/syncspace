@@ -65,3 +65,17 @@ No material visual mismatch remained after the final comparison. The implementat
 | Real-API client bundle | Vite production build passed; 1,702 modules transformed |
 | Docker image/Compose execution | Not run because Docker is unavailable |
 | Live migration, seed, and API smoke journey | Not run because PostgreSQL is unavailable |
+
+## UCS503 packaging verification — 2026-08-16
+
+| Check | Result |
+|---|---|
+| Server test suite | 34 passed, 0 failed, 3 PostgreSQL-only tests skipped without local database credentials |
+| Client test suite | 16 passed, 0 failed |
+| Production React build | Passed; 1,768 modules transformed |
+| Course structure verifier | Passed; 15 required artifacts, one member-journal folder, proposal approximately 1,334 words |
+| MkDocs project page | `mkdocs build --strict` passed |
+| Git diff whitespace check | Passed |
+| LaTeX PDF compilation | Not run locally because no TeX engine is installed; required after team metadata is filled |
+
+The production build reports a non-blocking size warning for the separately loaded Three.js chunk. This should be measured during the mobile pilot rather than hidden; the core signed-in pages do not depend on landing-page WebGL initialization.

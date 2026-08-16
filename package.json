@@ -10,6 +10,7 @@
     "dev:client": "pnpm --filter ./client dev",
     "test": "pnpm --filter ./server test && pnpm --filter ./client test",
     "build": "pnpm --filter ./client build",
+    "verify:course": "node scripts/verify-course-submission.js",
     "validate:config": "node scripts/validate-config.js",
     "smoke:api": "pnpm --filter ./server smoke:api",
     "db:migrate": "pnpm --filter ./server db:migrate",

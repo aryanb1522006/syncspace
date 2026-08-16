@@ -51,6 +51,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm validate:config
+      - run: pnpm verify:course
       - run: pnpm db:migrate
       - run: pnpm db:seed
       - run: pnpm test

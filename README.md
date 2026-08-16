@@ -89,6 +89,10 @@ Required skills carry more weight than preferred skills. The response also inclu
 
 ## Documentation
 
+- [UCS503 course submission status](course-submission-status.md)
+- [UCS503 project page source](docs/index.md)
+- [LaTeX project proposal](project-proposal/main.tex)
+- [Team journals](journals/README.md)
 - [API examples](docs/api.md)
 - [Architecture and data model](docs/architecture.md)
 - [Visual design system](docs/design-system.md)
@@ -99,4 +103,10 @@ Required skills carry more weight than preferred skills. The response also inclu
 
 ## Current deployment status
 
-The public prototype is hosted on Appwrite Sites with its Express API on Render and PostgreSQL plus private object storage on Supabase. Phase 9's immersive landing, unified account capabilities, and verified Thapar Google identity are complete in the repository. Google Cloud, Render, Appwrite, migration 005, and a public end-to-end pass are still required before enabling Google-only production access. See [the deployment status](docs/deployment-status.md) for the live checklist.
+The public prototype is hosted on Appwrite Sites with its Express API on Render and PostgreSQL plus private object storage on Supabase. The repository includes the immersive landing, unified join/publish account, verified Thapar Google identity, explainable matching, owner lifecycle/application controls, protected teammate profiles/contacts, responsive dark mode, and tenant-scoped pilot administration through Phase 17. Production migration 006, administrator configuration, credential-rotation confirmation, and a fresh two-account public journey remain required before the 50-student pilot. See [the deployment status](docs/deployment-status.md) for the operational checklist.
+
+## UCS503 semester-project structure
+
+This repository also contains the deliverables required by the official UCS503 semester-project template. The deployed React and Express source remains at the repository root so existing Appwrite and Render paths continue to work; [code/README.md](code/README.md) is the course-facing source manifest. Documentation is published from `docs/`, technical journals live under `journals/`, and the proposal and staged reports use the required LaTeX folders.
+
+After GitHub Pages is activated once for this repository, `.github/workflows/course-docs.yml` publishes the project documentation on every relevant change. The product deployment remains [syncspace.appwrite.network](https://syncspace.appwrite.network); GitHub Pages is the academic project page rather than the application host.

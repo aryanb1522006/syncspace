@@ -86,22 +86,22 @@ Last updated: 2026-08-13
 ## Remaining deployment work
 
 - [ ] Confirm that the database password exposed in setup screenshots was rotated and that Render uses the replacement URI
-- [ ] Commit and push Phase 12
+- [x] Commit and push Phase 12
 - [ ] Confirm Render deploys the relationship-aware API
 - [ ] Confirm Appwrite deploys the dark-mode and teammate-profile client
 - [ ] Confirm CI executes the accepted-team PostgreSQL authorization test
 - [ ] Test reciprocal teammate email/profile visibility with two real Thapar accounts
-- [ ] Commit and push Phase 13 project lifecycle controls
+- [x] Commit and push Phase 13 project lifecycle controls
 - [ ] Confirm Appwrite deploys the project edit and delete controls
 - [ ] Edit and delete a disposable owner-created project on the public site
-- [ ] Commit and push Phase 14 profile-skill and responsive-polish changes
+- [x] Commit and push Phase 14 profile-skill and responsive-polish changes
 - [ ] Confirm Appwrite deploys the Phase 14 React bundle
 - [ ] Verify manual skills, resume suggestions, dark contrast, and mobile landing fit on the public site
-- [ ] Commit and push Phase 15 stable teammate-profile changes
+- [x] Commit and push Phase 15 stable teammate-profile changes
 - [ ] Confirm Render deploys `GET /api/students/by-user/:userId`
 - [ ] Confirm Appwrite deploys the four-item navigation and stable teammate links
 - [ ] Test creator and collaborator profile links from a real public team workspace
-- [ ] Commit and push Phase 16 production profile identity hotfix
+- [x] Commit and push Phase 16 production profile identity hotfix
 - [ ] Confirm Render redeploys the Phase 16 API (no Appwrite rebuild is required)
 - [ ] Sign in again and confirm `/profiles/users/11` loads from the public shared workspace
 - [ ] Apply `006_admin_controls.sql` to the production Supabase database
@@ -109,6 +109,7 @@ Last updated: 2026-08-13
 - [ ] Sign out and sign in again with that verified Google account to receive the admin claim
 - [ ] Confirm **Admin control** is visible only to that account on the public site
 - [ ] Delete one disposable project and confirm its reason is retained in Recent admin activity
+- [x] Commit and push Phase 17 personal administrator controls
 - [ ] Commit and push this deployment status document to GitHub
 - [ ] Confirm Render automatically deploys the updated Express API
 - [ ] Run the owner create → student apply → owner accept/reject → team workspace journey against the public site

@@ -51,6 +51,7 @@ const seed = {
     }
   ],
   applications: [{ id: 1, projectId: 2, title: 'StudyCircle', domain: 'EdTech', status: 'pending', appliedAt: '2026-08-10T12:00:00Z', studentId: 1, name: 'Isha Mehta', department: 'Computer Science', year: 3, bio: 'Frontend engineer who cares about inclusive interfaces.', availabilityHoursPerWeek: 12, skills: [{ id: 1, name: 'React', proficiency: 5 }, { id: 2, name: 'TypeScript', proficiency: 4 }] }],
+  queries: [{ id: 1, projectId: 1, askerUserId: 1, askerName: 'Isha Mehta', question: 'Does the React role include dashboard accessibility work?', response: null, status: 'open', createdAt: '2026-08-11T10:00:00Z', answeredAt: null }],
   adminAudit: [],
   notifications: [
     { id: 1, message: 'StudyCircle viewed your application.', is_read: false, created_at: '2026-08-10T12:00:00Z' },
@@ -91,6 +92,21 @@ function save(state) {
 }
 
 const wait = (value) => new Promise((resolve) => setTimeout(() => resolve(clone(value)), 140));
+
+function validateDemoQuery(value, project, response = false) {
+  const text = value.trim();
+  if (/(asshole|bastard|bitch|bullshit|dumbass|fuck|idiot|moron|retard|shit|stupid)/i.test(text)) {
+    throw new Error('Please rewrite this without abusive or insulting language.');
+  }
+  if (!response) {
+    const context = `${project.title} ${project.domain} ${project.description} ${project.skills.map((skill) => skill.name).join(' ')}`;
+    const relevance = /(application|apply|availability|build|collaborat|commitment|contribut|deadline|deliverable|design|development|goal|join|member|meeting|milestone|project|requirement|responsibility|roadmap|role|skill|stack|task|team|technology|timeline|tool|work)/i;
+    const contextWords = context.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 3);
+    if (!relevance.test(text) && !contextWords.some((token) => text.toLowerCase().includes(token))) {
+      throw new Error('Keep the query related to this project, its skills, timeline, or team requirements.');
+    }
+  }
+}
 
 export const demoApi = {
   async login({ email, password }) {
@@ -148,6 +164,10 @@ export const demoApi = {
     return wait({ student: state.profile });
   },
   async listSkills() { return wait({ skills: load().skills }); },
+  async publicProjectSearch(skill = '') {
+    const projects = load().projects.filter((project) => project.status !== 'cancelled' && (!skill.trim() || project.skills.some((item) => `${item.name} ${item.category ?? ''}`.toLowerCase().includes(skill.trim().toLowerCase()))));
+    return wait({ projects: projects.slice(0, 6), count: projects.slice(0, 6).length });
+  },
   async listProjects(search = '') {
     const state = load();
     const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
@@ -242,6 +262,40 @@ export const demoApi = {
       }))
     ].filter((contact) => contact.profileId && contact.email) : [];
     return wait({ project: { ...project, teamContacts, canViewTeamContacts: teamContacts.length > 0 } });
+  },
+  async listProjectQueries(id) {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    const project = state.projects.find((item) => Number(item.id) === Number(id));
+    const queries = (state.queries ?? []).filter((item) => Number(item.projectId) === Number(id) && (Number(project?.ownerId) === Number(user?.id) || Number(item.askerUserId) === Number(user?.id)));
+    return wait({ queries });
+  },
+  async createProjectQuery(id, question) {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    const project = state.projects.find((item) => Number(item.id) === Number(id));
+    if (!project) throw new Error('Project not found');
+    if (Number(project.ownerId) === Number(user?.id)) throw new Error('Project owners cannot raise a query on their own project');
+    validateDemoQuery(question, project);
+    const created = { id: Date.now(), projectId: Number(id), askerUserId: user?.id, askerName: user?.name ?? user?.profile?.name ?? 'Student', question: question.trim(), response: null, status: 'open', createdAt: new Date().toISOString(), answeredAt: null };
+    state.queries ??= [];
+    state.queries.unshift(created);
+    state.notifications.unshift({ id: Date.now() + 1, message: `New query on ${project.title}.`, is_read: false, created_at: new Date().toISOString() });
+    save(state);
+    return wait({ query: created });
+  },
+  async answerProjectQuery(projectId, queryId, response) {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    const project = state.projects.find((item) => Number(item.id) === Number(projectId));
+    if (!project) throw new Error('Project not found');
+    if (Number(project.ownerId) !== Number(user?.id)) throw new Error('Only the project owner can answer queries');
+    validateDemoQuery(response, project, true);
+    const projectQuery = (state.queries ?? []).find((item) => Number(item.id) === Number(queryId) && Number(item.projectId) === Number(projectId));
+    if (!projectQuery) throw new Error('Open project query not found');
+    Object.assign(projectQuery, { response: response.trim(), status: 'answered', answeredAt: new Date().toISOString() });
+    save(state);
+    return wait({ query: projectQuery });
   },
   async apply(id) {
     const state = load();

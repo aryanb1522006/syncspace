@@ -3,9 +3,11 @@ import {
   deleteProject as deleteProjectRecord,
   getProjectById,
   getProjectContactsForViewer,
+  listPublicProjects,
   listProjects as listProjectRecords,
   updateProject as updateProjectRecord
 } from '../models/projectModel.js';
+import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
 
 async function visibleProject(req, id) {
@@ -33,6 +35,15 @@ export async function listProjects(req, res) {
     ownerId: req.query.mine === 'true' ? req.user.id : undefined
   });
   res.json({ projects });
+}
+
+export async function searchPublicProjects(req, res) {
+  const projects = await listPublicProjects({
+    skill: req.query.skill,
+    collegeId: env.defaultCollegeId,
+    limit: 6
+  });
+  res.json({ projects, count: projects.length });
 }
 
 export async function getProject(req, res) {

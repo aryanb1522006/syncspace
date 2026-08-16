@@ -1,280 +1,259 @@
-import { animate, stagger } from 'animejs';
-import {
-  ArrowRight,
-  BellRing,
-  CheckCircle2,
-  Compass,
-  FileLock2,
-  Flag,
-  LayoutDashboard,
-  LockKeyhole,
-  PencilLine,
-  Send,
-  ShieldCheck,
-  UserRoundCheck,
-  UsersRound
-} from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { ArrowRight, Clock3, Compass, LayoutDashboard, Search, UsersRound } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api/resources.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { createConstellationScene } from '../landing/constellationScene.js';
-import '../landing/landingCore.css';
-import '../landing/immersiveBase.css';
-import '../landing/joinFirst.css';
-import '../landing/workflow.css';
+import '../landing/hybrid.css';
 
-const projectExamples = [
-  { key: 'greenGrid', name: 'GreenGrid', domain: 'Climate Tech', tone: 'lime' },
-  { key: 'studyCircle', name: 'StudyCircle', domain: 'EdTech', tone: 'lavender' },
-  { key: 'campusMobility', name: 'Campus Mobility', domain: 'Mobility', tone: 'coral' },
-  { key: 'openLab', name: 'OpenLab', domain: 'Research', tone: 'lavender' },
-  { key: 'localLens', name: 'LocalLens', domain: 'Community', tone: 'mint' }
-];
+const suggestedSkills = ['React', 'Figma', 'Machine Learning', 'PostgreSQL', 'Video Editing'];
 
-const workflowSteps = [
-  { title: 'Discover', icon: Compass, details: ['Skill-based matching', 'Transparent match score'] },
-  { title: 'Apply', icon: Send, details: ['Application tracking', 'Private resume sharing'] },
-  { title: 'Review', icon: UserRoundCheck, details: ['Owner decisions', 'Accept or reject controls'] },
-  { title: 'Build', icon: UsersRound, details: ['Team workspace', 'Tasks and notifications'] },
-  { title: 'Deliver', icon: Flag, details: ['Shared progress', 'Verified team contacts'] }
-];
-
-function Brand() {
-  return <Link className="brand brand--landing" to="/" aria-label="SyncSpace home">
-    <svg className="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="19" cy="24" r="14" /><circle cx="29" cy="24" r="14" /></svg>
-    <span>SyncSpace</span>
-  </Link>;
-}
-
-function LandingConstellation({ joinTarget }) {
-  const shellRef = useRef(null);
+function NetworkCanvas() {
   const canvasRef = useRef(null);
-  const labelsRef = useRef({});
 
   useEffect(() => {
-    const scene = createConstellationScene(canvasRef.current, labelsRef.current);
-    const syncSceneToScroll = () => {
-      const hero = shellRef.current?.closest('.hero');
-      scene.setScrollProgress(window.scrollY / Math.max((hero?.offsetHeight ?? 1) * 0.82, 1));
+    const canvas = canvasRef.current;
+    const host = canvas?.parentElement;
+    if (!canvas || !host) return undefined;
+    const context = canvas.getContext('2d');
+    if (!context) return undefined;
+    const pointer = { x: -9999, y: -9999 };
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let width = 0;
+    let height = 0;
+    let nodes = [];
+    let frame;
+
+    const resize = () => {
+      const rect = host.getBoundingClientRect();
+      const density = Math.min(window.devicePixelRatio || 1, 2);
+      width = rect.width;
+      height = rect.height;
+      canvas.width = Math.max(1, Math.round(width * density));
+      canvas.height = Math.max(1, Math.round(height * density));
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context.setTransform(density, 0, 0, density, 0, 0);
+      const count = Math.min(64, Math.max(26, Math.floor((width * height) / 17000)));
+      nodes = Array.from({ length: count }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: (Math.random() - 0.5) * 0.22,
+        radius: Math.random() * 1.3 + 0.8
+      }));
     };
-    window.addEventListener('scroll', syncSceneToScroll, { passive: true });
-    syncSceneToScroll();
+
+    const draw = () => {
+      context.clearRect(0, 0, width, height);
+      nodes.forEach((node) => {
+        if (!reduceMotion) {
+          node.x += node.vx;
+          node.y += node.vy;
+          if (node.x < 0 || node.x > width) node.vx *= -1;
+          if (node.y < 0 || node.y > height) node.vy *= -1;
+          const pointerDistance = Math.hypot(pointer.x - node.x, pointer.y - node.y);
+          if (pointerDistance < 140) {
+            node.x += (pointer.x - node.x) * 0.0035;
+            node.y += (pointer.y - node.y) * 0.0035;
+          }
+        }
+      });
+
+      for (let first = 0; first < nodes.length; first += 1) {
+        for (let second = first + 1; second < nodes.length; second += 1) {
+          const distance = Math.hypot(nodes[first].x - nodes[second].x, nodes[first].y - nodes[second].y);
+          if (distance < 125) {
+            context.strokeStyle = `rgba(228, 242, 34, ${0.11 * (1 - distance / 125)})`;
+            context.beginPath();
+            context.moveTo(nodes[first].x, nodes[first].y);
+            context.lineTo(nodes[second].x, nodes[second].y);
+            context.stroke();
+          }
+        }
+        const pointerDistance = Math.hypot(nodes[first].x - pointer.x, nodes[first].y - pointer.y);
+        if (pointerDistance < 160) {
+          context.strokeStyle = `rgba(228, 242, 34, ${0.28 * (1 - pointerDistance / 160)})`;
+          context.beginPath();
+          context.moveTo(nodes[first].x, nodes[first].y);
+          context.lineTo(pointer.x, pointer.y);
+          context.stroke();
+        }
+      }
+
+      nodes.forEach((node) => {
+        context.beginPath();
+        context.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+        context.fillStyle = 'rgba(208, 214, 224, 0.56)';
+        context.fill();
+      });
+      if (!reduceMotion) frame = window.requestAnimationFrame(draw);
+    };
+
+    const move = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = event.clientX - rect.left;
+      pointer.y = event.clientY - rect.top;
+    };
+    const leave = () => { pointer.x = -9999; pointer.y = -9999; };
+    resize();
+    draw();
+    window.addEventListener('resize', resize);
+    host.addEventListener('pointermove', move);
+    host.addEventListener('pointerleave', leave);
     return () => {
-      window.removeEventListener('scroll', syncSceneToScroll);
-      scene.dispose?.();
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', resize);
+      host.removeEventListener('pointermove', move);
+      host.removeEventListener('pointerleave', leave);
     };
   }, []);
 
-  const saveLabel = (key) => (node) => {
-    labelsRef.current[key] = node;
-  };
+  return <canvas className="hybrid-network" ref={canvasRef} aria-hidden="true" />;
+}
 
-  return <div className="constellation-shell" id="project-examples" ref={shellRef} aria-label="Interactive map of example projects leading toward Join">
-    <canvas id="constellation-canvas" ref={canvasRef} aria-hidden="true" />
-    <p className="interaction-hint"><span aria-hidden="true">↔</span> Move to explore project paths</p>
-    <Link className="node-label node-label--you" ref={saveLabel('you')} to={joinTarget}>You</Link>
-    <Link className="node-label node-label--join" data-ambient-pulse ref={saveLabel('join')} to={joinTarget}>Join</Link>
-    {projectExamples.map((project) => <Link
-      className={`project-label project-label--${project.tone}`}
-      key={project.key}
-      ref={saveLabel(project.key)}
-      to={`${joinTarget}${joinTarget.includes('?') ? '&' : '?'}project=${project.key}`}
-    >
-      <strong>{project.name}</strong><small>{project.domain}</small>
-    </Link>)}
+function ProjectSearch({ user }) {
+  const [skill, setSkill] = useState('');
+  const [projects, setProjects] = useState([]);
+  const [openCount, setOpenCount] = useState(null);
+  const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.publicProjectSearch('').then(({ count, projects: rows }) => {
+      setOpenCount(count ?? rows.length);
+    }).catch(() => setOpenCount(null));
+  }, []);
+
+  const search = useCallback(async (requestedSkill = skill) => {
+    const normalized = requestedSkill.trim();
+    setSkill(requestedSkill);
+    setSearched(true);
+    setError('');
+    if (!normalized) {
+      setProjects([]);
+      setError('Enter a skill or choose one of the suggestions below.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await api.publicProjectSearch(normalized);
+      setProjects(result.projects);
+    } catch (reason) {
+      setProjects([]);
+      setError(reason.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [skill]);
+
+  return <div className="hybrid-matcher">
+    <div className="hybrid-status"><span />{openCount === null ? 'Live project matching' : `${openCount} projects open now`}</div>
+    <form className="hybrid-search" onSubmit={(event) => { event.preventDefault(); search(); }}>
+      <Search aria-hidden="true" />
+      <input aria-label="Search projects by skill" value={skill} onChange={(event) => setSkill(event.target.value)} placeholder="React, Figma, ML, PostgreSQL…" />
+      <button type="submit">{loading ? 'Searching…' : 'Find match'}</button>
+    </form>
+    <div className="hybrid-chips" aria-label="Suggested skills">
+      {suggestedSkills.map((item) => <button type="button" key={item} onClick={() => search(item)}>{item}</button>)}
+    </div>
+    <div className="hybrid-results" aria-live="polite">
+      {error && <p className="hybrid-search-message">{error}</p>}
+      {searched && !loading && !error && projects.length === 0 && <p className="hybrid-search-message">No open project currently lists that skill. Try a related skill.</p>}
+      {projects.map((project) => <Link className="hybrid-result" key={project.id} to={user ? `/projects/${project.id}` : `/register?intent=join&project=${project.id}`}>
+        <span><small>{project.domain}</small><strong>{project.title}</strong></span>
+        <span className="hybrid-result__skills">{project.skills.slice(0, 3).map((item) => item.name).join(' · ')}</span>
+        <ArrowRight aria-hidden="true" />
+      </Link>)}
+    </div>
   </div>;
 }
 
-function WorkflowSection({ joinTarget, postTarget }) {
-  return <section className="workflow-journey" id="workflow" aria-labelledby="workflow-title">
-    <div className="workflow-heading" data-scroll-reveal="up">
-      <h2 id="workflow-title">From idea to working team.</h2>
-      <p>One verified account keeps every step connected.</p>
-    </div>
-
-    <div className="workflow-track" data-scroll-reveal="up">
-      <span className="workflow-track__rail" aria-hidden="true" />
-      <span className="workflow-track__pulse" data-ambient-pulse aria-hidden="true" />
-      {workflowSteps.map(({ title, icon: Icon, details }, index) => <article className="workflow-step" key={title}>
-        <span className={`workflow-step__node workflow-step__node--${index + 1}`} aria-hidden="true"><Icon /></span>
-        <p><span>{index + 1}</span>{title}</p>
-        <ul>{details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
-      </article>)}
-    </div>
-
-    <div className="workflow-lanes" data-scroll-reveal="up">
-      <Link className="workflow-lane workflow-lane--join" to={joinTarget}>
-        <span className="workflow-lane__icon" aria-hidden="true"><UsersRound /></span>
-        <span className="workflow-lane__copy"><strong>Join a project</strong><small>Find work matched to your skills and goals.</small></span>
-        <span className="workflow-lane__signals"><span>90% match</span><span><CheckCircle2 /> Application accepted</span></span>
-        <ArrowRight aria-hidden="true" />
-      </Link>
-      <Link className="workflow-lane workflow-lane--lead" to={postTarget}>
-        <span className="workflow-lane__icon" aria-hidden="true"><Flag /></span>
-        <span className="workflow-lane__copy"><strong>Lead a project</strong><small>Post your idea and choose the right collaborators.</small></span>
-        <span className="workflow-lane__signals"><span>Review applicants</span><span><UserRoundCheck /> Accept or reject</span></span>
-        <ArrowRight aria-hidden="true" />
-      </Link>
-    </div>
-
-    <div className="workflow-preview" data-scroll-reveal="up">
-      <div className="workflow-preview__intro">
-        <strong>Live workflow preview</strong>
-        <span>Decisions and team activity stay in one place.</span>
-      </div>
-      <div className="workflow-preview__event">
-        <span className="avatar avatar--lavender">AR</span>
-        <span><small>Application accepted</small><strong>Arjun joined Campus Mobility</strong></span>
-        <CheckCircle2 aria-hidden="true" />
-      </div>
-      <div className="workflow-preview__event">
-        <span className="workflow-preview__event-icon"><LayoutDashboard /></span>
-        <span><small>Task assigned</small><strong>Design route selection screen</strong></span>
-        <BellRing aria-hidden="true" />
-      </div>
-    </div>
-  </section>;
-}
+const services = [
+  { icon: Compass, title: 'Skill-first ranking', copy: 'Discover ranks by what you know and how much time you have—not popularity.' },
+  { icon: LayoutDashboard, title: 'One dashboard', copy: 'Track applications, projects, queries, teams, and deadlines in one consistent workspace.' },
+  { icon: UsersRound, title: 'Project queries', copy: 'Ask the owner a focused question before applying, then keep the answer attached to the project.' },
+  { icon: Clock3, title: 'Live availability', copy: 'Matches respect your actual weekly bandwidth, not just your interests.' }
+];
 
 export function Landing() {
   const { user } = useAuth();
   const rootRef = useRef(null);
-  const joinTarget = user ? '/dashboard' : '/register?intent=join';
+  const discoverTarget = user ? '/dashboard' : '/register?intent=join';
   const postTarget = user ? '/projects/new' : '/register?intent=post';
 
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return undefined;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const targets = [...root.querySelectorAll('[data-scroll-reveal]')];
-    const reveal = (target) => { target.dataset.revealState = 'visible'; };
-    const running = [];
-
-    if (!reduceMotion) {
-      try {
-        running.push(animate(root.querySelectorAll('[data-ambient-pulse]'), {
-          scale: [0.96, 1.06, 0.96],
-          opacity: [0.62, 1, 0.62],
-          delay: stagger(220),
-          duration: 2600,
-          loop: true,
-          ease: 'inOutSine'
-        }));
-      } catch {
-        // Decorative motion must never control content visibility.
-      }
+    const targets = [...rootRef.current.querySelectorAll('[data-hybrid-reveal]')];
+    if (!('IntersectionObserver' in window) || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      targets.forEach((target) => { target.dataset.revealState = 'visible'; });
+      return undefined;
     }
-
-    if (reduceMotion || !('IntersectionObserver' in window)) {
-      targets.forEach(reveal);
-      return () => running.forEach((animation) => animation?.cancel?.());
-    }
-
     targets.forEach((target) => { target.dataset.revealState = 'waiting'; });
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
-        reveal(entry.target);
+        entry.target.dataset.revealState = 'visible';
         observer.unobserve(entry.target);
       });
-    }, { threshold: 0.16, rootMargin: '0px 0px -10% 0px' });
+    }, { threshold: 0.15 });
     targets.forEach((target) => observer.observe(target));
-    const visibilitySafety = window.setTimeout(() => targets.forEach(reveal), 8000);
-
-    return () => {
-      window.clearTimeout(visibilitySafety);
-      observer.disconnect();
-      running.forEach((animation) => animation?.cancel?.());
-    };
+    return () => observer.disconnect();
   }, []);
 
-  return <div className="immersive-landing" ref={rootRef}>
-    <div className="ambient-grid" aria-hidden="true" />
-    <header className="site-header" data-animate="header">
-      <Brand />
-      <nav className="site-nav" aria-label="Primary navigation">
-        <a href="#project-examples">Projects</a>
-        <a href="#how-it-works">How it works</a>
-        <a href="#workflow">Features</a>
-        {user ? <Link to="/dashboard">Dashboard</Link> : <Link to="/login">Sign in</Link>}
-        <Link className="button button--quiet button--dark" to={joinTarget}>{user ? 'Open SyncSpace' : 'Sign up now'}</Link>
-      </nav>
+  return <div className="hybrid-landing" ref={rootRef}>
+    <header className="hybrid-nav">
+      <Link className="hybrid-brand" to="/"><span aria-hidden="true" />SyncSpace</Link>
+      <nav aria-label="Primary navigation"><a href="#process">Process</a><a href="#services">Services</a><a href="#search">Discover</a>{user ? <Link to="/dashboard">Dashboard</Link> : <Link to="/login">Sign in</Link>}</nav>
+      <Link className="hybrid-pill" to={postTarget}>Post a project</Link>
     </header>
 
-    <main id="top">
-      <section className="hero" aria-labelledby="hero-title">
-        <div className="hero-copy">
-          <h1 id="hero-title">Find the project that makes you want to show up.</h1>
-          <p>Meet Thapar student builders, explore work that matches your skills, or start the idea you wish already existed.</p>
-          <div className="hero-actions">
-            <Link className="button button--primary button--landing-primary" to={joinTarget}>Explore projects <ArrowRight /></Link>
-            <Link className="button button--outline button--dark" to={postTarget}>Post your idea <ArrowRight /></Link>
-          </div>
-        </div>
-        <LandingConstellation joinTarget={joinTarget} />
-        <a className="scroll-cue" href="#how-it-works">Scroll to see how it works <span aria-hidden="true">↓</span></a>
-      </section>
-
-      <section className="action-switchboard" id="how-it-works" aria-labelledby="switchboard-title">
-        <div className="path-origin" aria-hidden="true"><span /><i /></div>
-        <div className="section-heading" data-scroll-reveal="up">
-          <h2 id="switchboard-title">Join something promising—or start what’s missing.</h2>
-          <p>One verified account gives you both paths.</p>
-        </div>
-        <div className="route-list" data-scroll-reveal="up">
-          <Link className="route route--mint" to={joinTarget}>
-            <span className="route-icon" aria-hidden="true"><UsersRound /></span>
-            <span className="route-copy"><strong>Join a project</strong><span>Explore real ideas, apply, and track every decision from your dashboard.</span></span>
-            <ArrowRight className="route-arrow" />
-          </Link>
-          <Link className="route route--lime" to={postTarget}>
-            <span className="route-icon" aria-hidden="true"><PencilLine /></span>
-            <span className="route-copy"><strong>Post your idea</strong><span>Create a project, review applicants, and assemble your team.</span></span>
-            <ArrowRight className="route-arrow" />
-          </Link>
+    <main>
+      <section className="hybrid-hero" id="search" aria-labelledby="hybrid-title">
+        <NetworkCanvas />
+        <div className="hybrid-glow" aria-hidden="true" />
+        <div className="hybrid-hero__content">
+          <p className="hybrid-eyebrow">— Group 16 / UCS503</p>
+          <h1 id="hybrid-title">Your skills already have<br />a project waiting. <span>Just ask.</span></h1>
+          <p className="hybrid-subhead">SyncSpace matches students to real project teams by what they can actually do—not who they know.</p>
+          <ProjectSearch user={user} />
+          <p className="hybrid-caption">— Search live projects by the skill you want to use</p>
         </div>
       </section>
 
-      <WorkflowSection joinTarget={joinTarget} postTarget={postTarget} />
-
-      <section className="privacy-band" id="contact-privacy" aria-labelledby="privacy-title">
-        <div className="privacy-copy" data-scroll-reveal="left">
-          <h2 id="privacy-title">Meet the people behind the project.</h2>
-          <p>After an application is accepted, the project creator and collaborators can see one another’s verified Thapar email address. Pending applicants never see private team contacts.</p>
-          <Link className="text-link text-link--landing" to={joinTarget}>{user ? 'Open your dashboard' : 'Sign up with Thapar'} <ArrowRight /></Link>
-        </div>
-        <div className="contact-stage" data-scroll-reveal="right">
-          <div className="contact-branches" aria-hidden="true"><span /><span /><span /></div>
-          <div className="contact-example" aria-label="Example accepted team contacts">
-            <p className="contact-kicker">Verified team-only contacts</p>
-            <div className="contact-team"><span className="team-mark">GG</span><span><strong>GreenGrid</strong><small>Accepted team</small></span></div>
-            <div className="contact-person"><span className="avatar avatar--lavender">AR</span><span><strong>Arjun Rao · Creator</strong><small>arjun@thapar.edu</small></span></div>
-            <div className="contact-person"><span className="avatar avatar--coral">IM</span><span><strong>Isha Mehta · Collaborator</strong><small>isha@thapar.edu</small></span></div>
-            <p className="contact-note"><LockKeyhole /> Accepted teammates only</p>
+      <section className="hybrid-band" id="process">
+        <div className="hybrid-wrap hybrid-band__inner">
+          <p className="hybrid-label">Process</p>
+          <h2>Three steps, no cold DMs.</h2>
+          <div className="hybrid-steps">
+            {[
+              ['01', 'Add your skills, not a résumé', 'Tag what you can actually build. SyncSpace ranks projects against that, not a GPA.'],
+              ['02', 'Get ranked matches by fit and time', 'Every project is scored against your skills and the hours you can reliably contribute.'],
+              ['03', 'Apply—or ask before you do', 'Raise one focused project query, get the owner’s answer, and track your application in one place.']
+            ].map(([number, title, copy]) => <article key={number} data-hybrid-reveal><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></article>)}
           </div>
         </div>
       </section>
-      <section className="landing-final" aria-labelledby="landing-final-title">
-        <div className="landing-final__copy" data-scroll-reveal="left">
-          <h2 id="landing-final-title">Your next working team can start here.</h2>
-          <p>Discover a project worth joining or post the idea you want Thapar builders to help ship.</p>
-          <div className="landing-final__actions">
-            <Link className="button button--primary button--landing-primary" to={joinTarget}>Explore projects <ArrowRight /></Link>
-            <Link className="button button--outline button--dark" to={postTarget}>Post your idea <ArrowRight /></Link>
+
+      <section className="hybrid-band" id="services">
+        <div className="hybrid-wrap hybrid-band__inner">
+          <p className="hybrid-label">Services</p>
+          <h2>Built for how student teams actually form.</h2>
+          <div className="hybrid-service-grid">
+            {services.map(({ icon: Icon, title, copy }) => <article key={title} data-hybrid-reveal><span><Icon /></span><h3>{title}</h3><p>{copy}</p></article>)}
           </div>
-        </div>
-        <div className="landing-trust" data-scroll-reveal="right">
-          <div><ShieldCheck aria-hidden="true" /><span><strong>Verified Thapar access</strong><small>Restrict sign-in to approved campus accounts.</small></span></div>
-          <div><FileLock2 aria-hidden="true" /><span><strong>Private resumes</strong><small>Files stay protected and are shared only when needed.</small></span></div>
-          <div><BellRing aria-hidden="true" /><span><strong>Live application status</strong><small>Applicants and owners see each decision clearly.</small></span></div>
         </div>
       </section>
 
+      <section className="hybrid-band">
+        <div className="hybrid-wrap hybrid-manifesto" data-hybrid-reveal>
+          <p className="hybrid-label">Why SyncSpace</p>
+          <h2>Building a project shouldn’t start with a cold DM.</h2>
+          <p>Skills should be the introduction. Find a team that needs what you can build, ask a relevant question, or lead the project you want to see on campus.</p>
+          <div><Link className="hybrid-pill" to={discoverTarget}>Explore projects</Link><Link className="hybrid-pill hybrid-pill--ghost" to={postTarget}>Post a project</Link></div>
+        </div>
+      </section>
     </main>
 
-    <footer className="site-footer">
-      <Brand />
-      <p>Verified collaboration for Thapar student builders.</p>
-    </footer>
+    <footer className="hybrid-footer"><span>© 2026 SyncSpace</span><span>UCS503 · Group 16</span></footer>
   </div>;
 }

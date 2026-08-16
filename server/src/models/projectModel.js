@@ -49,6 +49,40 @@ export async function listProjects({ skill, domain, collegeId, ownerId }) {
   return rows;
 }
 
+export async function listPublicProjects({ skill, collegeId, limit = 6 }) {
+  const params = [collegeId];
+  const filters = ["p.college_id = $1", "p.status = 'open'", 'p.deadline > NOW()'];
+  if (skill) {
+    params.push(`%${skill}%`);
+    filters.push(`EXISTS (
+      SELECT 1 FROM project_skills search_ps
+      JOIN skills search_skill ON search_skill.id = search_ps.skill_id
+      WHERE search_ps.project_id = p.id
+        AND (search_skill.name ILIKE $${params.length} OR search_skill.category ILIKE $${params.length})
+    )`);
+  }
+  params.push(limit);
+  const { rows } = await query(
+    `SELECT p.id, p.title, p.description, p.domain, p.team_size AS "teamSize",
+       p.deadline,
+       COALESCE(json_agg(DISTINCT jsonb_build_object(
+         'id', s.id, 'name', s.name, 'category', s.category, 'importance', ps.importance
+       )) FILTER (WHERE s.id IS NOT NULL), '[]') AS skills,
+       COUNT(DISTINCT tm.student_id)::int AS "memberCount"
+     FROM projects p
+     LEFT JOIN project_skills ps ON ps.project_id = p.id
+     LEFT JOIN skills s ON s.id = ps.skill_id
+     LEFT JOIN teams t ON t.project_id = p.id
+     LEFT JOIN team_members tm ON tm.team_id = t.id
+     WHERE ${filters.join(' AND ')}
+     GROUP BY p.id
+     ORDER BY p.created_at DESC
+     LIMIT $${params.length}`,
+    params
+  );
+  return rows;
+}
+
 export function createProject(ownerId, collegeId, input) {
   return withTransaction(async (client) => {
     const { rows: [project] } = await client.query(

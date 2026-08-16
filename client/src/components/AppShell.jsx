@@ -1,15 +1,13 @@
-import { Compass, FileText, FolderKanban, LogOut, Moon, PlusCircle, ShieldCheck, Sun, UsersRound } from 'lucide-react';
+import { Compass, FileText, FolderKanban, LogOut, PlusCircle, ShieldCheck, UsersRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { api } from '../api/resources.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useTheme } from '../context/ThemeContext.jsx';
 import { Logo } from './Logo.jsx';
 import { NotificationMenu } from './NotificationMenu.jsx';
 
 export function AppShell({ children, rightRail, className = '' }) {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [teams, setTeams] = useState([]);
 
@@ -51,17 +49,11 @@ export function AppShell({ children, rightRail, className = '' }) {
           <span className="avatar avatar--mint">{initials}</span>
           <span className="person__copy"><strong>{name}</strong>{email && <small>{email}</small>}</span>
         </NavLink>
-        <button className="sidebar__utility" onClick={toggleTheme} aria-pressed={theme === 'dark'}>
-          {theme === 'dark' ? <Sun /> : <Moon />}<span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-        </button>
         <button className="sidebar__utility" onClick={logout}><LogOut /><span>Sign out</span></button>
       </div>
     </aside>
     <div className="app-area">
-      <div className="mobile-top"><Logo to="/dashboard" /><div className="mobile-top__actions">
-        <button className="icon-button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Use light mode' : 'Use dark mode'} aria-pressed={theme === 'dark'}>{theme === 'dark' ? <Sun /> : <Moon />}</button>
-        <NotificationMenu />
-      </div></div>
+      <div className="mobile-top"><Logo to="/dashboard" /><div className="mobile-top__actions"><NotificationMenu /></div></div>
       <div className="app-content">{children}</div>
     </div>
     {rightRail && <aside className="right-rail">{rightRail}</aside>}

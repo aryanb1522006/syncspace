@@ -26,11 +26,17 @@ function renderApp(path, user) {
 describe('SyncSpace UI', () => {
   it('renders the exact landing offer and primary action', () => {
     render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
-    expect(screen.getByRole('heading', { level: 1, name: /Find the project that makes you want to show up\./i })).toBeVisible();
-    expect(screen.getAllByRole('link', { name: /explore projects/i })[0]).toHaveAttribute('href', '/register?intent=join');
-    expect(screen.getByRole('heading', { level: 2, name: /From idea to working team/i })).toBeVisible();
-    expect(screen.getByText('Verified Thapar access')).toBeVisible();
-    expect(screen.getByText('Live application status')).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: /Your skills already have.*a project waiting.*Just ask\./i })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Search projects by skill' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: /Three steps, no cold DMs/i })).toBeVisible();
+    expect(screen.getByText('Project queries')).toBeVisible();
+  });
+
+  it('searches the landing project catalogue by a real skill', async () => {
+    render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'React' }));
+    expect(await screen.findByRole('link', { name: /GreenGrid.*React/i })).toHaveAttribute('href', '/register?intent=join&project=1');
+    expect(screen.queryByText('CampusCart')).not.toBeInTheDocument();
   });
 
   it('never hides critical landing content when optional motion APIs are unavailable', () => {
@@ -41,7 +47,7 @@ describe('SyncSpace UI', () => {
     try {
       expect(screen.getByRole('banner')).not.toHaveStyle({ opacity: '0' });
       expect(screen.getByRole('heading', { level: 1 })).not.toHaveStyle({ opacity: '0' });
-      expect(view.container.querySelector('.constellation-shell')).not.toHaveStyle({ opacity: '0' });
+      expect(view.container.querySelector('.hybrid-network')).not.toHaveStyle({ opacity: '0' });
     } finally {
       view.unmount();
       window.matchMedia = originalMatchMedia;
@@ -138,12 +144,29 @@ describe('SyncSpace UI', () => {
     expect(await screen.findByRole('heading', { level: 1 })).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Admin control' })).not.toBeInTheDocument();
   });
-  it('persists dark mode from the signed-in navigation', async () => {
-    localStorage.setItem('syncspace-theme:v1', 'light');
+  it('uses one fixed dashboard palette without theme controls', async () => {
     renderApp('/dashboard', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
-    fireEvent.click((await screen.findAllByRole('button', { name: /Dark mode/i }))[0]);
-    expect(document.documentElement.dataset.theme).toBe('dark');
-    expect(localStorage.getItem('syncspace-theme:v1')).toBe('dark');
+    expect(await screen.findByRole('heading', { level: 1 })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /dark mode|light mode/i })).not.toBeInTheDocument();
+    expect(localStorage.getItem('syncspace-theme:v1')).toBeNull();
+  });
+
+  it('lets a student raise a focused project query', async () => {
+    renderApp('/projects/1', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    const field = await screen.findByRole('textbox', { name: 'Your question' });
+    fireEvent.change(field, { target: { value: 'What React role should I contribute to first?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Raise query' }));
+    expect(await screen.findByText('Query sent to the project owner.')).toBeVisible();
+    expect(screen.getByText('What React role should I contribute to first?')).toBeVisible();
+  });
+
+  it('lets the project owner publish one response to a query', async () => {
+    renderApp('/projects/1', { id: 4, email: 'arjun@northstar.edu', role: 'owner', profileId: 4, profile: { id: 4, name: 'Arjun Rao' } });
+    const field = await screen.findByRole('textbox', { name: 'Your response' });
+    fireEvent.change(field, { target: { value: 'Yes, accessibility is part of the first dashboard milestone.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Publish response' }));
+    expect(await screen.findByText('Response published to the student who raised the query.')).toBeVisible();
+    expect(screen.getByText('Yes, accessibility is part of the first dashboard milestone.')).toBeVisible();
   });
 
   it('shows accepted teammates as authorized project contacts with profile links', async () => {

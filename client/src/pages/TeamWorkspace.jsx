@@ -1,5 +1,5 @@
-import { ArrowLeft, Check, Circle, ExternalLink, Plus, UserRound, UsersRound } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Check, Circle, ExternalLink, Plus, RefreshCw, UserRound, UsersRound } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
@@ -27,9 +27,40 @@ export function TeamWorkspace() {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: '', assignedTo: '', dueDate: '' });
   const [error, setError] = useState('');
-  const refresh = useCallback(() => api.getTeam(id).then(({ team: value }) => { setTeam(value); setError(''); }).catch((reason) => setError(reason.message)), [id]);
+  const [syncing, setSyncing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const refreshInFlight = useRef(false);
+  const refresh = useCallback(async ({ silent = false } = {}) => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    if (!silent) setSyncing(true);
+    try {
+      const { team: value } = await api.getTeam(id);
+      setTeam(value);
+      setLastUpdated(new Date());
+      setError('');
+    } catch (reason) {
+      setError(reason.message);
+    } finally {
+      refreshInFlight.current = false;
+      if (!silent) setSyncing(false);
+    }
+  }, [id]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh({ silent: true });
+    };
+    const timer = window.setInterval(refreshWhenVisible, 15_000);
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [refresh]);
   const grouped = useMemo(() => Object.fromEntries(columns.map(([key]) => [key, team?.tasks.filter((task) => task.status === key) ?? []])), [team]);
   const move = async (task) => { try { await api.updateTask(task.id, { status: nextStatus[task.status] }); await refresh(); } catch (reason) { setError(reason.message); } };
   const add = async (event) => {
@@ -63,7 +94,7 @@ export function TeamWorkspace() {
       {(ownerUserId || ownerProfileId) && <Link to={ownerUserId ? `/profiles/users/${ownerUserId}` : `/profiles/${ownerProfileId}`}><ExternalLink />View {ownerName}'s profile</Link>}
       {team.members.map((member) => <Link key={member.profileId ?? member.id} to={memberProfilePath(member)}><ExternalLink />View {member.name}'s profile</Link>)}
     </div>
-    <div className="board-title"><h2>This week</h2><Button variant="secondary" onClick={() => setAdding(true)}><Plus />Add task</Button></div>
+    <div className="board-title"><div><h2>This week</h2><p className="workspace-sync" aria-live="polite"><i />{syncing ? 'Syncing workspace…' : lastUpdated ? `Live updates · checked ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(lastUpdated)}` : 'Connecting live updates…'}</p></div><div className="board-title__actions"><Button variant="secondary" onClick={() => refresh()} disabled={syncing}><RefreshCw className={syncing ? 'is-spinning' : ''} />Refresh</Button><Button variant="secondary" onClick={() => setAdding(true)}><Plus />Add task</Button></div></div>
     <div className="task-board">{columns.map(([status, label]) => <section className={`task-column task-column--${status}`} key={status}><h3>{label} · {grouped[status].length}</h3>{grouped[status].map((task) => <article className="task" key={task.id}><button onClick={() => move(task)} aria-label={`Move ${task.title} to ${nextStatus[task.status]}`}>{task.status === 'done' ? <Check /> : <Circle />}</button><div><h4>{task.title}</h4><div><span className={`mini-avatar ${task.assigned_to ? '' : 'unassigned'}`}>{task.assigned_to ? task.assignee_name.split(' ').map((part) => part[0]).join('') : <UserRound />}</span><span>{task.assignee_name ?? 'Unassigned'}</span><time>{task.due_date ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(task.due_date)) : '—'}</time></div></div></article>)}</section>)}</div>
     {adding && <Modal title="Add a task" onClose={() => setAdding(false)}><form className="modal-form" onSubmit={add}><label>Task title<input autoFocus value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} minLength="2" required /></label><label>Assign to<select value={draft.assignedTo} onChange={(event) => setDraft((current) => ({ ...current, assignedTo: event.target.value }))}><option value="">Unassigned</option>{team.members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select></label><label>Due date<input type="date" value={draft.dueDate} onChange={(event) => setDraft((current) => ({ ...current, dueDate: event.target.value }))} /></label><div><Button type="button" variant="secondary" onClick={() => setAdding(false)}>Cancel</Button><Button type="submit">Add task</Button></div></form></Modal>}
   </AppShell>;

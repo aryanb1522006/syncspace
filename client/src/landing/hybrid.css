@@ -41,6 +41,9 @@
 .hybrid-chips button:hover { border-color: var(--hybrid-lime); color: var(--hybrid-lime); }
 .hybrid-results { display: grid; gap: 8px; margin-top: 14px; text-align: left; }
 .hybrid-search-message { margin: 0; color: var(--hybrid-smoke); font-size: 13px; text-align: center; }
+.hybrid-discover-link { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; justify-self: center; padding: 0 15px; border: 1px solid var(--hybrid-graphite); border-radius: 999px; color: var(--hybrid-mist) !important; font-size: 11px; font-weight: 650; }
+.hybrid-discover-link:hover { border-color: var(--hybrid-lime); color: var(--hybrid-lime) !important; }
+.hybrid-discover-link svg { width: 15px; }
 .hybrid-result { display: grid; grid-template-columns: minmax(120px, .9fr) minmax(160px, 1.2fr) auto; align-items: center; gap: 14px; padding: 13px 16px; border: 1px solid var(--hybrid-graphite); border-radius: 9px; background: rgb(15 16 17 / 90%); transition: border-color 160ms ease, transform 160ms ease; }
 .hybrid-result:hover { transform: translateY(-2px); border-color: var(--hybrid-lime); }
 .hybrid-result > span:first-child { display: grid; gap: 3px; }

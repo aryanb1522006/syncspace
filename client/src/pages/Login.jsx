@@ -1,6 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { demoMode } from '../api/resources.js';
 import { Button } from '../components/Button.jsx';
 import { GoogleSignInButton, googleSignInConfigured } from '../components/GoogleSignInButton.jsx';
@@ -11,7 +11,10 @@ const passwordAuthEnabled = (import.meta.env.VITE_PASSWORD_AUTH_ENABLED ?? 'true
 
 export function Login() {
   const [params] = useSearchParams();
+  const location = useLocation();
   const intent = params.get('intent');
+  const projectId = params.get('project');
+  const skill = params.get('skill')?.trim();
   const [form, setForm] = useState({
     email: demoMode ? 'isha@northstar.edu' : '',
     password: demoMode ? 'demo1234' : ''
@@ -20,7 +23,9 @@ export function Login() {
   const [busy, setBusy] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const finish = useCallback(() => navigate(intent === 'post' ? '/projects/new' : '/dashboard'), [intent, navigate]);
+  const finish = useCallback(() => navigate(
+    intent === 'post' ? '/projects/new' : projectId ? `/projects/${projectId}` : skill ? `/dashboard?skill=${encodeURIComponent(skill)}` : '/dashboard'
+  ), [intent, navigate, projectId, skill]);
   const submit = async (event) => {
     event.preventDefault(); setBusy(true); setError('');
     try { await login(form); finish(); } catch (err) { setError(err.message); } finally { setBusy(false); }
@@ -30,6 +35,7 @@ export function Login() {
     <div className="auth-brand"><Logo /><div className="auth-orbits"><i /><i /><i /></div><h1>Good teams start with complementary skills.</h1><p>Find projects worth your time, then see exactly why they fit.</p></div>
     <div className="auth-form-wrap"><form className="auth-form" onSubmit={submit}>
       <Link className="back-link" to="/">← Back home</Link><h2>Welcome back</h2><p>Use one account to join projects and post your own ideas.</p>
+      {location.state?.sessionExpired && <p className="auth-session-notice" role="status">Your session expired. Sign in again to continue.</p>}
       <GoogleSignInButton onAuthenticated={finish} onError={setError} />
       {googleSignInConfigured && passwordAuthEnabled && <div className="auth-divider"><span>or use password</span></div>}
       {passwordAuthEnabled && <>
@@ -39,7 +45,7 @@ export function Login() {
       </>}
       {!googleSignInConfigured && !passwordAuthEnabled && <p className="form-error" role="alert">No sign-in method is configured.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <p className="auth-switch">New to SyncSpace? <Link to={`/register${intent ? `?intent=${intent}` : ''}`}>Create an account</Link></p>
+      <p className="auth-switch">New to SyncSpace? <Link to={`/register${params.toString() ? `?${params.toString()}` : ''}`}>Create an account</Link></p>
       {demoMode && passwordAuthEnabled && <div className="demo-note"><strong>Demo accounts</strong><span>Student: isha@northstar.edu</span><span>Owner: arjun@northstar.edu</span><span>Password: demo1234</span></div>}
     </form></div>
   </main>;

@@ -1,3 +1,5 @@
+import { expireStoredSession } from './authSession.js';
+
 const baseUrl = import.meta.env.VITE_API_URL ?? '/api';
 
 export async function request(path, options = {}) {
@@ -13,7 +15,10 @@ export async function request(path, options = {}) {
   });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error?.message ?? `Request failed (${response.status})`);
+    if (response.status === 401 && token) expireStoredSession();
+    const error = new Error(payload.error?.message ?? `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
   if (response.status === 204) return null;
   return response.json();

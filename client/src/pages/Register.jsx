@@ -11,12 +11,16 @@ const passwordAuthEnabled = (import.meta.env.VITE_PASSWORD_AUTH_ENABLED ?? 'true
 export function Register() {
   const [params] = useSearchParams();
   const intent = params.get('intent');
+  const projectId = params.get('project');
+  const skill = params.get('skill')?.trim();
   const [form, setForm] = useState({ name: '', email: '', password: '', department: '', year: 2 });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
-  const finish = useCallback(() => navigate(intent === 'post' ? '/projects/new' : '/dashboard'), [intent, navigate]);
+  const finish = useCallback(() => navigate(
+    intent === 'post' ? '/projects/new' : projectId ? `/projects/${projectId}` : skill ? `/dashboard?skill=${encodeURIComponent(skill)}` : '/dashboard'
+  ), [intent, navigate, projectId, skill]);
   const update = (key) => (event) => setForm({ ...form, [key]: event.target.value });
   const submit = async (event) => {
     event.preventDefault(); setBusy(true); setError('');
@@ -36,7 +40,7 @@ export function Register() {
       </>}
       {!googleSignInConfigured && !passwordAuthEnabled && <p className="form-error" role="alert">No sign-up method is configured.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <p className="auth-switch">Already have an account? <Link to={`/login${intent ? `?intent=${intent}` : ''}`}>Sign in</Link></p>
+      <p className="auth-switch">Already have an account? <Link to={`/login${params.toString() ? `?${params.toString()}` : ''}`}>Sign in</Link></p>
     </form></div>
   </main>;
 }

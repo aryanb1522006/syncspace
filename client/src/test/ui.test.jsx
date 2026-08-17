@@ -23,6 +23,10 @@ function renderApp(path, user) {
   return render(<MemoryRouter initialEntries={[path]}><ThemeProvider><AuthProvider><App /></AuthProvider></ThemeProvider></MemoryRouter>);
 }
 
+function expiredToken() {
+  return `header.${btoa(JSON.stringify({ exp: 1 }))}.signature`;
+}
+
 describe('SyncSpace UI', () => {
   it('renders the exact landing offer and primary action', () => {
     render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
@@ -33,11 +37,30 @@ describe('SyncSpace UI', () => {
     expect(screen.getAllByText('INDEX[0]').length).toBeGreaterThan(0);
   });
 
+  it('clears an expired stored session and asks the user to sign in again', async () => {
+    localStorage.setItem('syncspace-user', JSON.stringify({ id: 1, email: 'isha@northstar.edu', role: 'student' }));
+    localStorage.setItem('syncspace-token', expiredToken());
+    render(<MemoryRouter initialEntries={['/dashboard']}><ThemeProvider><AuthProvider><App /></AuthProvider></ThemeProvider></MemoryRouter>);
+    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('Your session expired. Sign in again to continue.');
+    expect(localStorage.getItem('syncspace-token')).toBeNull();
+    expect(localStorage.getItem('syncspace-user')).toBeNull();
+  });
+
   it('searches the landing project catalogue by a real skill', async () => {
     render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'React' }));
-    expect(await screen.findByRole('link', { name: /GreenGrid.*React/i })).toHaveAttribute('href', '/register?intent=join&project=1');
+    expect(await screen.findByRole('link', { name: /GreenGrid.*React/i })).toHaveAttribute('href', '/register?intent=join&project=1&skill=React');
+    expect(screen.getByRole('link', { name: /View matching projects in Discover/i })).toHaveAttribute('href', '/register?intent=join&skill=React');
     expect(screen.queryByText('CampusCart')).not.toBeInTheDocument();
+  });
+
+  it('shows a clear landing empty state when no project uses a skill', async () => {
+    render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search projects by skill' }), { target: { value: 'Rust' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Find match' }));
+    expect(await screen.findByText('No project exists with “Rust” right now.')).toBeVisible();
+    expect(screen.queryByRole('link', { name: /View matching projects in Discover/i })).not.toBeInTheDocument();
   });
 
   it('never hides critical landing content when optional motion APIs are unavailable', () => {
@@ -161,13 +184,22 @@ describe('SyncSpace UI', () => {
     expect(screen.getByText('What is your favourite movie?')).toBeVisible();
   });
 
-  it('blocks abusive language in a project query', async () => {
+  it('does not apply a content filter to project queries', async () => {
     renderApp('/projects/1', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
     const field = await screen.findByRole('textbox', { name: 'Your question' });
     fireEvent.change(field, { target: { value: 'Is the project owner an idiot?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Raise query' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Please rewrite this without abusive or insulting language.');
-    expect(screen.queryByText('Query sent to the project owner.')).not.toBeInTheDocument();
+    expect(await screen.findByText('Query sent to the project owner.')).toBeVisible();
+    expect(screen.getByText('Is the project owner an idiot?')).toBeVisible();
+    expect(screen.queryByText('Abusive or insulting language is blocked.')).not.toBeInTheDocument();
+  });
+
+  it('opens Discover with the landing skill filter applied', async () => {
+    renderApp('/dashboard?skill=Machine%20Learning', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Projects using “Machine Learning”' })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Filter by skill' })).toHaveValue('Machine Learning');
+    expect(await screen.findByText('StudyCircle')).toBeVisible();
+    expect(screen.queryByText('GreenGrid')).not.toBeInTheDocument();
   });
 
   it('lets the project owner publish one response to a query', async () => {
@@ -192,6 +224,8 @@ describe('SyncSpace UI', () => {
     expect(screen.getByText(/arjun@northstar.edu/i)).toBeVisible();
     expect(screen.getByRole('link', { name: /View Arjun Rao's profile/i })).toHaveAttribute('href', '/profiles/users/4');
     expect(screen.getByRole('link', { name: /View Kabir Shah's profile/i })).toHaveAttribute('href', '/profiles/users/2');
+    expect(screen.getByText(/Live updates · checked/i)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeVisible();
   });
 
   it('opens another accepted teammate profile by stable user id', async () => {

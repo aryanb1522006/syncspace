@@ -51,24 +51,50 @@ export async function listProjects({ skill, domain, collegeId, ownerId }) {
 }
 
 export async function listPublicProjects({ skill, collegeId, limit = 6 }) {
-  // Reuse the PostgreSQL query that already powers the authenticated project
-  // catalogue, then expose only the fields needed by the public landing page.
-  const projects = await listProjects({ skill, collegeId });
-  const now = Date.now();
-
-  return projects
-    .filter((project) => project.status === 'open' && new Date(project.deadline).getTime() > now)
-    .slice(0, limit)
-    .map((project) => ({
-      id: project.id,
-      title: project.title,
-      description: project.description,
-      domain: project.domain,
-      teamSize: project.teamSize,
-      deadline: project.deadline,
-      skills: project.skills,
-      memberCount: project.memberCount
-    }));
+  const normalizedSkill = String(skill ?? '').trim();
+  const skillPattern = `%${normalizedSkill}%`;
+  const { rows } = await query(
+    `SELECT p.id, p.title, p.description, p.domain, p.team_size AS "teamSize", p.deadline,
+       COALESCE((
+         SELECT json_agg(json_build_object(
+           'id', listed_skill.id,
+           'name', listed_skill.name,
+           'category', listed_skill.category,
+           'importance', listed_project_skill.importance
+         ) ORDER BY listed_skill.name)
+         FROM project_skills listed_project_skill
+         JOIN skills listed_skill ON listed_skill.id = listed_project_skill.skill_id
+         WHERE listed_project_skill.project_id = p.id
+       ), '[]'::json) AS skills,
+       COALESCE((
+         SELECT COUNT(*)::int
+         FROM teams project_team
+         JOIN team_members member ON member.team_id = project_team.id
+         WHERE project_team.project_id = p.id
+       ), 0)::int AS "memberCount"
+     FROM projects p
+     WHERE p.college_id = $1
+       AND p.status = 'open'
+       AND p.deadline > NOW()
+       AND ($2 = '' OR EXISTS (
+         SELECT 1
+         FROM project_skills matching_project_skill
+         JOIN skills matching_skill ON matching_skill.id = matching_project_skill.skill_id
+         WHERE matching_project_skill.project_id = p.id
+           AND (
+             matching_skill.name ILIKE $3
+             OR matching_skill.category ILIKE $3
+             OR EXISTS (
+               SELECT 1 FROM unnest(matching_skill.aliases) AS skill_alias(value)
+               WHERE skill_alias.value ILIKE $3
+             )
+           )
+       ))
+     ORDER BY p.created_at DESC
+     LIMIT $4`,
+    [collegeId, normalizedSkill, skillPattern, limit]
+  );
+  return rows;
 }
 
 export function createProject(ownerId, collegeId, input) {

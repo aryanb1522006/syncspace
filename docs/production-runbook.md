@@ -67,6 +67,18 @@ Run the mutation-heavy smoke journey against staging after each deployment. It c
 
 After adding or removing an administrator, redeploy the API. The user must sign out and sign in again to receive a fresh claim. Middleware also rechecks the live allowlist on every request, so removing an address stops admin requests even if an older token has not expired.
 
+### Appwrite Sites SPA route fallback
+
+SyncSpace uses React Router with browser-history URLs such as `/projects/1` and `/team/2`. Appwrite must return the client `index.html` file when a user reloads or directly opens one of these routes.
+
+In Appwrite Console, open **Sites → SyncSpace → Settings → Build settings** and set:
+
+- Rendering strategy: **Static site**
+- Output directory: keep the existing working value (`client/dist` when the site root is `.`, or `./dist` when the site root is `client`)
+- Fallback file: `index.html`
+
+Save the settings and redeploy the site. Directly open and reload `/dashboard`, `/projects/1`, `/projects/mine`, and `/team/1`. Each route should load the React application instead of Appwrite's page-not-found response.
+
 ## Pilot data cleanup
 
 Before inviting a real cohort, preview known seeded, QA, and smoke projects against the production database:

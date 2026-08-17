@@ -114,6 +114,7 @@ function NetworkCanvas() {
 function ProjectSearch({ user }) {
   const [skill, setSkill] = useState('');
   const [projects, setProjects] = useState([]);
+  const [searchedSkill, setSearchedSkill] = useState('');
   const [openCount, setOpenCount] = useState(null);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -128,6 +129,7 @@ function ProjectSearch({ user }) {
   const search = useCallback(async (requestedSkill = skill) => {
     const normalized = requestedSkill.trim();
     setSkill(requestedSkill);
+    setSearchedSkill(normalized);
     setSearched(true);
     setError('');
     if (!normalized) {
@@ -147,6 +149,9 @@ function ProjectSearch({ user }) {
     }
   }, [skill]);
 
+  const encodedSkill = encodeURIComponent(searchedSkill);
+  const discoverTarget = user ? `/dashboard?skill=${encodedSkill}` : `/register?intent=join&skill=${encodedSkill}`;
+
   return <div className="hybrid-matcher">
     <div className="hybrid-status"><span />{openCount === null ? 'Live project matching' : `${openCount} projects open now`}</div>
     <form className="hybrid-search" onSubmit={(event) => { event.preventDefault(); search(); }}>
@@ -159,12 +164,13 @@ function ProjectSearch({ user }) {
     </div>
     <div className="hybrid-results" aria-live="polite">
       {error && <p className="hybrid-search-message">{error}</p>}
-      {searched && !loading && !error && projects.length === 0 && <p className="hybrid-search-message">No open project currently lists that skill. Try a related skill.</p>}
-      {projects.map((project) => <Link className="hybrid-result" key={project.id} to={user ? `/projects/${project.id}` : `/register?intent=join&project=${project.id}`}>
+      {searched && !loading && !error && projects.length === 0 && <p className="hybrid-search-message">No project exists with “{searchedSkill}” right now.</p>}
+      {projects.map((project) => <Link className="hybrid-result" key={project.id} to={user ? `/projects/${project.id}` : `/register?intent=join&project=${project.id}&skill=${encodedSkill}`}>
         <span><small>{project.domain}</small><strong>{project.title}</strong></span>
-        <span className="hybrid-result__skills">{project.skills.slice(0, 3).map((item) => item.name).join(' · ')}</span>
+        <span className="hybrid-result__skills">{(project.skills ?? []).slice(0, 3).map((item) => item.name).join(' · ')}</span>
         <ArrowRight aria-hidden="true" />
       </Link>)}
+      {projects.length > 0 && <Link className="hybrid-discover-link" to={discoverTarget}>View matching projects in Discover <ArrowRight aria-hidden="true" /></Link>}
     </div>
   </div>;
 }

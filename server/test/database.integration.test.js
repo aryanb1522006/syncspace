@@ -32,6 +32,23 @@ test('migrations, seed data, college isolation, and rollback work in PostgreSQL'
     project.status === undefined && project.owner_id === undefined && Array.isArray(project.skills)
   )), 'public project results should expose only the landing-page fields');
 
+  const { rows: [searchableSkill] } = await query(
+    `SELECT s.name, p.college_id
+     FROM projects p
+     JOIN project_skills ps ON ps.project_id = p.id
+     JOIN skills s ON s.id = ps.skill_id
+     WHERE p.status = 'open' AND p.deadline > NOW()
+     LIMIT 1`
+  );
+  const matchingPublicProjects = await listPublicProjects({
+    collegeId: searchableSkill.college_id,
+    skill: searchableSkill.name,
+    limit: 6
+  });
+  assert.ok(matchingPublicProjects.length > 0, 'expected a known project skill to return a public match');
+  assert.ok(matchingPublicProjects.every((project) => project.skills.some((skill) => skill.name === searchableSkill.name)));
+  assert.deepEqual(await listPublicProjects({ collegeId: searchableSkill.college_id, skill: `missing-${Date.now()}`, limit: 6 }), []);
+
   const { rows: tenantConstraints } = await query(
     `SELECT conname FROM pg_constraint
      WHERE conname IN ('projects_owner_same_college_fk', 'users_id_college_id_unique')`

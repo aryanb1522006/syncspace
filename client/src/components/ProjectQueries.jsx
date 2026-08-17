@@ -1,4 +1,4 @@
-import { HelpCircle, Send, ShieldCheck } from 'lucide-react';
+import { HelpCircle, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../api/resources.js';
 import { Button } from './Button.jsx';
@@ -62,7 +62,7 @@ export function ProjectQueries({ projectId, isOwner }) {
     {!isOwner && <form className="query-form" onSubmit={raiseQuery}>
       <label htmlFor="project-query">Your question</label>
       <textarea id="project-query" value={question} onChange={(event) => setQuestion(event.target.value)} minLength="10" maxLength="800" required placeholder="Ask the project owner your question." />
-      <div><span><ShieldCheck />Abusive or insulting language is blocked.</span><Button type="submit" disabled={busyId === 'new'}><Send />{busyId === 'new' ? 'Sending…' : 'Raise query'}</Button></div>
+      <div><Button type="submit" disabled={busyId === 'new'}><Send />{busyId === 'new' ? 'Sending…' : 'Raise query'}</Button></div>
     </form>}
 
     {message && <p className="success-message" role="status">{message}</p>}

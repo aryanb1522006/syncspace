@@ -19,8 +19,8 @@ const AdminProjects = lazy(() => import('./pages/AdminProjects.jsx').then((modul
 
 
 function Protected({ children }) {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/login" replace />;
+  const { user, sessionExpired } = useAuth();
+  return user ? children : <Navigate to="/login" replace state={{ sessionExpired }} />;
 }
 
 function AdminOnly({ children }) {

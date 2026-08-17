@@ -1,6 +1,7 @@
 import { getTaskById, createTask as createTaskRecord, updateTask as updateTaskRecord } from '../models/taskModel.js';
 import { canAccessTeam, getTeamById, isTeamMember, listAccessibleTeams } from '../models/teamModel.js';
 import { AppError } from '../utils/AppError.js';
+import { getIO } from '../sockets/index.js';
 
 async function requireTeamAccess(teamId, userId, collegeId) {
   if (!(await canAccessTeam(teamId, userId, collegeId))) throw new AppError(403, 'You do not have access to this team');
@@ -24,7 +25,9 @@ export async function createTask(req, res) {
   if (req.body.assignedTo && !(await isTeamMember(teamId, req.body.assignedTo))) {
     throw new AppError(400, 'The assignee must be a member of this team');
   }
-  res.status(201).json({ task: await createTaskRecord(teamId, req.body) });
+  const task = await createTaskRecord(teamId, req.body);
+  getIO().to(`team:${teamId}`).emit('task:created', task);
+  res.status(201).json({ task });
 }
 
 export async function updateTask(req, res) {
@@ -34,5 +37,7 @@ export async function updateTask(req, res) {
   if (req.body.assignedTo && !(await isTeamMember(task.team_id, req.body.assignedTo))) {
     throw new AppError(400, 'The assignee must be a member of this team');
   }
-  res.json({ task: await updateTaskRecord(task.id, req.body) });
+  const updated = await updateTaskRecord(task.id, req.body);
+  getIO().to(`team:${task.team_id}`).emit('task:updated', updated);
+  res.json({ task: updated });
 }

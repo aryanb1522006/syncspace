@@ -23,9 +23,12 @@ export function Login() {
   const [busy, setBusy] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const protectedDestination = typeof location.state?.from === 'string' && location.state.from.startsWith('/')
+    ? location.state.from
+    : null;
   const finish = useCallback(() => navigate(
-    intent === 'post' ? '/projects/new' : projectId ? `/projects/${projectId}` : skill ? `/dashboard?skill=${encodeURIComponent(skill)}` : '/dashboard'
-  ), [intent, navigate, projectId, skill]);
+    intent === 'post' ? '/projects/new' : projectId ? `/projects/${projectId}` : skill ? `/dashboard?skill=${encodeURIComponent(skill)}` : protectedDestination ?? '/dashboard'
+  ), [intent, navigate, projectId, protectedDestination, skill]);
   const submit = async (event) => {
     event.preventDefault(); setBusy(true); setError('');
     try { await login(form); finish(); } catch (err) { setError(err.message); } finally { setBusy(false); }

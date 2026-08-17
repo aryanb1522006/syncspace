@@ -47,6 +47,13 @@ describe('SyncSpace UI', () => {
     expect(localStorage.getItem('syncspace-user')).toBeNull();
   });
 
+  it('returns an unauthenticated visitor to the requested project after login', async () => {
+    render(<MemoryRouter initialEntries={['/projects/1']}><ThemeProvider><AuthProvider><App /></AuthProvider></ThemeProvider></MemoryRouter>);
+    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'GreenGrid' })).toBeVisible();
+  });
+
   it('searches the landing project catalogue by a real skill', async () => {
     render(<MemoryRouter><AuthProvider><Landing /></AuthProvider></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'React' }));

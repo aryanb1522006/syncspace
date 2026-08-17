@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import { Applications } from './pages/Applications.jsx';
 import { CreateProject } from './pages/CreateProject.jsx';
@@ -20,7 +20,11 @@ const AdminProjects = lazy(() => import('./pages/AdminProjects.jsx').then((modul
 
 function Protected({ children }) {
   const { user, sessionExpired } = useAuth();
-  return user ? children : <Navigate to="/login" replace state={{ sessionExpired }} />;
+  const location = useLocation();
+  return user ? children : <Navigate to="/login" replace state={{
+    sessionExpired,
+    from: `${location.pathname}${location.search}`
+  }} />;
 }
 
 function AdminOnly({ children }) {

@@ -38,8 +38,9 @@ export async function listProjects(req, res) {
 }
 
 export async function searchPublicProjects(req, res) {
+  const query = req.validatedQuery ?? req.query;
   const projects = await listPublicProjects({
-    skill: req.query.skill,
+    skill: query.skill,
     collegeId: env.defaultCollegeId,
     limit: 6
   });

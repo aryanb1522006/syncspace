@@ -9,9 +9,10 @@ const project = {
   skills: [{ name: 'React' }, { name: 'Node.js' }]
 };
 
-test('project query moderation accepts relevant, respectful questions', () => {
+test('project query moderation accepts respectful questions without relevance filtering', () => {
   assert.equal(moderateProjectQuery('What React experience does the team need?', project).allowed, true);
-  assert.equal(moderateProjectQuery('Can I contribute for six hours each week?', project).allowed, true);
+  assert.equal(moderateProjectQuery('What is your favourite movie?', project).allowed, true);
+  assert.equal(moderateProjectQuery('BUY THIS NOWWWWWWWWW https://one.test https://two.test', project).allowed, true);
 });
 
 test('project query moderation rejects abusive language and common obfuscation', () => {
@@ -20,12 +21,7 @@ test('project query moderation rejects abusive language and common obfuscation',
   assert.deepEqual([direct.code, obfuscated.code], ['abusive_language', 'abusive_language']);
 });
 
-test('project query moderation rejects spam and unrelated submissions', () => {
-  assert.equal(moderateProjectQuery('BUY THIS NOWWWWWWWWW https://one.test https://two.test', project).code, 'spam');
-  assert.equal(moderateProjectQuery('What is your favourite movie?', project).code, 'off_topic');
-});
-
-test('owner responses still receive abuse and spam screening without over-restricting short answers', () => {
+test('owner responses receive the same abusive-language-only screening', () => {
   assert.equal(moderateProjectQuery('Yes, that works.', project, { response: true }).allowed, true);
   assert.equal(moderateProjectQuery('You are stupid.', project, { response: true }).code, 'abusive_language');
 });

@@ -30,6 +30,7 @@ describe('SyncSpace UI', () => {
     expect(screen.getByRole('textbox', { name: 'Search projects by skill' })).toBeVisible();
     expect(screen.getByRole('heading', { level: 2, name: /Three steps, no cold DMs/i })).toBeVisible();
     expect(screen.getByText('Project queries')).toBeVisible();
+    expect(screen.getAllByText('INDEX[0]').length).toBeGreaterThan(0);
   });
 
   it('searches the landing project catalogue by a real skill', async () => {
@@ -151,13 +152,22 @@ describe('SyncSpace UI', () => {
     expect(localStorage.getItem('syncspace-theme:v1')).toBeNull();
   });
 
-  it('lets a student raise a focused project query', async () => {
+  it('lets a student raise any non-abusive project query', async () => {
     renderApp('/projects/1', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
     const field = await screen.findByRole('textbox', { name: 'Your question' });
-    fireEvent.change(field, { target: { value: 'What React role should I contribute to first?' } });
+    fireEvent.change(field, { target: { value: 'What is your favourite movie?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Raise query' }));
     expect(await screen.findByText('Query sent to the project owner.')).toBeVisible();
-    expect(screen.getByText('What React role should I contribute to first?')).toBeVisible();
+    expect(screen.getByText('What is your favourite movie?')).toBeVisible();
+  });
+
+  it('blocks abusive language in a project query', async () => {
+    renderApp('/projects/1', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    const field = await screen.findByRole('textbox', { name: 'Your question' });
+    fireEvent.change(field, { target: { value: 'Is the project owner an idiot?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Raise query' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please rewrite this without abusive or insulting language.');
+    expect(screen.queryByText('Query sent to the project owner.')).not.toBeInTheDocument();
   });
 
   it('lets the project owner publish one response to a query', async () => {

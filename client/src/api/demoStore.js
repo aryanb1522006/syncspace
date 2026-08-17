@@ -93,18 +93,14 @@ function save(state) {
 
 const wait = (value) => new Promise((resolve) => setTimeout(() => resolve(clone(value)), 140));
 
-function validateDemoQuery(value, project, response = false) {
-  const text = value.trim();
-  if (/(asshole|bastard|bitch|bullshit|dumbass|fuck|idiot|moron|retard|shit|stupid)/i.test(text)) {
+function validateDemoQuery(value) {
+  const normalized = value.trim().toLowerCase()
+    .replace(/\$/g, 's')
+    .replace(/[013457]/g, (character) => ({ '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't' })[character])
+    .replace(/[^a-z0-9]+/g, ' ');
+  const compact = normalized.replace(/\s/g, '');
+  if (/(asshole|bastard|bitch|bullshit|dumbass|fuck|fucker|fucking|idiot|moron|retard|shit|stupid)/i.test(compact)) {
     throw new Error('Please rewrite this without abusive or insulting language.');
-  }
-  if (!response) {
-    const context = `${project.title} ${project.domain} ${project.description} ${project.skills.map((skill) => skill.name).join(' ')}`;
-    const relevance = /(application|apply|availability|build|collaborat|commitment|contribut|deadline|deliverable|design|development|goal|join|member|meeting|milestone|project|requirement|responsibility|roadmap|role|skill|stack|task|team|technology|timeline|tool|work)/i;
-    const contextWords = context.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 3);
-    if (!relevance.test(text) && !contextWords.some((token) => text.toLowerCase().includes(token))) {
-      throw new Error('Keep the query related to this project, its skills, timeline, or team requirements.');
-    }
   }
 }
 
@@ -276,7 +272,7 @@ export const demoApi = {
     const project = state.projects.find((item) => Number(item.id) === Number(id));
     if (!project) throw new Error('Project not found');
     if (Number(project.ownerId) === Number(user?.id)) throw new Error('Project owners cannot raise a query on their own project');
-    validateDemoQuery(question, project);
+    validateDemoQuery(question);
     const created = { id: Date.now(), projectId: Number(id), askerUserId: user?.id, askerName: user?.name ?? user?.profile?.name ?? 'Student', question: question.trim(), response: null, status: 'open', createdAt: new Date().toISOString(), answeredAt: null };
     state.queries ??= [];
     state.queries.unshift(created);
@@ -290,7 +286,7 @@ export const demoApi = {
     const project = state.projects.find((item) => Number(item.id) === Number(projectId));
     if (!project) throw new Error('Project not found');
     if (Number(project.ownerId) !== Number(user?.id)) throw new Error('Only the project owner can answer queries');
-    validateDemoQuery(response, project, true);
+    validateDemoQuery(response);
     const projectQuery = (state.queries ?? []).find((item) => Number(item.id) === Number(queryId) && Number(item.projectId) === Number(projectId));
     if (!projectQuery) throw new Error('Open project query not found');
     Object.assign(projectQuery, { response: response.trim(), status: 'answered', answeredAt: new Date().toISOString() });

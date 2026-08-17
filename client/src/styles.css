@@ -892,3 +892,125 @@ textarea { resize: vertical; line-height: 1.5; }
   .skill-list { gap: 7px; }
   .skill-list > span { max-width: 100%; }
 }
+
+/* Landing-aligned product theme */
+.app-shell {
+  --ink: #fff;
+  --muted: #9ba1aa;
+  --line: #23252a;
+  --soft: #17191c;
+  --lime: #e4f222;
+  --lime-strong: #e4f222;
+  --mint: #23252a;
+  --lavender: #23252a;
+  --app-page: #08090a;
+  --app-surface: #0f1011;
+  --app-surface-raised: #17191c;
+  --app-copy: #d0d6e0;
+  --app-hover: #23252a;
+  --shadow: 0 18px 45px rgb(0 0 0 / 36%);
+}
+
+.app-shell .button,
+.app-shell .sidebar__post {
+  min-height: 44px;
+  padding-inline: 20px;
+  border-color: var(--lime);
+  border-radius: 999px;
+  background: var(--lime);
+  color: #08090a;
+  box-shadow: none;
+}
+.app-shell .button:hover,
+.app-shell .sidebar__post:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: none; }
+.app-shell .button--secondary { border-color: #41454c; background: transparent; color: var(--ink); }
+.app-shell .button--secondary:hover { border-color: var(--lime); background: #17191c; }
+.app-shell .button--link {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.app-shell .button--danger { border-color: #f08776; background: transparent; color: #ff9a8a; }
+.app-shell .button--danger:hover { background: rgb(240 135 118 / 12%); }
+
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+  border-color: #34373d;
+  border-radius: 9px;
+  background: #17191c;
+  color: var(--ink);
+}
+.app-shell input::placeholder,
+.app-shell textarea::placeholder { color: #6f747d; }
+
+.app-shell .owner-project-card,
+.app-shell .candidate-card,
+.app-shell .team-card,
+.app-shell .project-row,
+.app-shell .project-detail__aside,
+.app-shell .profile-form > section,
+.app-shell .project-form > section,
+.app-shell .query-form,
+.app-shell .query-record,
+.app-shell .member-profile,
+.app-shell .admin-summary article,
+.app-shell .admin-projects { border-color: var(--line); border-radius: 10px; }
+
+.app-shell .tag,
+.app-shell .project-row--edtech .tag,
+.app-shell .project-row--civic-tech .tag,
+.app-shell .skills b,
+.app-shell .coverage b,
+.app-shell .proposed > div span {
+  border: 1px solid #34373d;
+  background: #17191c;
+  color: var(--lime);
+}
+.app-shell .project-emblem,
+.app-shell .project-emblem--lavender,
+.app-shell .project-row--edtech .project-emblem,
+.app-shell .project-row--civic-tech .project-emblem,
+.app-shell .project-icon,
+.app-shell .owner-summary svg,
+.app-shell .owner-summary article:nth-child(2) svg,
+.app-shell .owner-summary article:nth-child(3) svg,
+.app-shell .team-formation svg,
+.app-shell .breakdown__icon,
+.app-shell .mini-avatar,
+.app-shell .avatar--mint,
+.app-shell .avatar--lavender {
+  background: #17191c;
+  color: var(--lime);
+  box-shadow: 0 0 0 1px #34373d;
+}
+.app-shell .owner-summary article,
+.app-shell .owner-rail-stats div,
+.app-shell .skill-requirements div { background: var(--app-surface); border-color: var(--line); }
+.app-shell .status { border: 1px solid #34373d; }
+.app-shell .status--pending { background: #24250f; color: var(--lime); }
+.app-shell .status--accepted,
+.app-shell .status--active,
+.app-shell .status--open,
+.app-shell .status--answered { background: #1d2112; color: var(--lime); }
+.app-shell .profile-inline-link,
+.app-shell .project-contacts a,
+.app-shell .member small,
+.app-shell .member:nth-child(2) small { color: var(--lime); }
+.app-shell .member .avatar,
+.app-shell .member:nth-child(2) .avatar { outline-color: var(--lime); }
+.app-shell .task-column h3,
+.app-shell .task-column--in_progress h3,
+.app-shell .task-column--done h3 { border-color: var(--lime); }
+.app-shell .success-message { background: #1d2112; color: var(--lime); }
+.app-shell .empty-inline h3 { color: var(--ink); }
+.app-shell .query-response { background: #17191c; }
+.app-shell .sidebar nav a.active { box-shadow: inset 3px 0 0 var(--lime); }
+
+@media (max-width: 760px) {
+  .app-shell .mobile-post { border-color: var(--lime); border-radius: 999px; }
+}

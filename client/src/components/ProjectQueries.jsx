@@ -56,13 +56,13 @@ export function ProjectQueries({ projectId, isOwner }) {
   return <section className="project-queries" aria-labelledby="project-queries-title">
     <div className="project-queries__heading">
       <span><HelpCircle /></span>
-      <div><h2 id="project-queries-title">Project queries</h2><p>{isOwner ? 'Answer focused questions from students considering this project.' : 'Ask one focused question before applying. This is not a live chat.'}</p></div>
+      <div><h2 id="project-queries-title">Project queries</h2><p>{isOwner ? 'Answer questions from students considering this project.' : 'Ask the project owner a question before applying. This is not a live chat.'}</p></div>
     </div>
 
     {!isOwner && <form className="query-form" onSubmit={raiseQuery}>
       <label htmlFor="project-query">Your question</label>
-      <textarea id="project-query" value={question} onChange={(event) => setQuestion(event.target.value)} minLength="10" maxLength="800" required placeholder="Ask about the role, required skills, commitment, deadline, or team expectations." />
-      <div><span><ShieldCheck />Abusive, promotional, and unrelated submissions are blocked.</span><Button type="submit" disabled={busyId === 'new'}><Send />{busyId === 'new' ? 'Sending…' : 'Raise query'}</Button></div>
+      <textarea id="project-query" value={question} onChange={(event) => setQuestion(event.target.value)} minLength="10" maxLength="800" required placeholder="Ask the project owner your question." />
+      <div><span><ShieldCheck />Abusive or insulting language is blocked.</span><Button type="submit" disabled={busyId === 'new'}><Send />{busyId === 'new' ? 'Sending…' : 'Raise query'}</Button></div>
     </form>}
 
     {message && <p className="success-message" role="status">{message}</p>}
@@ -73,7 +73,7 @@ export function ProjectQueries({ projectId, isOwner }) {
         <p>{projectQuery.question}</p>
         {projectQuery.response ? <div className="query-response"><span>Project owner’s response</span><p>{projectQuery.response}</p></div> : isOwner ? <form onSubmit={(event) => answer(event, projectQuery)}>
           <label htmlFor={`query-response-${projectQuery.id}`}>Your response</label>
-          <textarea id={`query-response-${projectQuery.id}`} value={responses[projectQuery.id] ?? ''} onChange={(event) => setResponses((current) => ({ ...current, [projectQuery.id]: event.target.value }))} minLength="2" maxLength="800" required placeholder="Give one clear, project-relevant answer." />
+          <textarea id={`query-response-${projectQuery.id}`} value={responses[projectQuery.id] ?? ''} onChange={(event) => setResponses((current) => ({ ...current, [projectQuery.id]: event.target.value }))} minLength="2" maxLength="800" required placeholder="Write your response." />
           <Button type="submit" disabled={busyId === projectQuery.id}>{busyId === projectQuery.id ? 'Publishing…' : 'Publish response'}</Button>
         </form> : <small>Waiting for the project owner’s response.</small>}
       </article>)}

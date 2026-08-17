@@ -1,7 +1,7 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { pool, query, withTransaction } from '../src/config/db.js';
-import { getProjectContactsForViewer } from '../src/models/projectModel.js';
+import { getProjectContactsForViewer, listPublicProjects } from '../src/models/projectModel.js';
 import { canViewStudentContact, getStudentByUserId } from '../src/models/studentModel.js';
 import { deleteProjectAsAdmin } from '../src/models/adminModel.js';
 
@@ -25,6 +25,12 @@ test('migrations, seed data, college isolation, and rollback work in PostgreSQL'
   );
   assert.ok(projects.length >= 4, 'expected seeded projects');
   assert.ok(projects.every((project) => Number(project.college_id) === Number(project.owner_college_id)));
+
+  const publicProjects = await listPublicProjects({ collegeId: projects[0].college_id, limit: 6 });
+  assert.ok(publicProjects.length > 0, 'expected the public landing search to return open projects');
+  assert.ok(publicProjects.every((project) => (
+    project.status === undefined && project.owner_id === undefined && Array.isArray(project.skills)
+  )), 'public project results should expose only the landing-page fields');
 
   const { rows: tenantConstraints } = await query(
     `SELECT conname FROM pg_constraint

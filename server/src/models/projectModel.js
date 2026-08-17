@@ -40,7 +40,8 @@ export async function listProjects({ skill, domain, collegeId, ownerId }) {
   if (skill) {
     params.push(`%${skill}%`);
     filters.push(`EXISTS (SELECT 1 FROM project_skills fps JOIN skills fs ON fs.id = fps.skill_id
-      WHERE fps.project_id = p.id AND fs.name ILIKE $${params.length})`);
+      WHERE fps.project_id = p.id
+        AND (fs.name ILIKE $${params.length} OR fs.category ILIKE $${params.length}))`);
   }
   const { rows } = await query(
     `${projectSelect} WHERE ${filters.join(' AND ')} GROUP BY p.id, u.id, sp.id ORDER BY p.created_at DESC`,
@@ -50,37 +51,24 @@ export async function listProjects({ skill, domain, collegeId, ownerId }) {
 }
 
 export async function listPublicProjects({ skill, collegeId, limit = 6 }) {
-  const params = [collegeId];
-  const filters = ["p.college_id = $1", "p.status = 'open'", 'p.deadline > NOW()'];
-  if (skill) {
-    params.push(`%${skill}%`);
-    filters.push(`EXISTS (
-      SELECT 1 FROM project_skills search_ps
-      JOIN skills search_skill ON search_skill.id = search_ps.skill_id
-      WHERE search_ps.project_id = p.id
-        AND (search_skill.name ILIKE $${params.length} OR search_skill.category ILIKE $${params.length})
-    )`);
-  }
-  params.push(limit);
-  const { rows } = await query(
-    `SELECT p.id, p.title, p.description, p.domain, p.team_size AS "teamSize",
-       p.deadline,
-       COALESCE(json_agg(DISTINCT jsonb_build_object(
-         'id', s.id, 'name', s.name, 'category', s.category, 'importance', ps.importance
-       )) FILTER (WHERE s.id IS NOT NULL), '[]') AS skills,
-       COUNT(DISTINCT tm.student_id)::int AS "memberCount"
-     FROM projects p
-     LEFT JOIN project_skills ps ON ps.project_id = p.id
-     LEFT JOIN skills s ON s.id = ps.skill_id
-     LEFT JOIN teams t ON t.project_id = p.id
-     LEFT JOIN team_members tm ON tm.team_id = t.id
-     WHERE ${filters.join(' AND ')}
-     GROUP BY p.id
-     ORDER BY p.created_at DESC
-     LIMIT $${params.length}`,
-    params
-  );
-  return rows;
+  // Reuse the PostgreSQL query that already powers the authenticated project
+  // catalogue, then expose only the fields needed by the public landing page.
+  const projects = await listProjects({ skill, collegeId });
+  const now = Date.now();
+
+  return projects
+    .filter((project) => project.status === 'open' && new Date(project.deadline).getTime() > now)
+    .slice(0, limit)
+    .map((project) => ({
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      domain: project.domain,
+      teamSize: project.teamSize,
+      deadline: project.deadline,
+      skills: project.skills,
+      memberCount: project.memberCount
+    }));
 }
 
 export function createProject(ownerId, collegeId, input) {

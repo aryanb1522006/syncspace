@@ -139,9 +139,9 @@ function ProjectSearch({ user }) {
     try {
       const result = await api.publicProjectSearch(normalized);
       setProjects(result.projects);
-    } catch (reason) {
+    } catch {
       setProjects([]);
-      setError(reason.message);
+      setError('Project matching is temporarily unavailable. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -172,7 +172,7 @@ function ProjectSearch({ user }) {
 const services = [
   { icon: Compass, title: 'Skill-first ranking', copy: 'Discover ranks by what you know and how much time you have—not popularity.' },
   { icon: LayoutDashboard, title: 'One dashboard', copy: 'Track applications, projects, queries, teams, and deadlines in one consistent workspace.' },
-  { icon: UsersRound, title: 'Project queries', copy: 'Ask the owner a focused question before applying, then keep the answer attached to the project.' },
+  { icon: UsersRound, title: 'Project queries', copy: 'Ask the owner a question before applying, then keep the answer attached to the project.' },
   { icon: Clock3, title: 'Live availability', copy: 'Matches respect your actual weekly bandwidth, not just your interests.' }
 ];
 
@@ -212,7 +212,7 @@ export function Landing() {
         <NetworkCanvas />
         <div className="hybrid-glow" aria-hidden="true" />
         <div className="hybrid-hero__content">
-          <p className="hybrid-eyebrow">— Group 16 / UCS503</p>
+          <p className="hybrid-eyebrow">INDEX[0]</p>
           <h1 id="hybrid-title">Your skills already have<br />a project waiting. <span>Just ask.</span></h1>
           <p className="hybrid-subhead">SyncSpace matches students to real project teams by what they can actually do—not who they know.</p>
           <ProjectSearch user={user} />
@@ -228,7 +228,7 @@ export function Landing() {
             {[
               ['01', 'Add your skills, not a résumé', 'Tag what you can actually build. SyncSpace ranks projects against that, not a GPA.'],
               ['02', 'Get ranked matches by fit and time', 'Every project is scored against your skills and the hours you can reliably contribute.'],
-              ['03', 'Apply—or ask before you do', 'Raise one focused project query, get the owner’s answer, and track your application in one place.']
+              ['03', 'Apply—or ask before you do', 'Raise a project query, get the owner’s answer, and track your application in one place.']
             ].map(([number, title, copy]) => <article key={number} data-hybrid-reveal><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></article>)}
           </div>
         </div>
@@ -248,12 +248,12 @@ export function Landing() {
         <div className="hybrid-wrap hybrid-manifesto" data-hybrid-reveal>
           <p className="hybrid-label">Why SyncSpace</p>
           <h2>Building a project shouldn’t start with a cold DM.</h2>
-          <p>Skills should be the introduction. Find a team that needs what you can build, ask a relevant question, or lead the project you want to see on campus.</p>
+          <p>Skills should be the introduction. Find a team that needs what you can build, ask the project owner a question, or lead the project you want to see on campus.</p>
           <div><Link className="hybrid-pill" to={discoverTarget}>Explore projects</Link><Link className="hybrid-pill hybrid-pill--ghost" to={postTarget}>Post a project</Link></div>
         </div>
       </section>
     </main>
 
-    <footer className="hybrid-footer"><span>© 2026 SyncSpace</span><span>UCS503 · Group 16</span></footer>
+    <footer className="hybrid-footer"><span>© 2026 SyncSpace</span><span>UCS503 · INDEX[0]</span></footer>
   </div>;
 }

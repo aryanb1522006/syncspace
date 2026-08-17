@@ -55,6 +55,11 @@ const { project } = await request('/projects', {
   })
 });
 
+const landingSearch = await request(`/projects/public/search?skill=${encodeURIComponent(selectedSkills[0].name)}`);
+if (!landingSearch.projects.some((item) => Number(item.id) === Number(project.id))) {
+  throw new Error('The public landing search did not return the newly created matching project');
+}
+
 await request('/recommendations/projects', { token: student.token });
 const { application } = await request(`/projects/${project.id}/apply`, {
   method: 'POST',

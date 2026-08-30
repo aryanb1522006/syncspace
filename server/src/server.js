@@ -1,9 +1,14 @@
+import { createServer } from 'node:http';
 import { app } from './app.js';
 import { pool } from './config/db.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
+import { initSocketServer } from './sockets/index.js';
 
-const server = app.listen(env.port, () => {
+const httpServer = createServer(app);
+initSocketServer(httpServer);
+
+const server = httpServer.listen(env.port, () => {
   logger.info({ port: env.port }, 'SyncSpace API listening');
 });
 

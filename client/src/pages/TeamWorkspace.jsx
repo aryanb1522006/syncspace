@@ -1,11 +1,13 @@
 import { ArrowLeft, Check, Circle, ExternalLink, Plus, RefreshCw, UserRound, UsersRound } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { api } from '../api/resources.js';
+import { api, demoMode } from '../api/resources.js';
+import { getSocket } from '../api/socket.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+
 
 const columns = [['todo', 'To do'], ['in_progress', 'In progress'], ['done', 'Done']];
 const nextStatus = { todo: 'in_progress', in_progress: 'done', done: 'todo' };
@@ -61,6 +63,22 @@ export function TeamWorkspace() {
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    if (demoMode || !id) return undefined;
+    const socket = getSocket();
+    socket.connect();
+    const teamId = Number(id);
+    socket.emit('workspace:join', teamId);
+    const onTaskEvent = () => refresh();
+    socket.on('task:created', onTaskEvent);
+    socket.on('task:updated', onTaskEvent);
+    return () => {
+      socket.emit('workspace:leave', teamId);
+      socket.off('task:created', onTaskEvent);
+      socket.off('task:updated', onTaskEvent);
+    };
+  }, [id, refresh]);
   const grouped = useMemo(() => Object.fromEntries(columns.map(([key]) => [key, team?.tasks.filter((task) => task.status === key) ?? []])), [team]);
   const move = async (task) => { try { await api.updateTask(task.id, { status: nextStatus[task.status] }); await refresh(); } catch (reason) { setError(reason.message); } };
   const add = async (event) => {

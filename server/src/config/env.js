@@ -88,5 +88,40 @@ export const env = Object.freeze({
   rateLimitWindowMs: asNumber(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
   rateLimitMax: asNumber(process.env.RATE_LIMIT_MAX, 300),
   authRateLimitMax: asNumber(process.env.AUTH_RATE_LIMIT_MAX, 30),
-  shutdownTimeoutMs: asNumber(process.env.SHUTDOWN_TIMEOUT_MS, 10000)
+  shutdownTimeoutMs: asNumber(process.env.SHUTDOWN_TIMEOUT_MS, 10000),
+
+  // --- Recommendation ML / embedding configuration ---
+  // Provider for text embeddings used across semantic skill matching, the
+  // combined recommendation score, and duplicate-project detection.
+  // 'hashing' (default): deterministic, offline, dependency-free.
+  // 'transformers': real pretrained sentence embeddings via the optional
+  //   '@xenova/transformers' package (requires network access to fetch
+  //   model weights on first use); falls back to 'hashing' automatically
+  //   if unavailable.
+  embeddingProvider: (process.env.EMBEDDING_PROVIDER ?? 'hashing').trim(),
+  embeddingModel: process.env.EMBEDDING_MODEL?.trim() || 'Xenova/all-MiniLM-L6-v2',
+  embeddingDimensions: asNumber(process.env.EMBEDDING_DIMENSIONS, 256),
+  // Minimum cosine similarity for two different skill names to be treated
+  // as semantically related (e.g. "REST API" ~ "API Development"). 0.3 is
+  // calibrated for the default 'hashing' provider, which relies on shared
+  // vocabulary; it will not catch fully different-worded pairs like
+  // "React" ~ "Frontend Development" (no shared tokens) - that requires
+  // EMBEDDING_PROVIDER=transformers for genuine semantic embeddings, in
+  // which case a higher threshold (e.g. 0.6-0.7) is more appropriate.
+  semanticSkillThreshold: asNumber(process.env.SEMANTIC_SKILL_THRESHOLD, 0.3),
+  // Weights for the combined recommendation score:
+  //   finalScore = SKILL_SCORE_WEIGHT * skillScore + COSINE_SCORE_WEIGHT * cosineScore
+  skillScoreWeight: asNumber(process.env.SKILL_SCORE_WEIGHT, 0.5),
+  cosineScoreWeight: asNumber(process.env.COSINE_SCORE_WEIGHT, 0.5),
+  // Minimum cosine similarity between two project description embeddings
+  // for them to be flagged as highly similar/possible duplicates. 0.35 is
+  // calibrated for the default deterministic 'hashing' embedding provider
+  // (which surfaces shared-vocabulary overlap rather than deep semantic
+  // similarity, so its similarity scores run lower than a transformer
+  // model's). If EMBEDDING_PROVIDER=transformers is used instead, raise
+  // this threshold (e.g. 0.85) since that provider's similarity scores run
+  // much higher for genuinely related text.
+  duplicateSimilarityThreshold: asNumber(process.env.DUPLICATE_SIMILARITY_THRESHOLD, 0.35),
+  // Maximum word count for the generated project description summary.
+  projectSummaryWordLimit: asNumber(process.env.PROJECT_SUMMARY_WORD_LIMIT, 50)
 });

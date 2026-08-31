@@ -101,6 +101,12 @@ export const env = Object.freeze({
   embeddingProvider: (process.env.EMBEDDING_PROVIDER ?? 'hashing').trim(),
   embeddingModel: process.env.EMBEDDING_MODEL?.trim() || 'Xenova/all-MiniLM-L6-v2',
   embeddingDimensions: asNumber(process.env.EMBEDDING_DIMENSIONS, 256),
+  // Where the optional 'transformers' provider caches downloaded model
+  // weights on disk (~90MB for the default model). Without this pointed
+  // at a persistent volume/mounted directory, a container restart or
+  // redeploy re-downloads the model from Hugging Face on next use, which
+  // both costs time and requires the network call to succeed again.
+  embeddingCacheDir: process.env.EMBEDDING_CACHE_DIR?.trim() || undefined,
   // Minimum cosine similarity for two different skill names to be treated
   // as semantically related (e.g. "REST API" ~ "API Development"). 0.3 is
   // calibrated for the default 'hashing' provider, which relies on shared

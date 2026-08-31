@@ -88,6 +88,15 @@ services:
       METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN is required}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-30}
+      # Defaults to the offline hashing provider (no extra setup needed).
+      # Set EMBEDDING_PROVIDER=transformers in .env to use real pretrained
+      # semantic embeddings instead - the embedding_cache volume below
+      # persists the downloaded model across container restarts/redeploys.
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}
+      EMBEDDING_CACHE_DIR: /app/server/.cache/transformers
+    volumes:
+      - embedding_cache:/app/server/.cache/transformers
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
@@ -184,3 +193,4 @@ volumes:
   caddy_data:
   caddy_config:
   prometheus_data:
+  embedding_cache:

@@ -125,14 +125,40 @@ function l2Normalize(vector) {
 let transformersPipelinePromise = null;
 let transformersUnavailableLogged = false;
 
+/**
+ * Distinguishes *why* the transformers provider failed so the fallback
+ * warning actually tells an operator what to fix, instead of always
+ * pointing at "install the package" even when it's already installed and
+ * the real problem is network access or a bad model name.
+ */
+function describeTransformersFailure(error, modelName) {
+  const message = String(error?.message ?? error);
+  if (error?.code === 'ERR_MODULE_NOT_FOUND' || /Cannot find package '@xenova\/transformers'/.test(message)) {
+    return `the '@xenova/transformers' package is not installed. Run 'npm install' (it's an optional ` +
+      `dependency, declared in package.json) to install it.`;
+  }
+  if (/Forbidden access to file|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|fetch failed/i.test(message)) {
+    return `the model files could not be downloaded from Hugging Face (${message}). Ensure this process ` +
+      `has outbound network access to huggingface.co, or pre-populate EMBEDDING_CACHE_DIR with the ` +
+      `'${modelName}' model files ahead of time so no network call is needed at runtime.`;
+  }
+  return `it failed to load (${message}).`;
+}
+
 async function loadTransformersPipeline(modelName) {
   if (!transformersPipelinePromise) {
     transformersPipelinePromise = (async () => {
       // Optional dependency: only imported when EMBEDDING_PROVIDER=transformers.
       // Wrapped so environments without network access (or without the
       // package installed) gracefully fall back to the hashing provider.
-      const { pipeline } = await import('@xenova/transformers');
-      return pipeline('feature-extraction', modelName);
+      const transformers = await import('@xenova/transformers');
+      if (env.embeddingCacheDir) {
+        // Persist downloaded model weights across restarts/redeploys
+        // instead of re-downloading them (and needing network access
+        // again) every time the process starts.
+        transformers.env.cacheDir = env.embeddingCacheDir;
+      }
+      return transformers.pipeline('feature-extraction', modelName);
     })().catch((error) => {
       transformersPipelinePromise = null;
       throw error;
@@ -151,9 +177,8 @@ async function transformersEmbedding(text, modelName) {
       transformersUnavailableLogged = true;
       // eslint-disable-next-line no-console
       console.warn(
-        `[embeddingService] Falling back to the deterministic hashing embedding provider ` +
-        `because the '${modelName}' transformer model could not be loaded (${error.message}). ` +
-        `Install '@xenova/transformers' and ensure network access to use real pretrained embeddings.`
+        `[embeddingService] Falling back to the deterministic hashing embedding provider because ` +
+        `${describeTransformersFailure(error, modelName)}`
       );
     }
     return hashingEmbedding(text);

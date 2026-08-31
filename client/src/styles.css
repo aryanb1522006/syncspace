@@ -220,6 +220,15 @@ textarea { resize: vertical; line-height: 1.5; }
 .bar { height: 7px; overflow: hidden; border-radius: 4px; background: #e1e6e3; }
 .bar i { display: block; height: 100%; border-radius: inherit; background: var(--lime-strong); }
 .breakdown__row strong { font-size: 10px; text-align: right; }
+.breakdown__note { margin-top: 8px; font-size: 11px; color: #53605c; }
+.skills--related b { background: #fff3d6; }
+.tag--muted { background: #e7e9e6; color: #53605c; }
+.similar-projects { padding: 14px 24px 21px 104px; border-top: 1px solid var(--line); }
+.similar-projects h3 { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; font-size: 13px; }
+.similar-projects__item { padding: 10px 0; border-top: 1px solid var(--line); font-size: 11px; color: #53605c; }
+.similar-projects__item:first-of-type { border-top: none; }
+.similar-projects__header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.similar-projects__shared { color: var(--ink); }
 .week-time { display: flex; align-items: center; gap: 14px; }
 .week-time > span { width: 64px; height: 64px; display: grid; place-items: center; border: 9px solid #e3f7ed; border-radius: 50%; background: var(--mint); outline: 1px dashed #9ba7a3; outline-offset: 5px; }
 .week-time > span svg { width: 22px; }

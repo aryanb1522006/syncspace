@@ -11,6 +11,7 @@
     "smoke:api": "node scripts/smoke-api.js",
     "db:migrate": "node src/config/migrate.js",
     "db:seed": "node seed/index.js",
+    "db:backfill:embeddings": "node scripts/backfill-project-embeddings.js",
     "db:cleanup:pilot": "node scripts/cleanup-pilot-projects.js"
   },
   "dependencies": {

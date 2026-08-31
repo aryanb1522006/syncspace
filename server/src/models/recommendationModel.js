@@ -7,10 +7,17 @@ export async function getStudentRecommendationContext(userId, collegeId) {
   if (!profile) return null;
 
   const [{ rows: studentSkills }, { rows: projects }, { rows: applications }, { rows: memberships }] = await Promise.all([
-    query('SELECT skill_id AS "skillId", proficiency FROM student_skills WHERE student_id = $1', [profile.id]),
+    query(
+      `SELECT ss.skill_id AS "skillId", ss.proficiency, s.name
+       FROM student_skills ss JOIN skills s ON s.id = ss.skill_id
+       WHERE ss.student_id = $1`,
+      [profile.id]
+    ),
     query(
       `SELECT p.id, p.owner_id AS "ownerId", p.title, p.description, p.domain, p.team_size AS "teamSize",
         p.commitment_hours_per_week AS "commitmentHoursPerWeek", p.deadline, p.status,
+        p.description_embedding AS "descriptionEmbedding", p.embedding_model AS "embeddingModel",
+        p.description_summary AS "descriptionSummary",
         COALESCE((SELECT COUNT(*) FROM teams t JOIN team_members tm ON tm.team_id = t.id
           WHERE t.project_id = p.id), 0)::int AS "memberCount",
         COALESCE((SELECT json_agg(json_build_object('skillId', s.id, 'name', s.name,
@@ -26,6 +33,7 @@ export async function getStudentRecommendationContext(userId, collegeId) {
   return {
     student: {
       id: profile.id,
+      bio: profile.bio,
       skills: studentSkills,
       interests: profile.interests,
       availabilityHoursPerWeek: profile.availability_hours_per_week,

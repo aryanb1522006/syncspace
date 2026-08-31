@@ -44,7 +44,7 @@ function StudentDashboard() {
   const visible = useMemo(() => [...projects]
     .filter((project) => domain === 'All domains' || project.domain === domain)
     .filter((project) => !skill.trim() || project.skills.some((item) => `${item.name} ${item.category ?? ''}`.toLowerCase().includes(skill.trim().toLowerCase())))
-    .sort((a, b) => sort === 'Best match' ? b.match.score - a.match.score : new Date(a.deadline) - new Date(b.deadline)), [projects, domain, skill, sort]);
+    .sort((a, b) => sort === 'Best match' ? (b.recommendation?.finalScore ?? b.match.score) - (a.recommendation?.finalScore ?? a.match.score) : new Date(a.deadline) - new Date(b.deadline)), [projects, domain, skill, sort]);
 
   const updateSkill = (event) => {
     const nextSkill = event.target.value;

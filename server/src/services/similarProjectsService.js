@@ -89,6 +89,39 @@ export function findSimilarProjectPairs(projects, threshold = env.duplicateSimil
  * { project, similarityScore, differences } for projects similar to it,
  * so callers can attach a "similar projects" list to each recommendation.
  */
+function swapDifferences(differences) {
+  const swapSetDiff = (setDiff) => ({
+    onlyInFirst: setDiff.onlyInSecond,
+    onlyInSecond: setDiff.onlyInFirst,
+    shared: setDiff.shared
+  });
+
+  return {
+    technologies: swapSetDiff(differences.technologies),
+    skills: swapSetDiff(differences.skills),
+    domain: differences.domain.same
+      ? differences.domain
+      : { same: false, first: differences.domain.second, second: differences.domain.first },
+    focus: {
+      firstTitle: differences.focus.secondTitle,
+      secondTitle: differences.focus.firstTitle,
+      distinctSkillCount: {
+        first: differences.focus.distinctSkillCount.second,
+        second: differences.focus.distinctSkillCount.first
+      }
+    }
+  };
+}
+
+/**
+ * Maps similarity pairs to a per-project lookup: projectId -> list of
+ * { project, similarityScore, differences } for projects similar to it,
+ * so callers can attach a "similar projects" list to each recommendation.
+ * The `differences` object is computed once per pair as (first vs second);
+ * when attaching it to the second project's list, the "onlyInFirst" /
+ * "onlyInSecond" (and title/domain) fields are swapped so they always
+ * read correctly from the perspective of the project they're attached to.
+ */
 export function groupSimilarProjectsByProjectId(projects, pairs) {
   const byId = new Map(projects.map((project) => [project.id, project]));
   const grouped = new Map();
@@ -101,7 +134,7 @@ export function groupSimilarProjectsByProjectId(projects, pairs) {
   for (const pair of pairs) {
     const { projectId, similarProjectId, similarityScore, differences } = pair;
     addEntry(projectId, similarProjectId, { similarityScore, differences });
-    addEntry(similarProjectId, projectId, { similarityScore, differences });
+    addEntry(similarProjectId, projectId, { similarityScore, differences: swapDifferences(differences) });
   }
 
   return grouped;

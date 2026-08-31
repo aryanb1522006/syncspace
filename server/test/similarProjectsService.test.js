@@ -97,3 +97,37 @@ test('similar projects are grouped per project id in both directions, never merg
   assert.equal(grouped.get(2)[0].project.id, 1);
   assert.equal(grouped.has(3), false);
 });
+
+test('grouping swaps onlyInFirst/onlyInSecond so differences read correctly from each side', async () => {
+  const a = await project(1, {
+    title: 'Facial Attendance A',
+    description: 'AI powered attendance system using facial recognition',
+    domain: 'EdTech',
+    skills: [{ name: 'Python' }, { name: 'OpenCV' }]
+  });
+  const b = await project(2, {
+    title: 'Facial Attendance B',
+    description: 'Smart student attendance platform based on face recognition',
+    domain: 'Civic Tech',
+    skills: [{ name: 'Python' }, { name: 'React' }]
+  });
+
+  const pairs = findSimilarProjectPairs([a, b], 0.12);
+  const grouped = groupSimilarProjectsByProjectId([a, b], pairs);
+
+  const fromA = grouped.get(1)[0];
+  const fromB = grouped.get(2)[0];
+
+  // From A's perspective: "only in first" = A's own unique skill (OpenCV).
+  assert.deepEqual(fromA.differences.technologies.onlyInFirst, ['OpenCV']);
+  assert.deepEqual(fromA.differences.technologies.onlyInSecond, ['React']);
+  assert.equal(fromA.differences.domain.first, 'EdTech');
+  assert.equal(fromA.differences.domain.second, 'Civic Tech');
+
+  // From B's perspective: "only in first" must now mean B's own unique
+  // skill (React), not still A's - this is the bug being guarded against.
+  assert.deepEqual(fromB.differences.technologies.onlyInFirst, ['React']);
+  assert.deepEqual(fromB.differences.technologies.onlyInSecond, ['OpenCV']);
+  assert.equal(fromB.differences.domain.first, 'Civic Tech');
+  assert.equal(fromB.differences.domain.second, 'EdTech');
+});

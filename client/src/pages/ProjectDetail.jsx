@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, Check, Clock3, Leaf, Mail, UserRound, UsersRound } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, Clock3, Leaf, Mail, Sparkles, UserRound, UsersRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/resources.js';
@@ -51,7 +51,18 @@ export function ProjectDetail() {
   return <AppShell>
     <Link className="back-link app-back" to="/dashboard"><ArrowLeft />Discover</Link>
     <div className="project-detail__head"><div><span className="tag">{project.domain}</span><h1>{project.title}</h1><p>{project.description}</p></div>{project.match && <div className="score-ring score-ring--large" style={{ '--score': `${project.match.score * 3.6}deg` }}><strong>{project.match.score}%</strong><span>match</span></div>}</div>
-    <div className="project-detail__layout"><div className="project-detail__main"><section><h2>What the team is building</h2><p>{project.longDescription ?? project.description}</p></section><section><h2>Skills this project needs</h2><div className="skill-requirements">{project.skills.map((skill) => <div key={skill.id}><span><Check />{skill.name}</span><small>{skill.importance}</small></div>)}</div></section>
+    <div className="project-detail__layout"><div className="project-detail__main"><section><h2>What the team is building</h2><p>{project.longDescription ?? project.description}</p></section>
+        {isOwner && <section className="project-ai-debug">
+          <h2><Sparkles size={18} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />AI summary status (owner only)</h2>
+          {project.descriptionSummary ? <>
+            <p><strong>Generated summary:</strong> {project.descriptionSummary}</p>
+            <p className="breakdown__note">
+              Model: <code>{project.embeddingModel ?? 'unknown'}</code>
+              {project.embeddingUpdatedAt && <> · Generated {new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(project.embeddingUpdatedAt))}</>}
+            </p>
+          </> : <p className="breakdown__note">No AI summary has been generated for this project yet — it may still be processing, or summarization failed. Try editing and re-saving the description.</p>}
+        </section>}
+        <section><h2>Skills this project needs</h2><div className="skill-requirements">{project.skills.map((skill) => <div key={skill.id}><span><Check />{skill.name}</span><small>{skill.importance}</small></div>)}</div></section>
         {teamContacts.length > 0 && <section className="project-contacts"><h2>Project contacts</h2><p>Available to the project creator and accepted collaborators.</p><div>{teamContacts.map((contact) => <article key={`${contact.profileId}-${contact.roleLabel}`}>
           <span className="avatar avatar--mint">{contact.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span>
           <span><strong>{contact.name}</strong><small>{contact.roleLabel}</small><a href={`mailto:${contact.email}`}><Mail />{contact.email}</a></span>

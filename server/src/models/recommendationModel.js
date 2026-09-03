@@ -18,12 +18,15 @@ export async function getStudentRecommendationContext(userId, collegeId) {
         p.commitment_hours_per_week AS "commitmentHoursPerWeek", p.deadline, p.status,
         p.description_embedding AS "descriptionEmbedding", p.embedding_model AS "embeddingModel",
         p.description_summary AS "descriptionSummary",
+        owner_profile.name AS "ownerName",
         COALESCE((SELECT COUNT(*) FROM teams t JOIN team_members tm ON tm.team_id = t.id
           WHERE t.project_id = p.id), 0)::int AS "memberCount",
         COALESCE((SELECT json_agg(json_build_object('skillId', s.id, 'name', s.name,
           'importance', ps.importance)) FROM project_skills ps JOIN skills s ON s.id = ps.skill_id
           WHERE ps.project_id = p.id), '[]') AS skills
-       FROM projects p WHERE p.college_id = $1`,
+       FROM projects p
+       LEFT JOIN student_profiles owner_profile ON owner_profile.user_id = p.owner_id
+       WHERE p.college_id = $1`,
       [collegeId]
     ),
     query('SELECT project_id FROM applications WHERE student_id = $1', [profile.id]),

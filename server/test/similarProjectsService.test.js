@@ -3,12 +3,16 @@ import assert from 'node:assert/strict';
 import { generateEmbedding } from '../src/services/embeddingService.js';
 import { differentiateProjects, findSimilarProjectPairs, groupSimilarProjectsByProjectId } from '../src/services/similarProjectsService.js';
 
-async function project(id, { title, description, domain, skills }) {
+async function project(id, { title, description, domain, skills, ownerName, teamSize, memberCount, deadline }) {
   return {
     id,
     title,
     domain,
     skills,
+    ownerName,
+    teamSize,
+    memberCount,
+    deadline,
     descriptionEmbedding: await generateEmbedding(description)
   };
 }
@@ -84,6 +88,54 @@ test('differentiateProjects reports structured, non-invented differences from ex
   assert.equal(diff.differences.domain.second, 'Civic Tech');
 });
 
+test('differentiateProjects surfaces project lead, team composition, and timeline', () => {
+  const a = {
+    title: 'Facial Attendance A',
+    domain: 'EdTech',
+    skills: [{ name: 'Python' }],
+    ownerName: 'Aryan Mehta',
+    teamSize: 4,
+    memberCount: 2,
+    deadline: '2026-10-01T00:00:00.000Z'
+  };
+  const b = {
+    title: 'Facial Attendance B',
+    domain: 'EdTech',
+    skills: [{ name: 'Python' }],
+    ownerName: 'Rumani Kaur',
+    teamSize: 6,
+    memberCount: 1,
+    deadline: '2026-11-15T00:00:00.000Z'
+  };
+
+  const diff = differentiateProjects(a, b, 0.9);
+
+  assert.equal(diff.differences.lead.same, false);
+  assert.equal(diff.differences.lead.first, 'Aryan Mehta');
+  assert.equal(diff.differences.lead.second, 'Rumani Kaur');
+
+  assert.equal(diff.differences.teamComposition.same, false);
+  assert.deepEqual(diff.differences.teamComposition.first, { teamSize: 4, memberCount: 2 });
+  assert.deepEqual(diff.differences.teamComposition.second, { teamSize: 6, memberCount: 1 });
+
+  assert.equal(diff.differences.timeline.same, false);
+  assert.equal(diff.differences.timeline.first, '2026-10-01T00:00:00.000Z');
+  assert.equal(diff.differences.timeline.second, '2026-11-15T00:00:00.000Z');
+  assert.equal(diff.differences.timeline.daysApart, 45);
+});
+
+test('differentiateProjects handles missing lead/deadline data without throwing', () => {
+  const a = { title: 'A', domain: 'EdTech', skills: [] };
+  const b = { title: 'B', domain: 'EdTech', skills: [] };
+
+  const diff = differentiateProjects(a, b, 0.9);
+
+  assert.equal(diff.differences.lead.same, true);
+  assert.equal(diff.differences.lead.first, null);
+  assert.equal(diff.differences.timeline.same, true);
+  assert.equal(diff.differences.timeline.daysApart, null);
+});
+
 test('similar projects are grouped per project id in both directions, never merged/deleted', async () => {
   const a = await project(1, { title: 'A', description: 'AI attendance using facial recognition', domain: 'EdTech', skills: [] });
   const b = await project(2, { title: 'B', description: 'Smart attendance platform based on face recognition', domain: 'EdTech', skills: [] });
@@ -103,13 +155,21 @@ test('grouping swaps onlyInFirst/onlyInSecond so differences read correctly from
     title: 'Facial Attendance A',
     description: 'AI powered attendance system using facial recognition',
     domain: 'EdTech',
-    skills: [{ name: 'Python' }, { name: 'OpenCV' }]
+    skills: [{ name: 'Python' }, { name: 'OpenCV' }],
+    ownerName: 'Aryan Mehta',
+    teamSize: 4,
+    memberCount: 2,
+    deadline: '2026-10-01T00:00:00.000Z'
   });
   const b = await project(2, {
     title: 'Facial Attendance B',
     description: 'Smart student attendance platform based on face recognition',
     domain: 'Civic Tech',
-    skills: [{ name: 'Python' }, { name: 'React' }]
+    skills: [{ name: 'Python' }, { name: 'React' }],
+    ownerName: 'Rumani Kaur',
+    teamSize: 6,
+    memberCount: 1,
+    deadline: '2026-11-15T00:00:00.000Z'
   });
 
   const pairs = findSimilarProjectPairs([a, b], 0.12);
@@ -123,6 +183,10 @@ test('grouping swaps onlyInFirst/onlyInSecond so differences read correctly from
   assert.deepEqual(fromA.differences.technologies.onlyInSecond, ['React']);
   assert.equal(fromA.differences.domain.first, 'EdTech');
   assert.equal(fromA.differences.domain.second, 'Civic Tech');
+  assert.equal(fromA.differences.lead.first, 'Aryan Mehta');
+  assert.equal(fromA.differences.lead.second, 'Rumani Kaur');
+  assert.deepEqual(fromA.differences.teamComposition.first, { teamSize: 4, memberCount: 2 });
+  assert.equal(fromA.differences.timeline.daysApart, 45);
 
   // From B's perspective: "only in first" must now mean B's own unique
   // skill (React), not still A's - this is the bug being guarded against.
@@ -130,4 +194,8 @@ test('grouping swaps onlyInFirst/onlyInSecond so differences read correctly from
   assert.deepEqual(fromB.differences.technologies.onlyInSecond, ['OpenCV']);
   assert.equal(fromB.differences.domain.first, 'Civic Tech');
   assert.equal(fromB.differences.domain.second, 'EdTech');
+  assert.equal(fromB.differences.lead.first, 'Rumani Kaur');
+  assert.equal(fromB.differences.lead.second, 'Aryan Mehta');
+  assert.deepEqual(fromB.differences.teamComposition.first, { teamSize: 6, memberCount: 1 });
+  assert.equal(fromB.differences.timeline.daysApart, 45);
 });

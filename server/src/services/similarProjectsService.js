@@ -10,15 +10,34 @@
 // Similar projects are never merged, hidden, or deleted automatically.
 // Instead this module returns groups/pairs plus a differentiation object
 // built only from structured data already present on the projects
-// (title, skills, domain) so the frontend can explain to the user *why*
-// two similar-sounding projects are actually different, rather than
-// simply labelling them "duplicates".
+// (title, skills, domain, project lead, team composition, timeline) so
+// the frontend can explain to the user *why* two similar-sounding
+// projects are actually different, rather than simply labelling them
+// "duplicates".
+//
+// NOTE ON "MENTOR": SyncSpace is a peer-led platform - projects have an
+// owning student (`ownerName`), not a separate faculty/mentor record.
+// `lead` below surfaces that owner as the closest existing analog to a
+// "mentor" field. If a real mentor/advisor concept is added to the schema
+// later, wire it in here alongside `lead`.
 
 import { cosineSimilarity } from './embeddingService.js';
 import { env } from '../config/env.js';
 
 function skillNameSet(project) {
   return new Set((project.skills ?? []).map((skill) => String(skill.name)));
+}
+
+function sameValue(a, b) {
+  return a === b || (a == null && b == null);
+}
+
+function daysBetween(dateA, dateB) {
+  if (!dateA || !dateB) return null;
+  const a = new Date(dateA);
+  const b = new Date(dateB);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null;
+  return Math.round(Math.abs(a.getTime() - b.getTime()) / 86_400_000);
 }
 
 /**
@@ -36,6 +55,17 @@ export function differentiateProjects(projectA, projectB, similarityScore) {
 
   const sameDomain = String(projectA.domain).trim().toLowerCase() === String(projectB.domain).trim().toLowerCase();
 
+  const teamSizeA = projectA.teamSize ?? null;
+  const teamSizeB = projectB.teamSize ?? null;
+  const memberCountA = projectA.memberCount ?? null;
+  const memberCountB = projectB.memberCount ?? null;
+
+  const deadlineA = projectA.deadline ?? null;
+  const deadlineB = projectB.deadline ?? null;
+
+  const leadA = projectA.ownerName ?? null;
+  const leadB = projectB.ownerName ?? null;
+
   return {
     similarityScore: Number(similarityScore.toFixed(3)),
     differences: {
@@ -48,6 +78,24 @@ export function differentiateProjects(projectA, projectB, similarityScore) {
         firstTitle: projectA.title,
         secondTitle: projectB.title,
         distinctSkillCount: { first: onlyInA.length, second: onlyInB.length }
+      },
+      // Distinguishing metadata: helps a student tell two similar-sounding
+      // projects apart even when their descriptions and skills overlap.
+      lead: {
+        same: sameValue(leadA, leadB),
+        first: leadA,
+        second: leadB
+      },
+      teamComposition: {
+        same: teamSizeA === teamSizeB,
+        first: { teamSize: teamSizeA, memberCount: memberCountA },
+        second: { teamSize: teamSizeB, memberCount: memberCountB }
+      },
+      timeline: {
+        same: sameValue(deadlineA, deadlineB),
+        first: deadlineA,
+        second: deadlineB,
+        daysApart: daysBetween(deadlineA, deadlineB)
       }
     }
   };
@@ -85,9 +133,22 @@ export function findSimilarProjectPairs(projects, threshold = env.duplicateSimil
 }
 
 /**
+ * Swaps a two-sided { first, second, ...rest } shaped diff so it reads
+ * correctly from the other project's perspective. `same`/computed fields
+ * like `daysApart` are symmetric and left untouched.
+ */
+function swapTwoSided(field) {
+  return { ...field, first: field.second, second: field.first };
+}
+
+/**
  * Maps similarity pairs to a per-project lookup: projectId -> list of
  * { project, similarityScore, differences } for projects similar to it,
  * so callers can attach a "similar projects" list to each recommendation.
+ * The `differences` object is computed once per pair as (first vs second);
+ * when attaching it to the second project's list, every first/second-shaped
+ * field is swapped so it always reads correctly from the perspective of
+ * the project it's attached to.
  */
 function swapDifferences(differences) {
   const swapSetDiff = (setDiff) => ({
@@ -109,19 +170,13 @@ function swapDifferences(differences) {
         first: differences.focus.distinctSkillCount.second,
         second: differences.focus.distinctSkillCount.first
       }
-    }
+    },
+    lead: swapTwoSided(differences.lead),
+    teamComposition: swapTwoSided(differences.teamComposition),
+    timeline: swapTwoSided(differences.timeline)
   };
 }
 
-/**
- * Maps similarity pairs to a per-project lookup: projectId -> list of
- * { project, similarityScore, differences } for projects similar to it,
- * so callers can attach a "similar projects" list to each recommendation.
- * The `differences` object is computed once per pair as (first vs second);
- * when attaching it to the second project's list, the "onlyInFirst" /
- * "onlyInSecond" (and title/domain) fields are swapped so they always
- * read correctly from the perspective of the project they're attached to.
- */
 export function groupSimilarProjectsByProjectId(projects, pairs) {
   const byId = new Map(projects.map((project) => [project.id, project]));
   const grouped = new Map();

@@ -12,12 +12,14 @@ export function MatchBreakdown({ match, domain = 'Domain', recommendation }) {
   return <div className="breakdown">
     <h3>Why this match</h3>
     {rows.map(([label, key, max, Icon]) => {
-      const value = values[key] ?? 0;
+      const value = values[key];
       return <div className="breakdown__row" key={key}>
         <span className="breakdown__icon"><Icon /></span>
         <span>{key === 'domainInterest' ? `${domain} interest` : label}</span>
-        <span className="bar"><i style={{ width: `${Math.min(value / max * 100, 100)}%` }} /></span>
-        <strong>{value}/{max}</strong>
+        {value === null
+          ? <span className="breakdown__note" style={{ gridColumn: 'span 2' }}>Not required for this project</span>
+          : <><span className="bar"><i style={{ width: `${Math.min((value ?? 0) / max * 100, 100)}%` }} /></span>
+            <strong>{value ?? 0}/{max}</strong></>}
       </div>;
     })}
     {recommendation && <>

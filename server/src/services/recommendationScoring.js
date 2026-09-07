@@ -52,9 +52,13 @@ export function buildStudentProfileText(student) {
  * matching logic is reused rather than reimplemented.
  */
 export function computeSkillScore(matchBreakdown) {
-  const required = matchBreakdown?.requiredSkillOverlapRatio ?? 0;
-  const preferred = matchBreakdown?.preferredSkillOverlapRatio ?? 0;
-  return SKILL_REQUIRED_WEIGHT * required + SKILL_PREFERRED_WEIGHT * preferred;
+  const required = matchBreakdown?.requiredSkillOverlapRatio;
+  const preferred = matchBreakdown?.preferredSkillOverlapRatio;
+  const weightedSum = (required === null || required === undefined ? 0 : SKILL_REQUIRED_WEIGHT * required)
+    + (preferred === null || preferred === undefined ? 0 : SKILL_PREFERRED_WEIGHT * preferred);
+  const applicableWeight = (required === null || required === undefined ? 0 : SKILL_REQUIRED_WEIGHT)
+    + (preferred === null || preferred === undefined ? 0 : SKILL_PREFERRED_WEIGHT);
+  return applicableWeight > 0 ? weightedSum / applicableWeight : 0;
 }
 
 /**

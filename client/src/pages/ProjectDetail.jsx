@@ -53,8 +53,8 @@ export function ProjectDetail() {
 
   return <AppShell>
     <Link className="back-link app-back" to="/dashboard"><ArrowLeft />Discover</Link>
-    <div className="project-detail__head"><div><span className="tag">{project.domain}</span><h1>{project.title}</h1><p>{project.description}</p></div>{project.match && <div className="score-ring score-ring--large" style={{ '--score': `${(project.recommendation?.finalScore ?? project.match.score) * 3.6}deg` }}><strong>{project.recommendation?.finalScore ?? project.match.score}%</strong><span>match</span></div>}</div>
-    <div className="project-detail__layout"><div className="project-detail__main"><section><h2>What the team is building</h2><p>{project.longDescription ?? project.description}</p></section>
+    <div className="project-detail__head"><div><span className="tag">{project.domain}</span><h1>{project.title}</h1></div>{project.match && <div className="score-ring score-ring--large" style={{ '--score': `${(project.recommendation?.finalScore ?? project.match.score) * 3.6}deg` }}><strong>{project.recommendation?.finalScore ?? project.match.score}%</strong><span>match</span></div>}</div>
+    <div className="project-detail__layout"><div className="project-detail__main"><section><h2>What the team is building</h2><p>{project.description}</p></section>
         {isOwner && <section className="project-ai-debug">
           <h2><Sparkles size={18} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />AI summary status (owner only)</h2>
           {project.descriptionSummary ? <>

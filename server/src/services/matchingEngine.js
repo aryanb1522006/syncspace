@@ -9,7 +9,7 @@ const skillId = (skill) => Number(typeof skill === 'object' ? skill.skillId ?? s
 const skillSet = (skills = []) => new Set(skills.map(skillId));
 
 const overlapRatio = (studentIds, projectSkills) => {
-  if (!projectSkills.length) return 1;
+  if (!projectSkills.length) return null;
   return projectSkills.filter((skill) => studentIds.has(skillId(skill))).length / projectSkills.length;
 };
 
@@ -35,11 +35,17 @@ export function computeMatchScore(
     ? Math.min(Math.max(Number(studentAvailability) / Number(projectCommitment), 0), 1)
     : 1;
 
-  const weightedScore =
-    weights.requiredSkills * requiredSkillOverlapRatio +
-    weights.preferredSkills * preferredSkillOverlapRatio +
-    weights.domainInterest * domainInterestMatch +
-    weights.availability * availabilityRatio;
+  const categories = [
+    ['requiredSkills', requiredSkillOverlapRatio],
+    ['preferredSkills', preferredSkillOverlapRatio],
+    ['domainInterest', domainInterestMatch],
+    ['availability', availabilityRatio]
+  ];
+
+  const applicableWeight = categories.reduce((sum, [key, ratio]) => sum + (ratio === null ? 0 : weights[key]), 0);
+  const weightedScore = applicableWeight > 0
+    ? categories.reduce((sum, [key, ratio]) => sum + (ratio === null ? 0 : weights[key] * ratio), 0) / applicableWeight
+    : 0;
 
   return {
     score: Math.round(weightedScore * 100),
@@ -49,8 +55,8 @@ export function computeMatchScore(
       domainInterestMatch,
       availabilityRatio,
       contributions: {
-        requiredSkills: Math.round(weights.requiredSkills * requiredSkillOverlapRatio * 100),
-        preferredSkills: Math.round(weights.preferredSkills * preferredSkillOverlapRatio * 100),
+        requiredSkills: requiredSkillOverlapRatio === null ? null : Math.round(weights.requiredSkills * requiredSkillOverlapRatio * 100),
+        preferredSkills: preferredSkillOverlapRatio === null ? null : Math.round(weights.preferredSkills * preferredSkillOverlapRatio * 100),
         domainInterest: Math.round(weights.domainInterest * domainInterestMatch * 100),
         availability: Math.round(weights.availability * availabilityRatio * 100)
       }

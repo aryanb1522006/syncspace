@@ -1,4 +1,4 @@
-import { ArrowLeft, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowLeft, Github, Linkedin, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/resources.js';
@@ -32,7 +32,7 @@ export function MemberProfile() {
   return <AppShell>
     <Link className="back-link app-back" to="/teams"><ArrowLeft />Back to teams</Link>
     <section className="member-profile">
-      <span className="avatar avatar--mint">{initials}</span>
+      {student.avatarUrl ? <img className="avatar avatar--mint member-profile__avatar" src={student.avatarUrl} alt={`${student.name}'s profile`} referrerPolicy="no-referrer" /> : <span className="avatar avatar--mint">{initials}</span>}
       <span className="eyebrow">SyncSpace teammate</span>
       <h1>{student.name}</h1>
       {student.email
@@ -45,6 +45,11 @@ export function MemberProfile() {
           {student.availabilityHoursPerWeek !== undefined && <div><dt>Availability</dt><dd>{student.availabilityHoursPerWeek}h / week</dd></div>}
         </dl>}
         {student.bio && <section><h2>About</h2><p>{student.bio}</p></section>}
+        {(student.githubUrl || student.linkedinUrl) && <section><h2>Profile links</h2><div className="profile-social-links">
+          {student.githubUrl && <a href={student.githubUrl} target="_blank" rel="noopener noreferrer"><Github />GitHub <small>{student.connections?.some((account) => account.provider === 'github' && account.linkedProfile && account.status === 'connected') ? 'Account connected' : 'User-provided link'}</small></a>}
+          {student.linkedinUrl && <a href={student.linkedinUrl} target="_blank" rel="noopener noreferrer"><Linkedin />LinkedIn <small>User-provided link</small></a>}
+        </div></section>}
+        {student.portfolio?.length > 0 && <section><h2>Featured projects</h2><div className="profile-portfolio">{student.portfolio.map((repo) => <a href={repo.url} key={repo.id} target="_blank" rel="noopener noreferrer"><strong><Github />{repo.name}</strong><p>{repo.description}</p><small>{repo.language ? `${repo.language} · ` : ''}Imported from GitHub</small></a>)}</div></section>}
         {skills.length > 0 && <section><h2>Skills</h2><div className="member-profile__tags">{skills.map((skill) => <span key={skill.id}>{skill.name}<small>{skill.proficiency}/5</small></span>)}</div></section>}
         {interests.length > 0 && <section><h2>Interests</h2><div className="member-profile__tags">{interests.map((interest) => <span key={interest}>{interest}</span>)}</div></section>}
       </div>

@@ -23,7 +23,8 @@ const seed = {
     { id: 1, name: 'React', category: 'Web' }, { id: 2, name: 'TypeScript', category: 'Web' },
     { id: 3, name: 'UI/UX Design', category: 'Design' }, { id: 4, name: 'Figma', category: 'Design' },
     { id: 5, name: 'Node.js', category: 'Backend' }, { id: 6, name: 'PostgreSQL', category: 'Data' },
-    { id: 7, name: 'Machine Learning', category: 'AI' }, { id: 8, name: 'Data Science', category: 'Data' }
+    { id: 7, name: 'Machine Learning', category: 'AI' }, { id: 8, name: 'Data Science', category: 'Data' },
+    { id: 10, name: 'Python', category: 'Programming' }
   ],
   projects: [
     {
@@ -122,7 +123,12 @@ export const demoApi = {
       return viewerCanAccess && targetIsMember;
     });
     const contactVisible = Number(profile.userId) === Number(user?.id) || related;
-    return wait({ student: { ...profile, email: contactVisible ? profile.email : undefined, contactVisible } });
+    const socialsVisible = Number(profile.userId) === Number(user?.id) || profile.social_visibility === 'college' || (profile.social_visibility === 'team' && contactVisible);
+    return wait({ student: { ...profile, github_url: undefined, linkedin_url: undefined, avatar_url: undefined, import_sources: undefined,
+      githubUrl: socialsVisible ? profile.github_url : undefined, linkedinUrl: socialsVisible ? profile.linkedin_url : undefined,
+      avatarUrl: socialsVisible ? profile.avatar_url : undefined, portfolio: socialsVisible ? profile.portfolio ?? [] : [],
+      connections: [],
+      email: contactVisible ? profile.email : undefined, contactVisible } });
   },
   async getStudentByUserId(userId) {
     const state = load();
@@ -135,6 +141,9 @@ export const demoApi = {
   async updateProfile(id, input) {
     const state = load();
     state.profile = { ...state.profile, ...input, availability_hours_per_week: input.availabilityHoursPerWeek ?? state.profile.availability_hours_per_week };
+    if ('githubUrl' in input) state.profile.github_url = input.githubUrl;
+    if ('linkedinUrl' in input) state.profile.linkedin_url = input.linkedinUrl;
+    if ('socialVisibility' in input) state.profile.social_visibility = input.socialVisibility;
     save(state);
     return wait({ student: state.profile });
   },
@@ -149,6 +158,47 @@ export const demoApi = {
     return wait({ student: state.profile });
   },
   async listSkills() { return wait({ skills: load().skills }); },
+  async connectedAccounts() { return wait({ accounts: load().connectedAccounts ?? [], providers: { github: false, linkedin: false } }); },
+  async refreshConnection(provider) {
+    if (provider !== 'github') throw new Error('Real LinkedIn connections require the live API.');
+    const state = load();
+    const preview = { accountId: 'sample', username: 'octocat', name: 'Sample developer', bio: 'I build useful tools with TypeScript and Python.', avatarUrl: null, profileUrl: 'https://github.com/octocat',
+      repositories: [
+        { id: '1', name: 'Hello-World', description: 'Sample portfolio project for trying the import review.', url: 'https://github.com/octocat/Hello-World', language: 'TypeScript' },
+        { id: '2', name: 'Spoon-Knife', description: 'Sample project for choosing portfolio cards.', url: 'https://github.com/octocat/Spoon-Knife', language: 'Python' }
+      ], proposedSkills: [{ skillId: 2, name: 'TypeScript', evidence: ['Hello-World'] }, { skillId: 10, name: 'Python', evidence: ['Spoon-Knife'] }], fetchedAt: new Date().toISOString() };
+    const account = { provider: 'github', displayName: 'Sample developer', username: 'octocat', status: 'connected', refreshedAt: preview.fetchedAt, preview, isSample: true };
+    state.connectedAccounts = [...(state.connectedAccounts ?? []).filter((item) => item.provider !== provider), account];
+    save(state); return wait({ preview, accounts: state.connectedAccounts });
+  },
+  async importConnection(provider, input) {
+    const state = load();
+    const account = state.connectedAccounts?.find((item) => item.provider === provider);
+    if (!account) throw new Error('Load the sample preview first.');
+    state.profile.import_sources ??= {};
+    for (const field of input.fields) {
+      const column = { name: 'name', bio: 'bio', avatarUrl: 'avatar_url', profileUrl: 'github_url' }[field];
+      state.profile[column] = account.preview[field];
+      state.profile.import_sources[column] = { provider, value: account.preview[field] };
+    }
+    state.profile.portfolio = input.repositoryIds.map((id) => ({ ...account.preview.repositories.find((repo) => repo.id === id), provider }));
+    state.profile.import_sources.portfolio = { provider };
+    for (const skill of input.skills) {
+      if (!state.profile.skills.some((item) => Number(item.id) === skill.skillId)) state.profile.skills.push({ ...state.skills.find((item) => item.id === skill.skillId), proficiency: skill.proficiency });
+    }
+    save(state); return wait({ student: state.profile });
+  },
+  async disconnectAccount(provider, removeImported) {
+    const state = load();
+    state.connectedAccounts = (state.connectedAccounts ?? []).filter((item) => item.provider !== provider);
+    for (const [column, source] of Object.entries(state.profile.import_sources ?? {})) {
+      if (source.provider !== provider) continue;
+      if (removeImported && column === 'portfolio') state.profile.portfolio = [];
+      else if (removeImported && ['bio', 'avatar_url', 'github_url'].includes(column) && state.profile[column] === source.value) state.profile[column] = column === 'bio' ? '' : null;
+      delete state.profile.import_sources[column];
+    }
+    save(state); return wait({ accounts: state.connectedAccounts, student: state.profile });
+  },
   async publicProjectSearch(skill = '') {
     const projects = load().projects.filter((project) => project.status !== 'cancelled' && (!skill.trim() || project.skills.some((item) => `${item.name} ${item.category ?? ''}`.toLowerCase().includes(skill.trim().toLowerCase()))));
     return wait({ projects: projects.slice(0, 6), count: projects.slice(0, 6).length });

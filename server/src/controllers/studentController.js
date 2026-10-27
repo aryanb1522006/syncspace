@@ -11,6 +11,8 @@ import {
 import { extractSkills } from '../services/skillExtraction.js';
 import { storage } from '../services/storage.js';
 import { AppError } from '../utils/AppError.js';
+import { normalizeProfileLink, visibleSocials } from '../services/profileLinks.js';
+import { listAccounts } from '../models/accountConnectionModel.js';
 
 async function ownProfile(req, studentId) {
   const profile = await getStudentById(studentId);
@@ -38,6 +40,13 @@ export async function getStudentByUser(req, res) {
 async function sendVisibleStudent(req, res, student) {
   if (!student || Number(student.college_id) !== Number(req.user.collegeId)) throw new AppError(404, 'Student profile not found');
   const contactVisible = await canViewStudentContact(req.user.id, student.id, req.user.collegeId);
+  const socials = visibleSocials(student, req.user.id, contactVisible);
+  const connections = Object.keys(socials).length ? (await listAccounts(student.user_id)).map((account) => ({
+    provider: account.provider,
+    // A manually typed LinkedIn URL is never asserted to belong to its OIDC account.
+    linkedProfile: account.provider === 'github' && account.preview?.profileUrl === student.github_url,
+    status: account.status
+  })) : [];
   res.json({
     student: {
       id: student.id,
@@ -49,6 +58,8 @@ async function sendVisibleStudent(req, res, student) {
       interests: student.interests,
       availabilityHoursPerWeek: student.availability_hours_per_week,
       skills: student.skills,
+      ...socials,
+      connections,
       ...(contactVisible ? { email: student.email } : {}),
       contactVisible
     }
@@ -64,6 +75,9 @@ export async function updateProfile(req, res) {
     year: req.body.year,
     bio: req.body.bio,
     interests: req.body.interests,
+    github_url: req.body.githubUrl === undefined ? undefined : normalizeProfileLink(req.body.githubUrl, 'github'),
+    linkedin_url: req.body.linkedinUrl === undefined ? undefined : normalizeProfileLink(req.body.linkedinUrl, 'linkedin'),
+    social_visibility: req.body.socialVisibility,
     availability_hours_per_week: req.body.availabilityHoursPerWeek
   };
   res.json({ student: await updateStudent(id, changes) });

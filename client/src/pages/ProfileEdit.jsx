@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
+import { AccountConnections } from '../components/AccountConnections.jsx';
 
 const proficiencyLevels = [1, 2, 3, 4, 5];
 
@@ -14,29 +15,41 @@ export function ProfileEdit() {
   const [manualProficiency, setManualProficiency] = useState(3);
   const [skillBusy, setSkillBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [profileDirty, setProfileDirty] = useState(false);
 
   useEffect(() => {
     Promise.all([api.getMe(), api.listSkills()]).then(([{ student }, { skills: options }]) => {
       setProfile(student);
       setSkills(options);
-    });
+    }).catch((error) => setLoadError(error.message));
   }, []);
 
+  if (loadError) return <AppShell><div className="empty-panel" role="alert">{loadError}</div></AppShell>;
   if (!profile) return <AppShell><div className="loading">Loading your profile...</div></AppShell>;
 
-  const update = (field) => (event) => setProfile({ ...profile, [field]: event.target.value });
+  const update = (field) => (event) => { setProfile({ ...profile, [field]: event.target.value }); setProfileDirty(true); };
   const saveProfile = async (event) => {
     event.preventDefault();
+    setSaving(true);
+    try {
     const { student } = await api.updateProfile(profile.id, {
       name: profile.name,
       department: profile.department,
-      year: Number(profile.year),
+      year: Number(profile.year ?? 1),
       bio: profile.bio,
+      githubUrl: profile.github_url || null,
+      linkedinUrl: profile.linkedin_url || null,
+      socialVisibility: profile.social_visibility ?? 'private',
       interests: profile.interests,
       availabilityHoursPerWeek: Number(profile.availability_hours_per_week)
     });
     setProfile(student);
+    setProfileDirty(false);
     setMessage('Profile saved.');
+    } catch (error) { setMessage(error.message); }
+    finally { setSaving(false); }
   };
 
   const upload = async (event) => {
@@ -106,7 +119,14 @@ export function ProfileEdit() {
         <h2>About you</h2>
         <div className="form-grid"><label>Full name<input value={profile.name} onChange={update('name')} /></label><label>Department<input value={profile.department ?? ''} onChange={update('department')} /></label><label>Year<select value={profile.year ?? 1} onChange={update('year')}>{[1, 2, 3, 4].map((year) => <option key={year}>{year}</option>)}</select></label><label>Hours available each week<input type="number" min="0" max="168" value={profile.availability_hours_per_week} onChange={update('availability_hours_per_week')} /></label></div>
         <label>Bio<textarea rows="4" value={profile.bio ?? ''} onChange={update('bio')} /></label>
-        <Button type="submit">Save profile</Button>
+        <div className="social-fields">
+          <h3>Profile links</h3>
+          <p>These links are provided by you. Choose who can see them inside SyncSpace.</p>
+          <label>GitHub profile URL<input type="url" placeholder="https://github.com/username" value={profile.github_url ?? ''} onChange={update('github_url')} maxLength={300} /></label>
+          <label>LinkedIn profile URL<input type="url" placeholder="https://www.linkedin.com/in/username" value={profile.linkedin_url ?? ''} onChange={update('linkedin_url')} maxLength={300} /></label>
+          <label>Who can see my links and portfolio<select value={profile.social_visibility ?? 'private'} onChange={update('social_visibility')}><option value="private">Only me</option><option value="team">Accepted project teammates</option><option value="college">Members of my college</option></select></label>
+        </div>
+        <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save profile'}</Button>
       </section>
       <section>
         <div className="section-title"><div><h2>Skills</h2><p>Add skills manually or use your resume as a starting point. Set an honest proficiency from 1 to 5.</p></div><label className="button button--secondary upload-button"><FileUp />Read resume<input type="file" accept="application/pdf" onChange={upload} /></label></div>
@@ -120,5 +140,6 @@ export function ProfileEdit() {
       </section>
       {message && <p className="success-message" role="status">{message}</p>}
     </form>
+    <AccountConnections profile={profile} profileDirty={profileDirty} onProfileChange={(student) => { setProfile(student); setProfileDirty(false); }} />
   </AppShell>;
 }

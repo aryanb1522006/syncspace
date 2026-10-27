@@ -129,6 +129,7 @@ describe('SyncSpace UI', () => {
     const name = screen.getByRole('textbox', { name: 'Project name' });
     expect(name).toHaveValue('GreenGrid');
     fireEvent.change(name, { target: { value: 'GreenGrid Campus' } });
+    fireEvent.change(screen.getByLabelText('Application deadline'), { target: { value: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10) } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'GreenGrid Campus' })).toBeVisible();
   });

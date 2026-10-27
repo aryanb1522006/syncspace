@@ -19,6 +19,24 @@ if (!['local', 's3'].includes(storageDriver)) throw new Error('STORAGE_DRIVER mu
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() || null;
 const allowedEmailDomain = process.env.AUTH_ALLOWED_EMAIL_DOMAIN?.trim().toLowerCase().replace(/^@/, '') || null;
 const passwordAuthEnabled = asBoolean(process.env.PASSWORD_AUTH_ENABLED, true);
+const externalAccountsKey = process.env.EXTERNAL_ACCOUNTS_KEY?.trim() || null;
+const apiPublicUrl = process.env.API_PUBLIC_URL?.trim().replace(/\/$/, '') || (isProduction ? null : 'http://localhost:4000');
+const githubClientId = process.env.GITHUB_CLIENT_ID?.trim() || null;
+const githubClientSecret = process.env.GITHUB_CLIENT_SECRET?.trim() || null;
+const linkedinClientId = process.env.LINKEDIN_CLIENT_ID?.trim() || null;
+const linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET?.trim() || null;
+for (const [name, id, secret] of [['GitHub', githubClientId, githubClientSecret], ['LinkedIn', linkedinClientId, linkedinClientSecret]]) {
+  if (Boolean(id) !== Boolean(secret)) throw new Error(`${name} client ID and secret must be configured together`);
+  if (id && (!apiPublicUrl || !externalAccountsKey || Buffer.from(externalAccountsKey, 'base64').length !== 32)) {
+    throw new Error(`${name} connections require API_PUBLIC_URL and a base64 EXTERNAL_ACCOUNTS_KEY containing 32 bytes`);
+  }
+}
+if (apiPublicUrl) {
+  const url = new URL(apiPublicUrl);
+  if (url.username || url.password || url.search || url.hash || url.pathname !== '/' || (isProduction && url.protocol !== 'https:') || !['https:', 'http:'].includes(url.protocol)) {
+    throw new Error('API_PUBLIC_URL must be a bare API origin (HTTPS in production)');
+  }
+}
 const adminEmails = (process.env.ADMIN_EMAILS ?? '')
   .split(',')
   .map((email) => email.trim().toLowerCase())
@@ -65,6 +83,12 @@ export const env = Object.freeze({
   databaseStatementTimeoutMs: asNumber(process.env.DATABASE_STATEMENT_TIMEOUT_MS, 15000),
   jwtSecret: process.env.JWT_SECRET ?? 'development-only-change-me-please',
   googleClientId,
+  externalAccountsKey,
+  apiPublicUrl,
+  githubClientId,
+  githubClientSecret,
+  linkedinClientId,
+  linkedinClientSecret,
   allowedEmailDomain,
   passwordAuthEnabled,
   adminEmails,

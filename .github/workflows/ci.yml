@@ -55,6 +55,7 @@ jobs:
       - run: pnpm db:migrate
       - run: pnpm db:seed
       - run: pnpm test
+      - run: node scripts/verify-connections-db.mjs
       - run: pnpm build
       - name: Start API
         run: |

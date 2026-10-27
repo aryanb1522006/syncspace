@@ -10,6 +10,9 @@ SyncSpace helps college students discover worthwhile campus projects and find te
 - Google Sign-In with server-verified exact-domain restriction support
 - Editable student profiles, skill proficiency, interests, and weekly availability
 - PDF resume upload with a review-before-save skill extraction flow
+- Optional GitHub/LinkedIn profile links with private, accepted-team, or college visibility
+- GitHub OAuth and LinkedIn OIDC account connections with reviewed profile imports
+- Selected public GitHub portfolio projects and user-reviewed language skill suggestions
 - Project creation, filtering, deadlines, required skills, and preferred skills
 - Explainable project recommendations with a weighted score breakdown
 - Complementary teammate ranking based on uncovered project skills
@@ -98,6 +101,7 @@ Required skills carry more weight than preferred skills. The response also inclu
 - [Visual design system](docs/design-system.md)
 - [Verification and fidelity ledger](docs/qa.md)
 - [Production deployment and operations runbook](docs/production-runbook.md)
+- [Connected profiles setup, phase verification, and deployment](docs/connected-profiles-deployment.md)
 - [College boundary decision](docs/tenant-boundary.md)
 - [Phase-by-phase build record](docs/phases/README.md)
 

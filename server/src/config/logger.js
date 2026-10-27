@@ -14,6 +14,9 @@ export const logger = pino({
 
 export const requestLogger = pinoHttp({
   logger,
+  serializers: {
+    req(req) { return { id: req.id, method: req.method, url: req.url?.split('?')[0] }; }
+  },
   genReqId(req, res) {
     const requestId = req.headers['x-request-id'] || randomUUID();
     res.setHeader('x-request-id', requestId);
@@ -25,6 +28,6 @@ export const requestLogger = pinoHttp({
     return 'info';
   },
   customSuccessMessage(req, res) {
-    return `${req.method} ${req.url} completed with ${res.statusCode}`;
+    return `${req.method} ${req.url?.split('?')[0]} completed with ${res.statusCode}`;
   }
 });

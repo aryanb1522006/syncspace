@@ -14,6 +14,9 @@ const profileSchema = z.object({
   department: z.string().trim().min(2).max(100).nullable().optional(),
   year: z.coerce.number().int().min(1).max(8).nullable().optional(),
   bio: z.string().trim().max(1000).optional(),
+  githubUrl: z.string().trim().max(300).nullable().optional(),
+  linkedinUrl: z.string().trim().max(300).nullable().optional(),
+  socialVisibility: z.enum(['private', 'team', 'college']).optional(),
   interests: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
   availabilityHoursPerWeek: z.coerce.number().int().min(0).max(168).optional()
 }).refine((body) => Object.keys(body).length > 0, 'At least one profile field is required');

@@ -7,6 +7,7 @@ import { query } from './config/db.js';
 import { env } from './config/env.js';
 import { requestLogger } from './config/logger.js';
 import authRoutes from './routes/auth.js';
+import connectionRoutes from './routes/connections.js';
 import adminRoutes from './routes/admin.js';
 import applicationRoutes from './routes/applications.js';
 import notificationRoutes from './routes/notifications.js';
@@ -64,6 +65,7 @@ app.get('/api/health/ready', async (req, res, next) => {
 });
 app.get('/api/metrics', authorizeMetrics, renderMetrics);
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/connections', connectionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/projects', projectRoutes);

@@ -10,6 +10,10 @@ import {
 import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
 
+// The description embedding is an internal ML vector (hundreds of floats,
+// selected twice by p.* and its alias); API clients never need it.
+const toResponse = ({ description_embedding: _raw, descriptionEmbedding: _vector, ...project }) => project;
+
 async function visibleProject(req, id) {
   const project = await getProjectById(id, req.user.collegeId);
   if (!project) throw new AppError(404, 'Project not found');
@@ -24,7 +28,7 @@ async function ownedProject(req, id) {
 
 export async function createProject(req, res) {
   const project = await createProjectRecord(req.user.id, req.user.collegeId, req.body);
-  res.status(201).json({ project });
+  res.status(201).json({ project: toResponse(project) });
 }
 
 export async function listProjects(req, res) {
@@ -34,7 +38,7 @@ export async function listProjects(req, res) {
     collegeId: req.user.collegeId,
     ownerId: req.query.mine === 'true' ? req.user.id : undefined
   });
-  res.json({ projects });
+  res.json({ projects: projects.map(toResponse) });
 }
 
 export async function searchPublicProjects(req, res) {
@@ -52,14 +56,14 @@ export async function getProject(req, res) {
   const project = await visibleProject(req, id);
   const teamContacts = await getProjectContactsForViewer(id, req.user.id, req.user.collegeId);
   res.json({
-    project: { ...project, teamContacts, canViewTeamContacts: teamContacts.length > 0 }
+    project: { ...toResponse(project), teamContacts, canViewTeamContacts: teamContacts.length > 0 }
   });
 }
 
 export async function updateProject(req, res) {
   const id = Number(req.params.id);
   await ownedProject(req, id);
-  res.json({ project: await updateProjectRecord(id, req.user.collegeId, req.body) });
+  res.json({ project: toResponse(await updateProjectRecord(id, req.user.collegeId, req.body)) });
 }
 
 export async function deleteProject(req, res) {

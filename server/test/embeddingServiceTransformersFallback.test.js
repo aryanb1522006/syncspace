@@ -28,3 +28,11 @@ test('transformers provider never throws and always returns a usable vector, eve
 test('getEmbeddingModelName reports the configured transformers model name regardless of fallback', () => {
   assert.equal(getEmbeddingModelName(), 'Xenova/all-MiniLM-L6-v2');
 });
+
+test('generateEmbeddingWithModel labels a hashing fallback vector as hashing, not as the transformers model', async () => {
+  const { generateEmbeddingWithModel } = await import('../src/services/embeddingService.js');
+  const { embedding, model } = await generateEmbeddingWithModel('A peer tutoring platform for engineering students');
+  // MiniLM produces 384-d vectors; the hashing fallback produces EMBEDDING_DIMENSIONS (256 by default).
+  if (embedding.length === 384) assert.equal(model, 'Xenova/all-MiniLM-L6-v2');
+  else assert.equal(model, 'local-hashing-v1');
+});

@@ -27,7 +27,7 @@ export const api = {
   publicProjectSearch: (skill = '') => use(() => demoApi.publicProjectSearch(skill), () => request(`/projects/public/search?skill=${encodeURIComponent(skill)}`)),
   listProjects: (search = '') => use(() => demoApi.listProjects(search), () => request(`/projects${search}`)),
   createProject: (input) => use(() => demoApi.createProject(input), () => request('/projects', { method: 'POST', body: json(input) })),
-  recommendations: () => use(() => demoApi.recommendations(), () => request('/recommendations/projects')),
+  recommendations: (limit) => use(() => demoApi.recommendations(), () => request(`/recommendations/projects${limit ? `?limit=${limit}` : ''}`)),
   getProject: (id) => use(() => demoApi.getProject(id), () => request(`/projects/${id}`)),
   listProjectQueries: (id) => use(() => demoApi.listProjectQueries(id), () => request(`/projects/${id}/queries`)),
   createProjectQuery: (id, question) => use(() => demoApi.createProjectQuery(id, question), () => request(`/projects/${id}/queries`, { method: 'POST', body: json({ question }) })),
@@ -41,5 +41,25 @@ export const api = {
   createTask: (id, input) => use(() => demoApi.createTask(id, input), () => request(`/teams/${id}/tasks`, { method: 'POST', body: json(input) })),
   updateTask: (id, input) => use(() => demoApi.updateTask(id, input), () => request(`/tasks/${id}`, { method: 'PUT', body: json(input) })),
   notifications: () => use(() => demoApi.notifications(), () => request('/notifications')),
-  readNotification: (id) => use(() => demoApi.readNotification(id), () => request(`/notifications/${id}/read`, { method: 'PUT' }))
+  readNotification: (id) => use(() => demoApi.readNotification(id), () => request(`/notifications/${id}/read`, { method: 'PUT' })),
+  // GitHub / LinkedIn profile intelligence needs real OAuth and real
+  // uploads, so demo mode reports it as unavailable instead of faking data.
+  integrations: () => use(() => Promise.resolve({ demo: true }), () => request('/integrations')),
+  githubAuthorizeUrl: () => liveOnly(() => request('/integrations/github/authorize')),
+  githubExchange: (code, state) => liveOnly(() => request('/integrations/github/exchange', { method: 'POST', body: json({ code, state }) })),
+  githubSync: () => liveOnly(() => request('/integrations/github/sync', { method: 'POST' })),
+  githubDisconnect: (deleteEvidence) => liveOnly(() => request(`/integrations/github?deleteEvidence=${deleteEvidence ? 'true' : 'false'}`, { method: 'DELETE' })),
+  linkedinImport: (file) => liveOnly(() => {
+    const body = new FormData(); body.append('export', file);
+    return request('/integrations/linkedin/import', { method: 'POST', body });
+  }),
+  linkedinDelete: () => liveOnly(() => request('/integrations/linkedin', { method: 'DELETE' })),
+  decideSkill: (skillId, decision, proficiency) => liveOnly(() => request(`/integrations/skills/${skillId}/decision`, {
+    method: 'POST', body: json(proficiency ? { decision, proficiency } : { decision })
+  })),
+  setEvidenceVisibility: (evidenceIds, visibility) => liveOnly(() => request('/integrations/evidence/visibility', { method: 'PUT', body: json({ evidenceIds, visibility }) }))
 };
+
+function liveOnly(real) {
+  return demoMode ? Promise.reject(new Error('Connected profiles need the live API (set VITE_DEMO_MODE=false).')) : real();
+}

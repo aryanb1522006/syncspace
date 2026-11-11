@@ -123,6 +123,13 @@ describe('SyncSpace UI', () => {
     expect(screen.getByText('Read resume')).toBeVisible();
   });
 
+  it('explains on the profile page that connected profiles need the live API in demo mode', async () => {
+    renderApp('/profile', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    expect(await screen.findByRole('heading', { level: 2, name: 'Connected profiles' })).toBeVisible();
+    // The loading state renders the same heading, so wait for the demo note itself.
+    expect(await screen.findByText(/unavailable in demo mode/)).toBeVisible();
+  });
+
   it('lets the project owner edit an existing project', async () => {
     renderApp('/projects/1/edit', { id: 4, email: 'arjun@northstar.edu', role: 'owner', profileId: 4, profile: { id: 4, name: 'Arjun Rao' } });
     expect(await screen.findByRole('heading', { level: 1, name: 'Keep the project brief current' })).toBeVisible();

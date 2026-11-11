@@ -41,9 +41,14 @@ export function findOrCreateGoogleUser({ email, googleSubject, name, collegeId }
 
     let user;
     if (matched) {
+      // A password set before the email was ever verified may belong to
+      // someone who registered with this address without owning it, so it
+      // is dropped once Google proves real ownership. SET expressions read
+      // the pre-update row, so email_verified here is the old value.
       const { rows: [updated] } = await client.query(
         `UPDATE users
-         SET google_subject = $1, email_verified = TRUE, auth_provider = 'google'
+         SET google_subject = $1, email_verified = TRUE, auth_provider = 'google',
+           password_hash = CASE WHEN email_verified THEN password_hash ELSE NULL END
          WHERE id = $2 RETURNING *`,
         [googleSubject, matched.id]
       );

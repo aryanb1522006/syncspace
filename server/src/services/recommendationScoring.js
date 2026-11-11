@@ -10,10 +10,11 @@
 //                 more than preferred ones, matching the existing product
 //                 behaviour.
 //
-//   cosineScore = normalized (0-1) cosine similarity between the
+//   cosineScore = cosine similarity (clamped to 0-1) between the
 //                 student's profile text (bio + interests + skill names)
-//                 and the project's ORIGINAL description embedding
-//                 (persisted on the project, not recomputed per request).
+//                 and the project's persisted description embedding
+//                 (built from the description summary - see
+//                 projectDerivedFields.js - not recomputed per request).
 //
 //   finalScore  = SKILL_SCORE_WEIGHT * skillScore + COSINE_SCORE_WEIGHT * cosineScore
 //
@@ -27,7 +28,7 @@
 // 0-100 (rounded) to stay visually consistent with the existing
 // `match.score` field already returned by the API.
 
-import { cosineSimilarity, generateEmbedding, normalizeCosine } from './embeddingService.js';
+import { cosineSimilarity, generateEmbedding } from './embeddingService.js';
 import { matchSkillsSemantically } from './semanticSkillMatching.js';
 import { env } from '../config/env.js';
 
@@ -37,12 +38,14 @@ const SKILL_PREFERRED_WEIGHT = 0.3;
 /**
  * Builds the text used to represent a student's profile for cosine
  * similarity against project descriptions: their bio, stated interests,
- * and the names of the skills they've listed.
+ * the names of the skills they've listed, and text from connected
+ * GitHub / LinkedIn sources (public repository descriptions, headline).
  */
 export function buildStudentProfileText(student) {
   const skillNames = (student?.skills ?? []).map((skill) => skill.name).filter(Boolean);
   const interests = student?.interests ?? [];
-  return [student?.bio, interests.join(' '), skillNames.join(' ')].filter(Boolean).join('. ');
+  return [student?.bio, interests.join(' '), skillNames.join(' '), student?.externalProfileText]
+    .filter(Boolean).join('. ');
 }
 
 /**
@@ -62,15 +65,30 @@ export function computeSkillScore(matchBreakdown) {
 }
 
 /**
- * cosineScore: normalized 0-1 cosine similarity between the student's
- * profile embedding and the project's persisted description embedding.
+ * cosineScore: 0-1 cosine similarity between the student's profile
+ * embedding and the project's persisted description embedding.
+ * Negative similarity (opposing text) is clamped to 0 rather than
+ * rescaled with (s + 1) / 2: the rescale would award 0.5 to an empty
+ * profile or completely unrelated text, inflating every finalScore.
  * Returns 0 (rather than throwing) when either embedding is unavailable,
  * e.g. a project that hasn't been backfilled yet.
  */
 export function computeCosineScore(studentEmbedding, projectDescriptionEmbedding) {
   if (!studentEmbedding || !projectDescriptionEmbedding) return 0;
   const similarity = cosineSimilarity(studentEmbedding, projectDescriptionEmbedding);
-  return normalizeCosine(similarity);
+  return Math.min(1, Math.max(0, similarity));
+}
+
+/**
+ * The skill/cosine weights actually applied by computeFinalScore,
+ * re-normalized to sum to 1, so clients can explain the final score.
+ */
+export function effectiveScoreWeights(weights = {}) {
+  const skillWeight = weights.skillScoreWeight ?? env.skillScoreWeight;
+  const cosineWeight = weights.cosineScoreWeight ?? env.cosineScoreWeight;
+  const weightSum = skillWeight + cosineWeight;
+  if (!weightSum) return { skillScore: 0, cosineScore: 0 };
+  return { skillScore: skillWeight / weightSum, cosineScore: cosineWeight / weightSum };
 }
 
 /**
@@ -78,13 +96,10 @@ export function computeCosineScore(studentEmbedding, projectDescriptionEmbedding
  * configurable weights. Both inputs and the output are on a 0-1 scale.
  */
 export function computeFinalScore(skillScore, cosineScore, weights = {}) {
-  const skillWeight = weights.skillScoreWeight ?? env.skillScoreWeight;
-  const cosineWeight = weights.cosineScoreWeight ?? env.cosineScoreWeight;
-  const weightSum = skillWeight + cosineWeight;
-  if (!weightSum) return 0;
-  // Re-normalize so mis-configured weights that don't sum to 1 still
+  // Re-normalized so mis-configured weights that don't sum to 1 still
   // produce a score on a 0-1 scale rather than silently over/under-weighting.
-  return (skillWeight * skillScore + cosineWeight * cosineScore) / weightSum;
+  const effective = effectiveScoreWeights(weights);
+  return effective.skillScore * skillScore + effective.cosineScore * cosineScore;
 }
 
 /**
@@ -107,12 +122,22 @@ export async function computeRecommendationScore({
   const skillScore = computeSkillScore(matchBreakdown);
   const cosineScore = computeCosineScore(studentEmbedding, project.descriptionEmbedding);
   const finalScore = computeFinalScore(skillScore, cosineScore);
+  // Where each matched skill is evidenced (GitHub, LinkedIn export); an
+  // empty list means the skill is self-declared on SyncSpace.
+  const evidenceBySkill = new Map((student.skills ?? []).map((skill) => [
+    Number(skill.skillId ?? skill.id), skill.evidenceSources ?? []
+  ]));
 
   return {
     finalScore: Math.round(finalScore * 100),
     skillScore: Math.round(skillScore * 100),
     cosineScore: Math.round(cosineScore * 100),
-    matchedSkills: exactMatches.map((skill) => ({ skillId: skill.skillId ?? skill.id, name: skill.name })),
+    weights: effectiveScoreWeights(),
+    matchedSkills: exactMatches.map((skill) => ({
+      skillId: skill.skillId ?? skill.id,
+      name: skill.name,
+      evidenceSources: evidenceBySkill.get(Number(skill.skillId ?? skill.id)) ?? []
+    })),
     relatedSkills: semanticMatches,
     unmatchedSkills: unmatched.map((skill) => ({ skillId: skill.skillId ?? skill.id, name: skill.name })),
     summary: project.descriptionSummary ?? null

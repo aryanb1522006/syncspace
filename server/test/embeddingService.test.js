@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cosineSimilarity, generateEmbedding, normalizeCosine, normalizeText } from '../src/services/embeddingService.js';
+import { cosineSimilarity, generateEmbedding, generateEmbeddingWithModel, normalizeCosine, normalizeText } from '../src/services/embeddingService.js';
 
 test('normalizeText lowercases, strips punctuation, and collapses whitespace', () => {
   assert.equal(normalizeText('  React.js & Node.JS!! '), 'react js node js');
@@ -45,4 +45,14 @@ test('normalizeCosine maps [-1, 1] into [0, 1]', () => {
   assert.equal(normalizeCosine(1), 1);
   assert.equal(normalizeCosine(-1), 0);
   assert.equal(normalizeCosine(0), 0.5);
+});
+
+test('cosineSimilarity treats vectors from different models (different lengths) as incomparable', () => {
+  assert.equal(cosineSimilarity([1, 0, 0], [1, 0]), 0);
+});
+
+test('generateEmbeddingWithModel reports the model that produced the vector', async () => {
+  const { embedding, model } = await generateEmbeddingWithModel('Campus energy dashboard');
+  assert.equal(model, 'local-hashing-v1');
+  assert.deepEqual(embedding, await generateEmbedding('Campus energy dashboard'));
 });

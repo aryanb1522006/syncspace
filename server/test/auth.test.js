@@ -1,4 +1,7 @@
 import test, { after } from 'node:test';
+import { randomUUID } from 'node:crypto';
+import { unlink, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
@@ -24,6 +27,17 @@ test('CORS rejects origins outside the production allowlist', async () => {
     .set('Origin', 'https://malicious.example')
     .expect(403);
   assert.match(response.body.error.message, /origin/i);
+});
+
+test('uploaded resumes are not served as public static files', async () => {
+  const name = `${randomUUID()}.pdf`;
+  const file = path.resolve(process.cwd(), env.uploadDir, name);
+  await writeFile(file, '%PDF-1.4 private resume');
+  try {
+    await request(app).get(`/uploads/${name}`).expect(404);
+  } finally {
+    await unlink(file);
+  }
 });
 
 test('metrics stay unavailable when monitoring is disabled', async () => {

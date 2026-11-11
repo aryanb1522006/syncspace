@@ -59,13 +59,14 @@ export async function recommendProjects(req, res) {
   const recommendations = withRecommendation
     .sort((a, b) => b.recommendation.finalScore - a.recommendation.finalScore || b.match.score - a.match.score)
     .slice(0, requestedLimit(req.query.limit))
-    .map((project) => {
+    .map(({ descriptionEmbedding: _embedding, ...project }) => {
       const similar = (similarByProjectId.get(project.id) ?? []).map((entry) => ({
         projectId: entry.project.id,
         title: entry.project.title,
         similarityScore: entry.similarityScore,
         differences: entry.differences
       }));
+      // The raw embedding vector is only needed server-side for scoring.
       return { ...project, similarProjects: similar };
     });
 

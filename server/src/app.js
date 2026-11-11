@@ -2,13 +2,13 @@ import cors from 'cors';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
-import path from 'node:path';
 import { query } from './config/db.js';
 import { env } from './config/env.js';
 import { requestLogger } from './config/logger.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import applicationRoutes from './routes/applications.js';
+import integrationRoutes from './routes/integrations.js';
 import notificationRoutes from './routes/notifications.js';
 import projectRoutes from './routes/projects.js';
 import recommendationRoutes from './routes/recommendations.js';
@@ -34,7 +34,8 @@ app.use(cors({
   credentials: false
 }));
 app.use(express.json({ limit: '1mb' }));
-app.use('/uploads', express.static(path.resolve(process.cwd(), env.uploadDir)));
+// Resumes are private: they are only served through the owner-checked
+// GET /api/students/:id/resume route, never as public static files.
 
 const globalLimiter = rateLimit({
   windowMs: env.rateLimitWindowMs,
@@ -72,6 +73,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/integrations', integrationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

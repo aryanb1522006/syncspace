@@ -24,6 +24,10 @@ export function MatchBreakdown({ match, domain = 'Domain', recommendation }) {
     })}
     {recommendation && <>
       <h3>Semantic match</h3>
+      <p className="breakdown__note">
+        Overall {recommendation.finalScore}% = {Math.round((recommendation.weights?.skillScore ?? 0.5) * 100)}% skill overlap
+        + {Math.round((recommendation.weights?.cosineScore ?? 0.5) * 100)}% profile-description similarity
+      </p>
       <div className="breakdown__row">
         <span className="breakdown__icon"><Code2 /></span>
         <span>Skill overlap score</span>
@@ -36,7 +40,9 @@ export function MatchBreakdown({ match, domain = 'Domain', recommendation }) {
         <span className="bar"><i style={{ width: `${recommendation.cosineScore}%` }} /></span>
         <strong>{recommendation.cosineScore}/100</strong>
       </div>
-      {recommendation.matchedSkills?.length > 0 && <p className="breakdown__note">Matched skills: {recommendation.matchedSkills.map((skill) => skill.name).join(', ')}</p>}
+      {recommendation.matchedSkills?.length > 0 && <p className="breakdown__note">Matched skills: {recommendation.matchedSkills.map((skill) => skill.evidenceSources?.length
+        ? `${skill.name} (backed by ${skill.evidenceSources.map((source) => (source === 'github' ? 'GitHub' : 'LinkedIn')).join(' + ')})`
+        : skill.name).join(', ')}</p>}
       {recommendation.relatedSkills?.length > 0 && <p className="breakdown__note">Semantically related: {recommendation.relatedSkills.map((skill) => skill.name).join(', ')}</p>}
     </>}
   </div>;

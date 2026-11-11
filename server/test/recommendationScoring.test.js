@@ -6,7 +6,8 @@ import {
   computeCosineScore,
   computeFinalScore,
   computeSkillScore,
-  computeRecommendationScore
+  computeRecommendationScore,
+  effectiveScoreWeights
 } from '../src/services/recommendationScoring.js';
 
 test('computeSkillScore reuses the existing required/preferred overlap ratios (0-1)', () => {
@@ -70,6 +71,7 @@ test('computeRecommendationScore produces a full payload with matched/related sk
   assert.ok(result.cosineScore >= 0 && result.cosineScore <= 100);
   assert.ok(result.matchedSkills.some((skill) => skill.name === 'React'));
   assert.equal(result.summary, 'A React dashboard for visualizing climate data.');
+  assert.deepEqual(result.weights, { skillScore: 0.5, cosineScore: 0.5 });
 });
 
 test('recommendation ranking: higher combined score sorts first', () => {
@@ -80,4 +82,20 @@ test('recommendation ranking: higher combined score sorts first', () => {
   ];
   const ranked = [...projects].sort((a, b) => b.recommendation.finalScore - a.recommendation.finalScore);
   assert.deepEqual(ranked.map((project) => project.id), [2, 3, 1]);
+});
+
+test('computeCosineScore gives no similarity credit to an empty or unrelated profile', async () => {
+  const project = await generateEmbedding('Machine learning pipeline that predicts campus energy usage from sensor data');
+  const empty = await generateEmbedding('');
+  assert.equal(computeCosineScore(empty, project), 0);
+  assert.equal(computeCosineScore([-1, 0], [1, 0]), 0);
+  const unrelated = await generateEmbedding('Classical guitar, poetry and theatre stage lighting');
+  const related = await generateEmbedding('Machine learning engineer interested in energy prediction from sensor data');
+  assert.ok(computeCosineScore(unrelated, project) < 0.2);
+  assert.ok(computeCosineScore(related, project) > computeCosineScore(unrelated, project));
+});
+
+test('effectiveScoreWeights re-normalizes the configured weights to sum to 1', () => {
+  assert.deepEqual(effectiveScoreWeights(), { skillScore: 0.5, cosineScore: 0.5 });
+  assert.deepEqual(effectiveScoreWeights({ skillScoreWeight: 3, cosineScoreWeight: 1 }), { skillScore: 0.75, cosineScore: 0.25 });
 });

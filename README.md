@@ -10,6 +10,7 @@ SyncSpace helps college students discover worthwhile campus projects and find te
 - Google Sign-In with server-verified exact-domain restriction support
 - Editable student profiles, skill proficiency, interests, and weekly availability
 - PDF resume upload with a review-before-save skill extraction flow
+- GitHub (OAuth, public repositories only) and LinkedIn data-export import that suggest evidence-backed skills for review ([Phase 18](docs/phases/phase-18-profile-intelligence.md))
 - Project creation, filtering, deadlines, required skills, and preferred skills
 - Explainable project recommendations with a weighted score breakdown
 - Complementary teammate ranking based on uncovered project skills
@@ -64,13 +65,23 @@ For Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
 
 ## Matching model
 
-Project recommendations are deterministic and use four independently visible components:
+Project recommendations are deterministic. Each project gets a rule-based fit score (`match.score`) with four independently visible components:
 
 ```text
-score = 50% skill coverage
-      + 20% domain/interest alignment
-      + 15% availability fit
-      + 15% commitment fit
+match.score = 50% required-skill overlap
+            + 20% preferred-skill overlap
+            + 15% domain/interest alignment
+            + 15% availability vs. weekly commitment
+```
+
+Components that do not apply (for example, a project with no preferred skills) are left out and the remaining weights are re-normalized.
+
+Recommendations are ranked by a hybrid score (`recommendation.finalScore`), which is also the headline percentage in the UI:
+
+```text
+skillScore  = 0.7 × required-skill overlap + 0.3 × preferred-skill overlap
+cosineScore = max(0, cosine(student profile embedding, project description embedding))
+finalScore  = SKILL_SCORE_WEIGHT × skillScore + COSINE_SCORE_WEIGHT × cosineScore   (default 0.5 / 0.5)
 ```
 
 Required skills carry more weight than preferred skills. The response also includes the skills already covered, the student's skill gaps, and eligibility reasons. Teammate ranking favors candidates who add skills the current team still lacks, while retaining the same availability and interest signals. The pure scoring module is isolated from PostgreSQL so it can be audited and unit-tested directly.

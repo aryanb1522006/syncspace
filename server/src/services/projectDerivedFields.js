@@ -30,7 +30,7 @@
 // The original `projects.description` column is never modified by this
 // module.
 
-import { generateEmbedding, getEmbeddingModelName } from './embeddingService.js';
+import { generateEmbeddingWithModel } from './embeddingService.js';
 import { generateSummary } from './summarizationService.js';
 import { env } from '../config/env.js';
 
@@ -46,11 +46,14 @@ export async function deriveProjectFields(description, { summaryWordLimit = env.
   // (practically unreachable, since generateSummary never throws on bad
   // input) case that summarization returns nothing usable.
   const textToEmbed = descriptionSummary || description;
-  const descriptionEmbedding = await generateEmbedding(textToEmbed);
+  // Record the model that actually produced the vector (it differs from the
+  // configured one when the transformers provider fell back to hashing), so
+  // the backfill script can find and regenerate fallback embeddings.
+  const { embedding: descriptionEmbedding, model: embeddingModel } = await generateEmbeddingWithModel(textToEmbed);
 
   return {
     descriptionEmbedding,
-    embeddingModel: getEmbeddingModelName(),
+    embeddingModel,
     descriptionSummary
   };
 }

@@ -15,7 +15,12 @@ const profileSchema = z.object({
   year: z.coerce.number().int().min(1).max(8).nullable().optional(),
   bio: z.string().trim().max(1000).optional(),
   interests: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
-  availabilityHoursPerWeek: z.coerce.number().int().min(0).max(168).optional()
+  availabilityHoursPerWeek: z.coerce.number().int().min(0).max(168).optional(),
+  // Matches the student_profiles.linkedin_url CHECK; '' clears the link.
+  linkedinUrl: z.union([
+    z.literal('').transform(() => null),
+    z.string().trim().regex(/^https:\/\/(www\.)?linkedin\.com\/in\/[A-Za-z0-9_-]{3,100}\/?$/, 'Enter a LinkedIn profile URL like https://www.linkedin.com/in/your-name')
+  ]).nullable().optional()
 }).refine((body) => Object.keys(body).length > 0, 'At least one profile field is required');
 
 const skillsSchema = z.object({

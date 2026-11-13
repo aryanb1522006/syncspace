@@ -14,7 +14,9 @@ export function extractSkills(resumeText, skillDictionary) {
 
     const matchedAlias = candidates.find((candidate) => {
       const leadingBoundary = /^[a-z0-9]/i.test(candidate) ? '(^|[^a-z0-9+#.])' : '';
-      const trailingBoundary = /[a-z0-9]$/i.test(candidate) ? '(?=$|[^a-z0-9+#.])' : '';
+      // A '.' ends a match only when it is punctuation ("I know Python."),
+      // not part of a longer name ("node" must not match inside "node.js").
+      const trailingBoundary = /[a-z0-9]$/i.test(candidate) ? '(?=$|[^a-z0-9+#.]|\\.(?![a-z0-9]))' : '';
       const pattern = new RegExp(`${leadingBoundary}${escapeRegExp(candidate)}${trailingBoundary}`, 'i');
       return pattern.test(normalized);
     });

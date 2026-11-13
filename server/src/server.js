@@ -4,6 +4,11 @@ import { pool } from './config/db.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { initSocketServer } from './sockets/index.js';
+import { runMigrations } from './config/migrate.js';
+
+// Apply additive schema updates before accepting requests on a deployed
+// revision, including hosts that invoke this file without a predeploy step.
+await runMigrations();
 
 const httpServer = createServer(app);
 initSocketServer(httpServer);

@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext.jsx';
 import { Applications } from './pages/Applications.jsx';
 import { CreateProject } from './pages/CreateProject.jsx';
 import { EditProject } from './pages/EditProject.jsx';
+import { GitHubCallback } from './pages/GitHubCallback.jsx';
 import { Dashboard } from './pages/Dashboard.jsx';
 import { Login } from './pages/Login.jsx';
 import { MemberProfile } from './pages/MemberProfile.jsx';
@@ -46,6 +47,7 @@ export default function App() {
     <Route path="/projects/:id/applications" element={<Protected><OwnerApplications /></Protected>} />
     <Route path="/projects/:id" element={<Protected><ProjectDetail /></Protected>} />
     <Route path="/profile" element={<Protected><ProfileEdit /></Protected>} />
+    <Route path="/integrations/github/callback" element={<Protected><GitHubCallback /></Protected>} />
     <Route path="/profiles/users/:userId" element={<Protected><MemberProfile /></Protected>} />
     <Route path="/profiles/:id" element={<Protected><MemberProfile /></Protected>} />
     <Route path="/teams" element={<Protected><Teams /></Protected>} />

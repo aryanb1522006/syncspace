@@ -38,6 +38,8 @@
 
 import { env } from '../config/env.js';
 
+const HASHING_MODEL_NAME = 'local-hashing-v1';
+
 const STOPWORDS = new Set([
   'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'so', 'of', 'to', 'in',
   'on', 'for', 'with', 'as', 'by', 'at', 'is', 'are', 'was', 'were', 'be',
@@ -171,7 +173,7 @@ async function transformersEmbedding(text, modelName) {
   try {
     const extractor = await loadTransformersPipeline(modelName);
     const output = await extractor(normalizeText(text) || ' ', { pooling: 'mean', normalize: true });
-    return Array.from(output.data);
+    return { embedding: Array.from(output.data), model: modelName };
   } catch (error) {
     if (!transformersUnavailableLogged) {
       transformersUnavailableLogged = true;
@@ -181,7 +183,7 @@ async function transformersEmbedding(text, modelName) {
         `${describeTransformersFailure(error, modelName)}`
       );
     }
-    return hashingEmbedding(text);
+    return { embedding: hashingEmbedding(text), model: HASHING_MODEL_NAME };
   }
 }
 
@@ -192,7 +194,23 @@ async function transformersEmbedding(text, modelName) {
  */
 export function getEmbeddingModelName() {
   if (env.embeddingProvider === 'transformers') return env.embeddingModel;
-  return 'local-hashing-v1';
+  return HASHING_MODEL_NAME;
+}
+
+/**
+ * Like generateEmbedding, but also reports which model ACTUALLY produced
+ * the vector. This differs from getEmbeddingModelName() when the
+ * transformers provider fell back to hashing, so persisted embeddings are
+ * labelled truthfully and the backfill script can regenerate them later.
+ */
+export async function generateEmbeddingWithModel(text) {
+  const normalized = normalizeText(text);
+  if (!normalized) return { embedding: new Array(dimensions()).fill(0), model: getEmbeddingModelName() };
+
+  if (env.embeddingProvider === 'transformers') {
+    return transformersEmbedding(normalized, env.embeddingModel);
+  }
+  return { embedding: hashingEmbedding(normalized), model: HASHING_MODEL_NAME };
 }
 
 /**
@@ -202,23 +220,20 @@ export function getEmbeddingModelName() {
  * - Deterministic: the same model + input always returns the same vector.
  */
 export async function generateEmbedding(text) {
-  const normalized = normalizeText(text);
-  if (!normalized) return new Array(dimensions()).fill(0);
-
-  if (env.embeddingProvider === 'transformers') {
-    return transformersEmbedding(normalized, env.embeddingModel);
-  }
-  return hashingEmbedding(normalized);
+  return (await generateEmbeddingWithModel(text)).embedding;
 }
 
 /**
  * Cosine similarity between two vectors, in [-1, 1].
  * Returns 0 for missing/empty/zero-magnitude vectors instead of NaN so it
- * is always safe to use directly in scoring formulas.
+ * is always safe to use directly in scoring formulas. Vectors of different
+ * lengths come from different models (e.g. a 256-d hashing fallback vs a
+ * 384-d transformer vector) and are not comparable, so they also score 0.
  */
 export function cosineSimilarity(vectorA, vectorB) {
   if (!Array.isArray(vectorA) || !Array.isArray(vectorB)) return 0;
-  const length = Math.min(vectorA.length, vectorB.length);
+  if (vectorA.length !== vectorB.length) return 0;
+  const { length } = vectorA;
   if (!length) return 0;
 
   let dot = 0;

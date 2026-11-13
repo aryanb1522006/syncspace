@@ -19,5 +19,8 @@
 | 15 | Stable teammate profiles and simplified signed-in navigation | Complete in repository | 29 server and 13 client tests pass; production build; desktop/mobile profile navigation QA |
 | 16 | Production profile identity hotfix | Complete in repository | 31 server tests pass; PostgreSQL string-valued JWT identity regressions covered |
 | 17 | Personal admin project control and deletion audit | Complete in repository | Server-enforced admin allowlist; tenant-scoped confirmed deletion; audit log; 16 client tests and production build |
+| 18 | GitHub and LinkedIn profile intelligence | Implemented in repository | 117 server and 30 client tests pass; production build; PostgreSQL test runs in CI only; real OAuth needs a registered GitHub OAuth App |
 
 Each phase has a separate document containing its decisions, delivered scope, verification evidence, and known constraints.
+
+Phase 19 repairs callback routing, recommendation visibility and sync/disconnect races. See [the repair and OAuth setup](phase-19-integration-repair.md).

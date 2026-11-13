@@ -20,7 +20,7 @@ export function ProjectDetail() {
 
   useEffect(() => {
     let active = true;
-    const load = Promise.all([api.getProject(id), api.listApplications(), api.recommendations().catch(() => ({ recommendations: [] }))]);
+    const load = Promise.all([api.getProject(id), api.listApplications(), api.recommendations(20).catch(() => ({ recommendations: [] }))]);
     load.then(([projectResult, applicationResult, recommendationResult]) => {
       if (!active) return;
       const matchedEntry = recommendationResult.recommendations.find((item) => Number(item.id) === Number(id));

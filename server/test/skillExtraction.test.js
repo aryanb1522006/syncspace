@@ -23,3 +23,11 @@ test('matches punctuation-bearing skill names', () => {
   const matches = extractSkills('Experience: C++17 and Python.', dictionary);
   assert.equal(matches[0].name, 'C++');
 });
+
+test('skills at the end of a sentence are still extracted', () => {
+  const found = extractSkills('I know Python. I also use node.js daily.', [
+    { id: 1, name: 'Python', aliases: ['py'] },
+    { id: 2, name: 'Node.js', aliases: ['node'] }
+  ]);
+  assert.deepEqual(found.map((skill) => `${skill.name}/${skill.matchedAlias}`), ['Python/python', 'Node.js/node.js']);
+});

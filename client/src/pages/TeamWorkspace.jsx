@@ -63,20 +63,31 @@ export function TeamWorkspace() {
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [refresh]);
-  useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
     if (demoMode || !id) return undefined;
     const socket = getSocket();
-    socket.connect();
     const teamId = Number(id);
-    socket.emit('workspace:join', teamId);
+    // Room membership lives on the server and is lost on every reconnect,
+    // so join on each 'connect' (initial and automatic reconnects) and
+    // refresh to pick up any task changes missed while offline.
+    const join = () => {
+      socket.emit('workspace:join', teamId);
+      refresh({ silent: true });
+    };
     const onTaskEvent = () => refresh();
+    socket.on('connect', join);
     socket.on('task:created', onTaskEvent);
     socket.on('task:updated', onTaskEvent);
+    if (socket.connected) join();
+    else socket.connect();
     return () => {
       socket.emit('workspace:leave', teamId);
+      socket.off('connect', join);
       socket.off('task:created', onTaskEvent);
       socket.off('task:updated', onTaskEvent);
+      // Disconnect so the next workspace visit re-authenticates with the
+      // current token instead of reusing a previous user's session.
+      socket.disconnect();
     };
   }, [id, refresh]);
   const grouped = useMemo(() => Object.fromEntries(columns.map(([key]) => [key, team?.tasks.filter((task) => task.status === key) ?? []])), [team]);

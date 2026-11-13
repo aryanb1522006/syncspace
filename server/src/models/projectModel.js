@@ -115,9 +115,9 @@ export function createProject(ownerId, collegeId, input) {
         [project.id, skill.skillId, skill.importance]);
     }
 
-    // The embedding is always generated from the ORIGINAL full description
-    // (never the shortened summary); the description column itself is
-    // never overwritten by this step.
+    // The summary and embedding are derived from the description (the
+    // embedding is built from the summary - see projectDerivedFields.js);
+    // the description column itself is never overwritten by this step.
     const { descriptionEmbedding, embeddingModel, descriptionSummary } = await deriveProjectFields(input.description);
     await client.query(
       `UPDATE projects SET description_embedding = $1, embedding_model = $2, embedding_updated_at = NOW(),

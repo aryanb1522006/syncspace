@@ -1,4 +1,4 @@
-import { ArrowLeft, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowLeft, Linkedin, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/resources.js';
@@ -28,6 +28,8 @@ export function MemberProfile() {
   const ownProfile = Number(student.userId) === Number(user?.id);
   const interests = student.interests ?? [];
   const skills = student.skills ?? [];
+  const evidence = student.skillEvidence ?? [];
+  const sourceNames = { github: 'GitHub', linkedin_export: 'LinkedIn' };
 
   return <AppShell>
     <Link className="back-link app-back" to="/teams"><ArrowLeft />Back to teams</Link>
@@ -38,6 +40,7 @@ export function MemberProfile() {
       {student.email
         ? <a className="member-profile__email" href={`mailto:${student.email}`}><Mail />{student.email}</a>
         : <p className="contact-privacy"><UserRound />Email becomes visible after you are accepted into the same project team.</p>}
+      {student.linkedinUrl && <a className="member-profile__email" href={student.linkedinUrl} target="_blank" rel="noreferrer"><Linkedin />LinkedIn profile</a>}
       <div className="member-profile__details">
         {(student.department || student.year) && <dl>
           {student.department && <div><dt>Department</dt><dd>{student.department}</dd></div>}
@@ -46,6 +49,10 @@ export function MemberProfile() {
         </dl>}
         {student.bio && <section><h2>About</h2><p>{student.bio}</p></section>}
         {skills.length > 0 && <section><h2>Skills</h2><div className="member-profile__tags">{skills.map((skill) => <span key={skill.id}>{skill.name}<small>{skill.proficiency}/5</small></span>)}</div></section>}
+        {evidence.length > 0 && <section><h2>Skill evidence</h2><ul className="member-profile__evidence">{evidence.map((group) => <li key={group.skillId}>
+          <strong>{group.name}</strong> <small>{group.sources.map((source) => sourceNames[source] ?? source).join(' + ')}</small>
+          <span>{group.items.slice(0, 3).map((item) => `${item.sourceRef}: ${item.evidence}`).join(' · ')}</span>
+        </li>)}</ul></section>}
         {interests.length > 0 && <section><h2>Interests</h2><div className="member-profile__tags">{interests.map((interest) => <span key={interest}>{interest}</span>)}</div></section>}
       </div>
       <p className="member-profile__trust"><ShieldCheck />Contact details are shared only inside accepted project teams.</p>

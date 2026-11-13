@@ -1,8 +1,10 @@
 import { FileUp, Plus, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
+import { ConnectedProfiles } from '../components/ConnectedProfiles.jsx';
 
 const proficiencyLevels = [1, 2, 3, 4, 5];
 
@@ -14,6 +16,7 @@ export function ProfileEdit() {
   const [manualProficiency, setManualProficiency] = useState(3);
   const [skillBusy, setSkillBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const location = useLocation();
 
   useEffect(() => {
     Promise.all([api.getMe(), api.listSkills()]).then(([{ student }, { skills: options }]) => {
@@ -21,22 +24,32 @@ export function ProfileEdit() {
       setSkills(options);
     });
   }, []);
+  // Approving an evidence-backed suggestion adds a skill server-side.
+  const reloadSkills = useCallback(async () => {
+    const { student } = await api.getMe();
+    setProfile((current) => ({ ...current, skills: student.skills }));
+  }, []);
 
   if (!profile) return <AppShell><div className="loading">Loading your profile...</div></AppShell>;
 
   const update = (field) => (event) => setProfile({ ...profile, [field]: event.target.value });
   const saveProfile = async (event) => {
     event.preventDefault();
-    const { student } = await api.updateProfile(profile.id, {
-      name: profile.name,
-      department: profile.department,
-      year: Number(profile.year),
-      bio: profile.bio,
-      interests: profile.interests,
-      availabilityHoursPerWeek: Number(profile.availability_hours_per_week)
-    });
-    setProfile(student);
-    setMessage('Profile saved.');
+    try {
+      const { student } = await api.updateProfile(profile.id, {
+        name: profile.name,
+        department: profile.department,
+        year: Number(profile.year),
+        bio: profile.bio,
+        interests: profile.interests,
+        availabilityHoursPerWeek: Number(profile.availability_hours_per_week),
+        ...(profile.linkedin_url !== undefined ? { linkedinUrl: profile.linkedin_url ?? '' } : {})
+      });
+      setProfile(student);
+      setMessage('Profile saved.');
+    } catch (reason) {
+      setMessage(reason.message);
+    }
   };
 
   const upload = async (event) => {
@@ -106,6 +119,7 @@ export function ProfileEdit() {
         <h2>About you</h2>
         <div className="form-grid"><label>Full name<input value={profile.name} onChange={update('name')} /></label><label>Department<input value={profile.department ?? ''} onChange={update('department')} /></label><label>Year<select value={profile.year ?? 1} onChange={update('year')}>{[1, 2, 3, 4].map((year) => <option key={year}>{year}</option>)}</select></label><label>Hours available each week<input type="number" min="0" max="168" value={profile.availability_hours_per_week} onChange={update('availability_hours_per_week')} /></label></div>
         <label>Bio<textarea rows="4" value={profile.bio ?? ''} onChange={update('bio')} /></label>
+        <label>LinkedIn profile URL <small>(shown only to accepted teammates)</small><input type="url" placeholder="https://www.linkedin.com/in/your-name" value={profile.linkedin_url ?? ''} onChange={update('linkedin_url')} /></label>
         <Button type="submit">Save profile</Button>
       </section>
       <section>
@@ -120,5 +134,6 @@ export function ProfileEdit() {
       </section>
       {message && <p className="success-message" role="status">{message}</p>}
     </form>
+    <ConnectedProfiles onSkillsChanged={reloadSkills} initialMessage={location.state?.message ?? ''} />
   </AppShell>;
 }

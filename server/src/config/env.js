@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { parseEncryptionKey } from '../services/tokenCrypto.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const requiredInProduction = ['DATABASE_URL', 'JWT_SECRET', 'CLIENT_ORIGIN'];
@@ -19,6 +20,11 @@ if (!['local', 's3'].includes(storageDriver)) throw new Error('STORAGE_DRIVER mu
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() || null;
 const allowedEmailDomain = process.env.AUTH_ALLOWED_EMAIL_DOMAIN?.trim().toLowerCase().replace(/^@/, '') || null;
 const passwordAuthEnabled = asBoolean(process.env.PASSWORD_AUTH_ENABLED, true);
+// GitHub profile intelligence (OAuth). All four values are required
+// together; the integration reports itself as unavailable otherwise.
+const githubOAuthKeys = ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'GITHUB_REDIRECT_URI', 'TOKEN_ENCRYPTION_KEY'];
+const githubOAuthConfigured = githubOAuthKeys.every((key) => process.env[key]?.trim());
+const tokenEncryptionKey = parseEncryptionKey(process.env.TOKEN_ENCRYPTION_KEY);
 const adminEmails = (process.env.ADMIN_EMAILS ?? '')
   .split(',')
   .map((email) => email.trim().toLowerCase())
@@ -40,6 +46,9 @@ if (isProduction) {
   }
   if (allowedEmailDomain && adminEmails.some((email) => !email.endsWith(`@${allowedEmailDomain}`))) {
     throw new Error(`Every ADMIN_EMAILS entry must use @${allowedEmailDomain}`);
+  }
+  if (!githubOAuthConfigured && githubOAuthKeys.some((key) => process.env[key]?.trim())) {
+    throw new Error(`${githubOAuthKeys.join(', ')} must be configured together in production`);
   }
 }
 
@@ -129,5 +138,16 @@ export const env = Object.freeze({
   // much higher for genuinely related text.
   duplicateSimilarityThreshold: asNumber(process.env.DUPLICATE_SIMILARITY_THRESHOLD, 0.35),
   // Maximum word count for the generated project description summary.
-  projectSummaryWordLimit: asNumber(process.env.PROJECT_SUMMARY_WORD_LIMIT, 50)
+  projectSummaryWordLimit: asNumber(process.env.PROJECT_SUMMARY_WORD_LIMIT, 50),
+
+  // --- GitHub / LinkedIn profile intelligence ---
+  githubOAuthConfigured,
+  githubClientId: process.env.GITHUB_CLIENT_ID?.trim() || null,
+  githubClientSecret: process.env.GITHUB_CLIENT_SECRET?.trim() || null,
+  // Must be the SyncSpace client page /integrations/github/callback; the
+  // client forwards code + state to the API with the user's own token.
+  githubRedirectUri: process.env.GITHUB_REDIRECT_URI?.trim() || null,
+  tokenEncryptionKey,
+  // Most recently pushed public repositories analyzed per sync.
+  githubMaxRepos: asNumber(process.env.GITHUB_MAX_REPOS, 20)
 });

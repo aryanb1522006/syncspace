@@ -1,3 +1,7 @@
+// Demo deadlines are relative to today so the seeded projects stay open
+// (and their edit forms stay valid) no matter when the demo is opened.
+const daysFromNow = (days) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+
 const seed = {
   users: [
     { id: 1, email: 'isha@northstar.edu', password: 'demo1234', role: 'student', collegeId: 1, profileId: 1, name: 'Isha Mehta' },
@@ -29,7 +33,7 @@ const seed = {
     {
       id: 1, title: 'GreenGrid', domain: 'Climate Tech', description: 'Turn live campus energy data into actions students can see.',
       longDescription: 'GreenGrid connects campus meter readings to a clear student dashboard. The first milestone is a live energy loop for one academic block, followed by practical nudges that make usage patterns understandable.',
-      teamSize: 4, memberCount: 2, deadline: '2026-09-12', commitmentHoursPerWeek: 10, ownerId: 4, owner_name: 'Arjun Rao', pendingApplicationCount: 0, applicationCount: 0,
+      teamSize: 4, memberCount: 2, deadline: daysFromNow(45), commitmentHoursPerWeek: 10, ownerId: 4, owner_name: 'Arjun Rao', pendingApplicationCount: 0, applicationCount: 0,
       ownerProfileId: 4,
       skills: [{ id: 1, name: 'React', importance: 'required' }, { id: 5, name: 'Node.js', importance: 'required' }, { id: 3, name: 'UI/UX Design', importance: 'preferred' }, { id: 8, name: 'Data Science', importance: 'preferred' }],
       match: { score: 92, breakdown: { contributions: { requiredSkills: 45, preferredSkills: 17, domainInterest: 15, availability: 15 } } }
@@ -37,7 +41,7 @@ const seed = {
     {
       id: 2, title: 'StudyCircle', domain: 'EdTech', description: 'Smart peer study groups built around pace, courses, and availability.',
       longDescription: 'StudyCircle helps students find a study rhythm that fits. Teams are matched around course overlap, preferred pace, and the hours they can reliably protect each week.',
-      teamSize: 5, memberCount: 3, deadline: '2026-08-28', commitmentHoursPerWeek: 8, ownerId: 4, owner_name: 'Arjun Rao', pendingApplicationCount: 1, applicationCount: 1,
+      teamSize: 5, memberCount: 3, deadline: daysFromNow(30), commitmentHoursPerWeek: 8, ownerId: 4, owner_name: 'Arjun Rao', pendingApplicationCount: 1, applicationCount: 1,
       ownerProfileId: 4,
       skills: [{ id: 1, name: 'React', importance: 'required' }, { id: 6, name: 'PostgreSQL', importance: 'required' }, { id: 7, name: 'Machine Learning', importance: 'preferred' }],
       match: { score: 86, breakdown: { contributions: { requiredSkills: 42, preferredSkills: 14, domainInterest: 15, availability: 15 } } }
@@ -45,7 +49,7 @@ const seed = {
     {
       id: 3, title: 'CampusCart', domain: 'Civic Tech', description: 'A trusted exchange for borrowing and reusing useful campus gear.',
       longDescription: 'CampusCart is a simple campus-only exchange for lab kits, calculators, books, and project equipment—with lightweight trust signals and clear handoff coordination.',
-      teamSize: 4, memberCount: 1, deadline: '2026-10-03', commitmentHoursPerWeek: 6, ownerId: 9, owner_name: 'Naina Bose', pendingApplicationCount: 0, applicationCount: 0,
+      teamSize: 4, memberCount: 1, deadline: daysFromNow(60), commitmentHoursPerWeek: 6, ownerId: 9, owner_name: 'Naina Bose', pendingApplicationCount: 0, applicationCount: 0,
       skills: [{ id: 2, name: 'TypeScript', importance: 'required' }, { id: 3, name: 'UI/UX Design', importance: 'required' }],
       match: { score: 78, breakdown: { contributions: { requiredSkills: 38, preferredSkills: 10, domainInterest: 15, availability: 15 } } }
     }
@@ -134,7 +138,11 @@ export const demoApi = {
   },
   async updateProfile(id, input) {
     const state = load();
-    state.profile = { ...state.profile, ...input, availability_hours_per_week: input.availabilityHoursPerWeek ?? state.profile.availability_hours_per_week };
+    state.profile = {
+      ...state.profile, ...input,
+      availability_hours_per_week: input.availabilityHoursPerWeek ?? state.profile.availability_hours_per_week,
+      ...(input.linkedinUrl !== undefined ? { linkedin_url: input.linkedinUrl || null } : {})
+    };
     save(state);
     return wait({ student: state.profile });
   },

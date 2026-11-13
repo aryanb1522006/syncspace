@@ -8,6 +8,8 @@ import {
   setResumePath,
   updateStudent
 } from '../models/studentModel.js';
+import { listVisibleEvidence } from '../models/profileIntelligenceModel.js';
+import { summarizeEvidence } from '../services/evidenceScoring.js';
 import { extractSkills } from '../services/skillExtraction.js';
 import { storage } from '../services/storage.js';
 import { AppError } from '../utils/AppError.js';
@@ -38,6 +40,11 @@ export async function getStudentByUser(req, res) {
 async function sendVisibleStudent(req, res, student) {
   if (!student || Number(student.college_id) !== Number(req.user.collegeId)) throw new AppError(404, 'Student profile not found');
   const contactVisible = await canViewStudentContact(req.user.id, student.id, req.user.collegeId);
+  // Evidence is private unless the student chose 'team' (teammates, the
+  // same relationship that reveals contact details) or 'college'.
+  const isSelf = Number(student.user_id) === req.user.id;
+  const visibilities = isSelf ? ['private', 'team', 'college'] : contactVisible ? ['team', 'college'] : ['college'];
+  const evidence = await listVisibleEvidence(student.id, visibilities);
   res.json({
     student: {
       id: student.id,
@@ -49,8 +56,12 @@ async function sendVisibleStudent(req, res, student) {
       interests: student.interests,
       availabilityHoursPerWeek: student.availability_hours_per_week,
       skills: student.skills,
-      ...(contactVisible ? { email: student.email } : {}),
-      contactVisible
+      ...(contactVisible ? { email: student.email, linkedinUrl: student.linkedin_url ?? null } : {}),
+      contactVisible,
+      skillEvidence: summarizeEvidence(evidence).map(({ skillId, name, confidence, evidenceClass, sources, items }) => ({
+        skillId, name, confidence, evidenceClass, sources,
+        items: items.map(({ sourceRef, evidence: text, detectionMethod, lastVerifiedAt }) => ({ sourceRef, evidence: text, detectionMethod, lastVerifiedAt }))
+      }))
     }
   });
 }
@@ -64,7 +75,8 @@ export async function updateProfile(req, res) {
     year: req.body.year,
     bio: req.body.bio,
     interests: req.body.interests,
-    availability_hours_per_week: req.body.availabilityHoursPerWeek
+    availability_hours_per_week: req.body.availabilityHoursPerWeek,
+    linkedin_url: req.body.linkedinUrl
   };
   res.json({ student: await updateStudent(id, changes) });
 }
@@ -78,7 +90,9 @@ export async function uploadResume(req, res) {
   try {
     const buffer = await storage.readUpload(req.file);
     const parsed = await pdf(buffer);
-    const dictionary = await listSkillDictionary();
+    // Skills named with one or two letters ("C", "Go") are ordinary words
+    // in resume prose, so they are suggested from GitHub evidence instead.
+    const dictionary = (await listSkillDictionary()).filter((skill) => skill.name.trim().length >= 3);
     const proposedSkills = extractSkills(parsed.text, dictionary);
     savedReference = await storage.saveUpload(req.file);
     await setResumePath(id, savedReference);

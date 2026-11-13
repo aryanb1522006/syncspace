@@ -15,6 +15,7 @@ import {
   syncGitHubNow,
   updateEvidenceVisibility
 } from '../controllers/integrationController.js';
+import { getLinkedinAuthorizeUrl, linkedinCallbackBridge, exchangeLinkedinCode, importLinkedinDetails, disconnectLinkedinAccount, previewLinkedIn } from '../controllers/integrationController.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -23,6 +24,7 @@ import { AppError } from '../utils/AppError.js';
 const router = Router();
 router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 router.get('/github/callback', asyncHandler(githubCallbackBridge));
+router.get('/linkedin/callback', asyncHandler(linkedinCallbackBridge));
 router.use(authenticate);
 
 // Sync and import call GitHub or parse uploads, so they get a tighter
@@ -38,9 +40,9 @@ const syncLimiter = rateLimit({
 // The export is parsed in memory and never written to disk.
 const linkedinUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 2, fieldSize: 2000, parts: 4 },
   fileFilter: (req, file, callback) => {
-    if (!/\.zip$/i.test(file.originalname ?? '')) return callback(new AppError(400, 'Upload the LinkedIn export as a .zip file'));
+    if (!/\.(zip|csv)$/i.test(file.originalname ?? '')) return callback(new AppError(400, 'Upload the LinkedIn export as a .zip or .csv file'));
     callback(null, true);
   }
 });
@@ -66,6 +68,11 @@ router.get('/github/authorize', asyncHandler(getGitHubAuthorizeUrl));
 router.post('/github/exchange', syncLimiter, validate(exchangeSchema), asyncHandler(exchangeGitHubCode));
 router.post('/github/sync', syncLimiter, asyncHandler(syncGitHubNow));
 router.delete('/github', validate(disconnectSchema, 'query'), asyncHandler(disconnectGitHub));
+router.get('/linkedin/authorize', asyncHandler(getLinkedinAuthorizeUrl));
+router.post('/linkedin/exchange', syncLimiter, validate(exchangeSchema), asyncHandler(exchangeLinkedinCode));
+router.post('/linkedin/profile', validate(z.object({ fields: z.array(z.enum(['name', 'photo'])).min(1).max(2) }).strict()), asyncHandler(importLinkedinDetails));
+router.delete('/linkedin/account', asyncHandler(disconnectLinkedinAccount));
+router.post('/linkedin/preview', syncLimiter, linkedinUpload.single('export'), asyncHandler(previewLinkedIn));
 router.post('/linkedin/import', syncLimiter, linkedinUpload.single('export'), asyncHandler(importLinkedIn));
 router.delete('/linkedin', asyncHandler(deleteLinkedIn));
 router.post('/skills/:skillId/decision', validate(skillParamsSchema, 'params'), validate(decisionSchema), asyncHandler(decideSkill));

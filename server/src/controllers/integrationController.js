@@ -24,7 +24,9 @@ import {
   revokeOAuthGrant,
   verifyConnectState
 } from '../services/githubClient.js';
-import { parseLinkedInExport } from '../services/linkedinExport.js';
+import { parseLinkedInUpload, previewLinkedInUpload } from '../services/linkedinExport.js';
+import { exchangeLinkedin, linkedinAuthorize, linkedinState, verifyLinkedinState } from '../services/linkedinIdentity.js';
+import { linkedinAccount, removeLinkedinAccount, saveLinkedinAccount, useLinkedinDetails } from '../models/linkedinIdentityModel.js';
 import { buildSkillReview, decideSkillSuggestion } from '../services/skillReview.js';
 import { decryptToken, encryptToken } from '../services/tokenCrypto.js';
 import { AppError } from '../utils/AppError.js';
@@ -52,13 +54,13 @@ const publicConnection = (connection) => connection && {
 };
 
 async function overview(student) {
-  const [connections, evidence, decisions] = await Promise.all([
-    listConnections(student.id), listEvidence(student.id), listDecisions(student.id)
+  const [connections, evidence, decisions, account] = await Promise.all([
+    listConnections(student.id), listEvidence(student.id), listDecisions(student.id), linkedinAccount(student.id)
   ]);
   const bySource = new Map(connections.map((connection) => [connection.source, connection]));
   return {
     github: { configured: env.githubOAuthConfigured, connection: publicConnection(bySource.get('github')) ?? null },
-    linkedin: { connection: publicConnection(bySource.get('linkedin_export')) ?? null },
+    linkedin: { configured: env.linkedinOAuthConfigured, account, connection: publicConnection(bySource.get('linkedin_export')) ?? null },
     skills: buildSkillReview(evidence, decisions, student.skills.map((skill) => skill.id))
   };
 }
@@ -172,11 +174,68 @@ export async function disconnectGitHub(req, res) {
 }
 
 export async function importLinkedIn(req, res) {
-  if (!req.file) throw new AppError(400, 'Choose your LinkedIn data export ZIP');
+  if (!req.file) throw new AppError(400, 'Choose your LinkedIn data export ZIP or CSV');
+  if (req.body.confirm !== 'true') throw new AppError(400, 'Preview the export and confirm the selected sections first.');
+  let sections;
+  try { sections = JSON.parse(req.body.sections); } catch { throw new AppError(400, 'Select the sections to import.'); }
   const student = await currentStudent(req);
-  const { evidence, profileText, sectionsFound } = parseLinkedInExport(req.file.buffer, await listSkillDictionary());
+  const { evidence, profileText, sectionsFound } = parseLinkedInUpload(req.file.buffer, req.file.originalname, await listSkillDictionary(), sections);
   await replaceSourceEvidence({ studentId: student.id, source: 'linkedin_export', evidence, profileText });
   res.json({ ...(await overview(student)), import: { sectionsFound, evidenceCount: evidence.length } });
+}
+
+export async function previewLinkedIn(req, res) {
+  if (!req.file) throw new AppError(400, 'Choose your LinkedIn data export ZIP or CSV');
+  await currentStudent(req);
+  res.json(previewLinkedInUpload(req.file.buffer, req.file.originalname, await listSkillDictionary()));
+}
+
+function requireLinkedinConfigured() {
+  if (!env.linkedinOAuthConfigured) throw new AppError(503, 'LinkedIn connection is not configured on this SyncSpace server. Export import is still available.');
+}
+export async function getLinkedinAuthorizeUrl(req, res) {
+  requireLinkedinConfigured();
+  const challenge = req.query.browserChallenge;
+  if (typeof challenge !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(challenge)) throw new AppError(400, 'Start the connection again from your profile.');
+  const student = await currentStudent(req);
+  const returnOrigin = req.headers.origin ?? env.clientOrigins[0];
+  if (!env.clientOrigins.includes(returnOrigin)) throw new AppError(400, 'Start this connection from SyncSpace.');
+  const id = randomUUID(), nonce = randomBytes(32).toString('base64url');
+  await createOAuthRequest({ id, studentId: student.id, provider: 'linkedin', browserChallenge: challenge, nonce, returnOrigin });
+  res.json({ requestId: id, url: linkedinAuthorize({ clientId: env.linkedinClientId, redirectUri: env.linkedinRedirectUri, state: linkedinState(req.user.id, env.jwtSecret, id), nonce }) });
+}
+export async function linkedinCallbackBridge(req, res) {
+  const { state, code, error } = req.query;
+  if (typeof state !== 'string' || state.length > 2000 || (code && (typeof code !== 'string' || code.length > 2000))) throw new AppError(400, 'Invalid account callback');
+  const { requestId, userId } = verifyLinkedinState(state, undefined, env.jwtSecret);
+  const origin = await getOAuthReturn(requestId, 'linkedin', userId);
+  if (!env.clientOrigins.includes(origin)) throw new AppError(400, 'This callback origin is no longer allowed');
+  const params = new URLSearchParams({ state, requestId });
+  if (error) params.set('error', 'access_denied');
+  else if (code) params.set('code', code);
+  else throw new AppError(400, 'Missing account callback code');
+  const target = new URL('/', origin);
+  target.hash = `/integrations/linkedin/callback?${params}`;
+  res.set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }).redirect(303, target.href);
+}
+export async function exchangeLinkedinCode(req, res) {
+  requireLinkedinConfigured();
+  const { requestId } = verifyLinkedinState(req.body.state, req.user.id, env.jwtSecret);
+  const student = await currentStudent(req);
+  const flow = await claimOAuthRequest({ id: requestId, studentId: student.id, provider: 'linkedin', verifier: req.body.verifier });
+  const account = await exchangeLinkedin({ code: req.body.code, clientId: env.linkedinClientId, clientSecret: env.linkedinClientSecret, redirectUri: env.linkedinRedirectUri, nonce: flow.nonce });
+  await saveLinkedinAccount(student.id, requestId, account);
+  res.json(await overview(student));
+}
+export async function importLinkedinDetails(req, res) {
+  const student = await currentStudent(req);
+  await useLinkedinDetails(student.id, req.body.fields);
+  res.json({ student: await currentStudent(req) });
+}
+export async function disconnectLinkedinAccount(req, res) {
+  const student = await currentStudent(req);
+  await removeLinkedinAccount(student.id);
+  res.json(await overview(student));
 }
 
 export async function deleteLinkedIn(req, res) {

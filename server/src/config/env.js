@@ -24,6 +24,8 @@ const passwordAuthEnabled = asBoolean(process.env.PASSWORD_AUTH_ENABLED, true);
 // together; the integration reports itself as unavailable otherwise.
 const githubOAuthKeys = ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'GITHUB_REDIRECT_URI', 'TOKEN_ENCRYPTION_KEY'];
 const githubOAuthConfigured = githubOAuthKeys.every((key) => process.env[key]?.trim());
+const linkedinOAuthKeys = ['LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET', 'LINKEDIN_REDIRECT_URI'];
+const linkedinOAuthConfigured = linkedinOAuthKeys.every((key) => process.env[key]?.trim());
 const tokenEncryptionKey = parseEncryptionKey(process.env.TOKEN_ENCRYPTION_KEY);
 const adminEmails = (process.env.ADMIN_EMAILS ?? '')
   .split(',')
@@ -47,9 +49,16 @@ if (isProduction) {
   if (allowedEmailDomain && adminEmails.some((email) => !email.endsWith(`@${allowedEmailDomain}`))) {
     throw new Error(`Every ADMIN_EMAILS entry must use @${allowedEmailDomain}`);
   }
-  if (!githubOAuthConfigured && githubOAuthKeys.some((key) => process.env[key]?.trim())) {
+  if (!githubOAuthConfigured && githubOAuthKeys.slice(0, 3).some((key) => process.env[key]?.trim())) {
     throw new Error(`${githubOAuthKeys.join(', ')} must be configured together in production`);
   }
+  if (!linkedinOAuthConfigured && linkedinOAuthKeys.some((key) => process.env[key]?.trim())) throw new Error(`${linkedinOAuthKeys.join(', ')} must be configured together in production`);
+}
+
+for (const key of ['GITHUB_REDIRECT_URI', 'LINKEDIN_REDIRECT_URI']) {
+  if (!process.env[key]?.trim()) continue;
+  const url = new URL(process.env[key].trim());
+  if (url.hash || url.username || url.password || !['https:', 'http:'].includes(url.protocol) || (isProduction && url.protocol !== 'https:')) throw new Error(`${key} must be an absolute callback URL without a fragment; production requires HTTPS`);
 }
 
 if (storageDriver === 's3') {
@@ -144,9 +153,12 @@ export const env = Object.freeze({
   githubOAuthConfigured,
   githubClientId: process.env.GITHUB_CLIENT_ID?.trim() || null,
   githubClientSecret: process.env.GITHUB_CLIENT_SECRET?.trim() || null,
-  // Must be the SyncSpace client page /integrations/github/callback; the
-  // client forwards code + state to the API with the user's own token.
+  // Prefer the API /api/integrations/github/callback bridge.
   githubRedirectUri: process.env.GITHUB_REDIRECT_URI?.trim() || null,
+  linkedinOAuthConfigured,
+  linkedinClientId: process.env.LINKEDIN_CLIENT_ID?.trim() || null,
+  linkedinClientSecret: process.env.LINKEDIN_CLIENT_SECRET?.trim() || null,
+  linkedinRedirectUri: process.env.LINKEDIN_REDIRECT_URI?.trim() || null,
   tokenEncryptionKey,
   // Most recently pushed public repositories analyzed per sync.
   githubMaxRepos: asNumber(process.env.GITHUB_MAX_REPOS, 20)

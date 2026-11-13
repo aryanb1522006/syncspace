@@ -63,13 +63,16 @@ function SkillRow({ group, busy, onDecide, onVisibility }) {
   </article>;
 }
 
-export function ConnectedProfiles({ onSkillsChanged, initialMessage = '' }) {
+export function ConnectedProfiles({ onSkillsChanged, onProfileUpdated, profileDirty = false, initialMessage = '' }) {
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialMessage);
   const [error, setError] = useState('');
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [deleteGitHubEvidence, setDeleteGitHubEvidence] = useState(false);
+  const [upload, setUpload] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [detailFields, setDetailFields] = useState([]);
 
   useEffect(() => {
     api.integrations().then(setState).catch((reason) => setError(reason.message));
@@ -97,26 +100,43 @@ export function ConnectedProfiles({ onSkillsChanged, initialMessage = '' }) {
 
   const github = state.github.connection;
   const linkedin = state.linkedin.connection;
+  const account = state.linkedin.account;
   const reviewable = state.skills.filter((group) => group.status !== 'unmatched');
   const pending = reviewable.filter((group) => group.status === 'pending');
   const rest = reviewable.filter((group) => group.status !== 'pending');
   const unmatched = state.skills.filter((group) => group.status === 'unmatched');
 
-  const connectGitHub = async () => {
+  const connectProvider = async (provider) => {
     setBusy(true); setError('');
     try {
-      await startProviderConnection('github', api.githubAuthorizeUrl);
+      await startProviderConnection(provider, provider === 'github' ? api.githubAuthorizeUrl : api.linkedinAuthorizeUrl);
     } catch (reason) {
       setError(reason.message);
       setBusy(false);
     }
   };
-  const importLinkedIn = (event) => {
+  const connectGitHub = () => connectProvider('github');
+  const importLinkedIn = async (event) => {
     const file = event.target.files[0];
     event.target.value = '';
     if (!file) return;
-    run(() => api.linkedinImport(file), (next) => `LinkedIn export read (${next.import.sectionsFound.join(', ')}). Review the suggested skills below.`);
+    setBusy(true); setError(''); setUpload(null); setMessage('');
+    try {
+      const preview = await api.linkedinPreview(file);
+      setUpload({ file, ...preview });
+      setSections(preview.sections.map((section) => section.name));
+    } catch (reason) { setError(reason.message); }
+    finally { setBusy(false); }
   };
+  const useDetails = async () => {
+    setBusy(true); setError('');
+    try {
+      const { student } = await api.linkedinUseDetails(detailFields);
+      onProfileUpdated?.(student); setDetailFields([]); setMessage('Selected LinkedIn details added to your profile.');
+    } catch (reason) { setError(reason.message); }
+    finally { setBusy(false); }
+  };
+  const toggle = (list, value) => list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
   const decide = (group, decision, proficiency) => run(
     () => api.decideSkill(group.skillId, decision, proficiency),
     decision === 'approved' ? `${group.name} added to your skills.` : `${group.name} will not be suggested again.`,
@@ -129,6 +149,7 @@ export function ConnectedProfiles({ onSkillsChanged, initialMessage = '' }) {
 
   return <section className="connected-profiles">
     <div className="section-title"><div><h2>Connected profiles</h2><p>Use evidence from GitHub and LinkedIn to suggest skills. Nothing is added to your profile until you approve it, and evidence stays private unless you share it.</p></div></div>
+    {profileDirty && <p className="connected-profiles__note">Save your profile edits before connecting an account or copying account details.</p>}
 
     <div className="source-cards">
       <article className="source-card">
@@ -140,7 +161,7 @@ export function ConnectedProfiles({ onSkillsChanged, initialMessage = '' }) {
             {github.lastSyncError && <p className="form-error">{github.lastSyncError}</p>}
             <div className="source-card__actions">
               {github.status === 'revoked'
-                ? <Button type="button" disabled={busy || !state.github.configured} onClick={connectGitHub}><Github />Reconnect</Button>
+                ? <Button type="button" disabled={busy || profileDirty || !state.github.configured} onClick={connectGitHub}><Github />Reconnect</Button>
                 : <Button type="button" variant="secondary" disabled={busy} onClick={() => run(() => api.githubSync(), 'GitHub synced. Review any new suggestions below.')}><RefreshCw className={busy ? 'is-spinning' : ''} />Sync now</Button>}
               {!confirmDisconnect
                 ? <Button type="button" variant="secondary" disabled={busy} onClick={() => setConfirmDisconnect(true)}>Disconnect</Button>
@@ -154,18 +175,50 @@ export function ConnectedProfiles({ onSkillsChanged, initialMessage = '' }) {
           </>
           : state.github.configured && <>
             <p>SyncSpace reads only your <strong>public</strong> repositories: languages, topics, README and dependency files. It requests no GitHub permissions and never posts anything.</p>
-            <Button type="button" disabled={busy} onClick={connectGitHub}><Github />Connect GitHub</Button>
+            <Button type="button" disabled={busy || profileDirty} onClick={connectGitHub}><Github />Connect GitHub</Button>
           </>}
       </article>
 
       <article className="source-card">
         <h3><Linkedin />LinkedIn</h3>
-        <p>LinkedIn does not let apps read your skills directly. Instead, download your data (LinkedIn → Settings → Data privacy → <em>Get a copy of your data</em>) and upload the ZIP. Only Skills, Positions, Projects, Certifications, Education and your headline are read; the file is not stored.</p>
+        <p>Connect for your account name and photo. This does not verify your identity or change your college login. Skills and experience come from an export you review separately.</p>
+        {account ? <div>
+          <p>Connected as <strong>{account.name}</strong></p>
+          {account.pictureUrl && <img src={account.pictureUrl} alt="Your LinkedIn account photo" width="64" height="64" referrerPolicy="no-referrer" />}
+          <label><input type="checkbox" checked={detailFields.includes('name')} disabled={busy} onChange={() => setDetailFields((fields) => toggle(fields, 'name'))} />Use name: {account.name}</label>
+          {account.pictureUrl && <label><input type="checkbox" checked={detailFields.includes('photo')} disabled={busy} onChange={() => setDetailFields((fields) => toggle(fields, 'photo'))} />Use photo on my college profile</label>}
+          <div className="source-card__actions">
+            <Button type="button" disabled={busy || profileDirty || !detailFields.length} onClick={useDetails}>Use selected details</Button>
+            <Button type="button" variant="secondary" disabled={busy} onClick={() => run(async () => {
+              const next = await api.linkedinDisconnect();
+              const { student } = await api.getMe();
+              onProfileUpdated?.((current) => ({ ...current, avatar_url: student.avatar_url, avatar_source: student.avatar_source }));
+              setDetailFields([]); return next;
+            }, 'LinkedIn disconnected and its profile photo removed. Copied name and export imports stay. You can revoke SyncSpace in LinkedIn settings.')}>Disconnect account</Button>
+          </div>
+        </div> : state.linkedin.configured
+          ? <Button type="button" disabled={busy || profileDirty} onClick={() => connectProvider('linkedin')}><Linkedin />Connect LinkedIn</Button>
+          : <p className="connected-profiles__note">Account connection is not configured yet. You can still import your export below.</p>}
+        <h4>Import skills and experience</h4>
+        <p>Download your data (LinkedIn → Settings → Data privacy → <em>Get a copy of your data</em>) and upload the ZIP or an individual export CSV. Review sections before saving. Files are processed in memory and never stored; unrelated files, contacts and messages are ignored.</p>
         {linkedin && <p>Imported {formatDate(linkedin.lastSyncedAt)}</p>}
         <div className="source-card__actions">
-          <label className={`button button--${linkedin ? 'secondary' : 'primary'} upload-button`}><FileArchive />{linkedin ? 'Import a newer export' : 'Upload LinkedIn export'}<input type="file" accept=".zip,application/zip" disabled={busy} onChange={importLinkedIn} /></label>
+          <label className={`button button--${linkedin ? 'secondary' : 'primary'} upload-button`}><FileArchive />{linkedin ? 'Preview a newer export' : 'Preview LinkedIn export'}<input aria-label="LinkedIn export file" type="file" accept=".zip,.csv,application/zip,text/csv" disabled={busy} onChange={importLinkedIn} /></label>
           {linkedin && <Button type="button" variant="secondary" disabled={busy} onClick={() => run(() => api.linkedinDelete(), 'LinkedIn import and its evidence deleted.')}>Delete import</Button>}
         </div>
+        {upload && <div className="source-card__confirm">
+          <h4>Review {upload.file.name}</h4>
+          <p>Nothing has been saved. Confirming replaces all previous LinkedIn export evidence with the selected sections, including when uploading one CSV. Approved skills stay on your profile. New evidence is private; existing evidence keeps its visibility.</p>
+          {upload.sections.map((section) => <div key={section.name}>
+            <label><input type="checkbox" checked={sections.includes(section.name)} disabled={busy} onChange={() => setSections((list) => toggle(list, section.name))} />{section.name} · {section.evidenceCount} evidence items</label>
+            <p>{section.skills.length ? section.skills.join(', ') : 'No recognized skill evidence in this section.'}</p>
+            {section.profileText && <details><summary>Profile text used for matching</summary><p>{section.profileText}</p></details>}
+          </div>)}
+          <Button type="button" disabled={busy || !sections.length} onClick={() => run(async () => {
+            const next = await api.linkedinImport(upload.file, sections); setUpload(null); return next;
+          }, 'Selected LinkedIn sections saved. Review and approve suggested skills below.')}>Confirm selected sections</Button>
+          <Button type="button" variant="secondary" disabled={busy} onClick={() => setUpload(null)}>Cancel import</Button>
+        </div>}
       </article>
     </div>
 

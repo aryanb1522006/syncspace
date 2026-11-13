@@ -16,6 +16,7 @@ export function ProfileEdit() {
   const [manualProficiency, setManualProficiency] = useState(3);
   const [skillBusy, setSkillBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [dirty, setDirty] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export function ProfileEdit() {
 
   if (!profile) return <AppShell><div className="loading">Loading your profile...</div></AppShell>;
 
-  const update = (field) => (event) => setProfile({ ...profile, [field]: event.target.value });
+  const update = (field) => (event) => { setDirty(true); setProfile({ ...profile, [field]: event.target.value }); };
   const saveProfile = async (event) => {
     event.preventDefault();
     try {
@@ -46,6 +47,7 @@ export function ProfileEdit() {
         ...(profile.linkedin_url !== undefined ? { linkedinUrl: profile.linkedin_url ?? '' } : {})
       });
       setProfile(student);
+      setDirty(false);
       setMessage('Profile saved.');
     } catch (reason) {
       setMessage(reason.message);
@@ -64,7 +66,7 @@ export function ProfileEdit() {
     setSkillBusy(true);
     try {
       const { student } = await api.updateSkills(profile.id, next);
-      setProfile(student);
+      setProfile((current) => ({ ...current, skills: student.skills }));
       setMessage(successMessage);
       return true;
     } catch (reason) {
@@ -134,6 +136,6 @@ export function ProfileEdit() {
       </section>
       {message && <p className="success-message" role="status">{message}</p>}
     </form>
-    <ConnectedProfiles onSkillsChanged={reloadSkills} initialMessage={location.state?.message ?? ''} />
+    <ConnectedProfiles onSkillsChanged={reloadSkills} profileDirty={dirty} onProfileUpdated={setProfile} initialMessage={location.state?.message ?? ''} />
   </AppShell>;
 }

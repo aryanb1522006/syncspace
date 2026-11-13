@@ -9,8 +9,8 @@ vi.mock('../api/resources.js', () => ({
     integrations: vi.fn(),
     githubAuthorizeUrl: vi.fn(),
     decideSkill: vi.fn(),
-    setEvidenceVisibility: vi.fn()
-    , linkedinPreview: vi.fn(), linkedinImport: vi.fn(), linkedinUseDetails: vi.fn(), linkedinAuthorizeUrl: vi.fn()
+    setEvidenceVisibility: vi.fn(),
+    linkedinPreview: vi.fn(), linkedinImport: vi.fn(), linkedinUseDetails: vi.fn(), linkedinAuthorizeUrl: vi.fn()
   }
 }));
 

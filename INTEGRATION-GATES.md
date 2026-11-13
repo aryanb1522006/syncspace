@@ -61,5 +61,5 @@ Scope: fix the three reviewed defects, audit and test the rumani release, merge 
 - [x] B5: exact developer-app setup, deployment and real-consent verification are documented
   EVIDENCE: docs/phases/phase-20-linkedin-connected-imports.md contains exact app registrations, private environment variables, rollout/rollback and real-consent checks. Owner configuration is required for live consent.
 
-- [ ] B6: final source is pushed and local testing uses the fixed implementation
-  EVIDENCE: pending
+- [x] B6: final source is pushed and local testing uses the fixed implementation
+  EVIDENCE: Published as PR 8 (feat/linkedin-connected-imports), based on merged main. Local API/Vite launchers point to live-repo, startup migrations run before listening, and browser testing confirmed the real API import/review flow at localhost:5173. Provider credentials are absent locally, so consent requires the documented dashboard setup.

@@ -13,6 +13,7 @@ import {
 } from '../src/models/profileIntelligenceModel.js';
 import { getStudentRecommendationContext } from '../src/models/recommendationModel.js';
 import { decideSkillSuggestion } from '../src/services/skillReview.js';
+import { integrationFixture } from '../test-fixtures/integrationHarness.js';
 
 const enabled = process.env.RUN_DB_TESTS === 'true';
 
@@ -25,17 +26,13 @@ const item = (skillId, rawName, sourceRef, detectionMethod, confidence = 0.6) =>
 });
 
 test('GitHub evidence sync, visibility, review decisions and recommendation context work in PostgreSQL', { skip: !enabled }, async () => {
-  const { rows: [student] } = await query(
-    `SELECT sp.id, sp.user_id, u.college_id FROM student_profiles sp JOIN users u ON u.id = sp.user_id
-     WHERE u.email = 'isha@northstar.edu'`
-  );
-  const { rows: [other] } = await query(
-    `SELECT sp.id FROM student_profiles sp JOIN users u ON u.id = sp.user_id WHERE u.email = 'kabir@northstar.edu'`
-  );
+  const fixture = await integrationFixture();
+  const student = { ...fixture.candidate.profile, college_id: fixture.college.id };
+  const other = fixture.stranger.profile;
   const { rows: skills } = await query("SELECT id, name FROM skills WHERE name IN ('React', 'Docker', 'Kubernetes')");
   const skill = Object.fromEntries(skills.map((row) => [row.name, Number(row.id)]));
   const { rows: [react] } = await query('SELECT proficiency FROM student_skills WHERE student_id = $1 AND skill_id = $2', [student.id, skill.React]);
-  assert.ok(react, 'seeded student has React');
+  assert.ok(react, 'isolated fixture has React');
   const providerUserId = `test-${Date.now()}`;
 
   try {
@@ -87,11 +84,9 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
     assert.match(context.student.externalProfileText, /Campus energy dashboard/);
     const kubernetes = context.student.skills.find((row) => Number(row.skillId) === skill.Kubernetes);
     assert.deepEqual(kubernetes.evidenceSources, ['github']);
-  } finally {
     await deleteConnection(student.id, 'github', { deleteEvidence: true });
-    await query('DELETE FROM skill_decisions WHERE student_id = $1', [student.id]);
-    await query('DELETE FROM student_skills WHERE student_id = $1 AND skill_id = $2', [student.id, skill.Kubernetes]);
+    assert.equal((await listEvidence(student.id)).length, 0, 'disconnecting with deleteEvidence removes the data');
+  } finally {
+    await fixture.cleanup();
   }
-
-  assert.equal((await listEvidence(student.id)).length, 0, 'disconnecting with deleteEvidence removes the data');
 });

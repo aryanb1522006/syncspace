@@ -51,6 +51,7 @@ export async function exchangeLinkedin({ code, clientId, clientSecret, redirectU
     const actual = Buffer.from(claims.nonce), expected = Buffer.from(nonce);
     if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new Error();
     if (Array.isArray(claims.aud) && claims.aud.length > 1 && claims.azp !== clientId) throw new Error();
+    if (claims.azp !== undefined && claims.azp !== clientId) throw new Error();
   } catch { throw new AppError(400, 'LinkedIn account token could not be validated. Connect again.'); }
   const info = await json('https://api.linkedin.com/v2/userinfo', { headers: { Authorization: `Bearer ${tokens.access_token}` } });
   if (typeof info.sub !== 'string' || !info.sub || info.sub.length > 255 || info.sub !== claims.sub || typeof info.name !== 'string' || !info.name.trim()) throw new AppError(400, 'LinkedIn returned inconsistent account details.');

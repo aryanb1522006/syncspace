@@ -35,7 +35,7 @@ test('OIDC rejects invalid nonce, issuer, audience, expired tokens and subject m
   const input = { code: 'code', clientId: 'linkedin-fixture', clientSecret: 'linkedin-secret', redirectUri: process.env.LINKEDIN_REDIRECT_URI, nonce: 'expected' };
   const success = await exchangeLinkedin({ ...input, fetchImpl: mockFetch({ nonce: 'expected' }) });
   assert.equal(success.name, 'LinkedIn Name');
-  for (const override of [{ nonce: 'wrong' }, { info: { sub: 'someone-else' } }]) await assert.rejects(exchangeLinkedin({ ...input, fetchImpl: mockFetch({ nonce: 'expected', ...override }) }), { status: 400 });
+  for (const override of [{ nonce: 'wrong' }, { info: { sub: 'someone-else' } }, { claims: { azp: 'other-app' } }, { claims: { iat: Math.floor(Date.now() / 1000) + 120 } }]) await assert.rejects(exchangeLinkedin({ ...input, fetchImpl: mockFetch({ nonce: 'expected', ...override }) }), { status: 400 });
   for (const options of [{ issuer: 'https://evil.test' }, { audience: 'other-app' }, { expiresIn: -1 }]) {
     const valid = mockFetch({ nonce: 'expected' });
     await assert.rejects(exchangeLinkedin({ ...input, fetchImpl: async (url, requestOptions) => url.endsWith('/accessToken')

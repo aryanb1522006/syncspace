@@ -50,6 +50,7 @@ async function sendVisibleStudent(req, res, student) {
       id: student.id,
       userId: student.user_id,
       name: student.name,
+      avatarUrl: student.avatar_url ?? null,
       department: student.department,
       year: student.year,
       bio: student.bio,

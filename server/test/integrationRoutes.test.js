@@ -32,9 +32,9 @@ test('inputs are validated before any work is done', async () => {
   await auth(request(app).delete('/api/integrations/github?deleteEvidence=maybe')).expect(400);
 });
 
-test('LinkedIn import only accepts a .zip upload', async () => {
+test('LinkedIn import rejects unsupported uploads before database work', async () => {
   const response = await auth(request(app).post('/api/integrations/linkedin/import'))
-    .attach('export', Buffer.from('Name\nPython\n'), 'Skills.csv')
+    .attach('export', Buffer.from('Name\nPython\n'), 'Skills.txt')
     .expect(400);
   assert.match(response.body.error.message, /\.zip/);
 });

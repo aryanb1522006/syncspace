@@ -27,6 +27,7 @@ const MAX_PROFILE_TEXT = 4000;
 // Far above any real export (LinkedIn allows 100 skills); bounds the rows
 // one import writes and every later profile response returns.
 const MAX_EVIDENCE_ITEMS = 500;
+const MAX_CSV_ROWS = 10000;
 
 const clip = (value, length) => String(value ?? '').slice(0, length);
 const basename = (path) => path.split('/').pop().toLowerCase();
@@ -39,6 +40,7 @@ export function parseCsv(text) {
   let quoted = false;
   const input = String(text).replace(/^﻿/, '');
   for (let i = 0; i < input.length; i += 1) {
+    if (rows.length > MAX_CSV_ROWS || row.length > 200 || field.length > 100000) throw new AppError(422, 'The LinkedIn CSV exceeds the supported row or field limits.');
     const char = input[i];
     if (quoted) {
       if (char === '"' && input[i + 1] === '"') { field += '"'; i += 1; }
@@ -74,6 +76,7 @@ export function readLinkedInZip(buffer) {
   }
   let entries;
   const accepted = new Set();
+  let totalBytes = 0;
   try {
     entries = unzipSync(bytes, {
       // Decompress only the CSVs we read, at most one entry per file name,
@@ -83,6 +86,8 @@ export function readLinkedInZip(buffer) {
       filter: (file) => {
         const name = basename(file.name);
         if (!WANTED_FILES.has(name) || accepted.has(name) || file.originalSize > MAX_ENTRY_BYTES) return false;
+        if (totalBytes + file.originalSize > 10 * 1024 * 1024) throw new Error('Export exceeds decompressed limit');
+        totalBytes += file.originalSize;
         accepted.add(name);
         return true;
       }
@@ -98,9 +103,12 @@ export function readLinkedInZip(buffer) {
 
 /** Returns { evidence, profileText, sectionsFound } from a LinkedIn export ZIP. */
 export function parseLinkedInExport(buffer, dictionary) {
-  const files = readLinkedInZip(buffer);
+  return parseLinkedInFiles(readLinkedInZip(buffer), dictionary);
+}
+
+function parseLinkedInFiles(files, dictionary) {
   const sectionsFound = Object.keys(files).sort();
-  if (!['skills.csv', 'positions.csv', 'projects.csv', 'certifications.csv', 'profile.csv'].some((file) => files[file])) {
+  if (!Object.values(files).some(Boolean)) {
     throw new AppError(422, 'This export has no Skills, Positions, Projects, Certifications or Profile data. Request the full LinkedIn archive and upload it again.');
   }
 
@@ -173,4 +181,30 @@ export function parseLinkedInExport(buffer, dictionary) {
     profileText: clip(profileParts.join('. '), MAX_PROFILE_TEXT),
     sectionsFound
   };
+}
+
+export function readLinkedInUpload(buffer, filename) {
+  if (/\.zip$/i.test(filename)) return readLinkedInZip(buffer);
+  const name = basename(filename.replaceAll('\\', '/'));
+  if (!WANTED_FILES.has(name)) throw new AppError(400, 'Choose a LinkedIn export ZIP or Skills, Positions, Projects, Certifications, Profile or Education CSV.');
+  if (buffer.length > MAX_ENTRY_BYTES) throw new AppError(422, 'The CSV is too large.');
+  return { [name]: new TextDecoder('utf-8').decode(buffer) };
+}
+
+export function parseLinkedInUpload(buffer, filename, dictionary, sections) {
+  const files = readLinkedInUpload(buffer, filename);
+  if (sections !== undefined) {
+    if (!Array.isArray(sections) || !sections.length || sections.length > 6 || sections.some((name) => typeof name !== 'string' || !Object.hasOwn(files, name))) throw new AppError(400, 'Select at least one available export section.');
+    return parseLinkedInFiles(Object.fromEntries([...new Set(sections)].map((name) => [name, files[name]])), dictionary);
+  }
+  return parseLinkedInFiles(files, dictionary);
+}
+
+export function previewLinkedInUpload(buffer, filename, dictionary) {
+  const files = readLinkedInUpload(buffer, filename);
+  const full = parseLinkedInFiles(files, dictionary);
+  return { sections: full.sectionsFound.map((name) => {
+    const parsed = parseLinkedInFiles({ [name]: files[name] }, dictionary);
+    return { name, evidenceCount: parsed.evidence.length, skills: [...new Set(parsed.evidence.map((item) => item.rawName))], profileText: parsed.profileText };
+  }) };
 }

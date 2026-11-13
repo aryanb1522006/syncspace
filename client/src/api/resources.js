@@ -49,8 +49,17 @@ export const api = {
   githubExchange: (code, state, verifier) => liveOnly(() => request('/integrations/github/exchange', { method: 'POST', body: json({ code, state, verifier }) })),
   githubSync: () => liveOnly(() => request('/integrations/github/sync', { method: 'POST' })),
   githubDisconnect: (deleteEvidence) => liveOnly(() => request(`/integrations/github?deleteEvidence=${deleteEvidence ? 'true' : 'false'}`, { method: 'DELETE' })),
-  linkedinImport: (file) => liveOnly(() => {
+  linkedinAuthorizeUrl: (browserChallenge) => liveOnly(() => request(`/integrations/linkedin/authorize?browserChallenge=${encodeURIComponent(browserChallenge)}`)),
+  linkedinExchange: (code, state, verifier) => liveOnly(() => request('/integrations/linkedin/exchange', { method: 'POST', body: json({ code, state, verifier }) })),
+  linkedinUseDetails: (fields) => liveOnly(() => request('/integrations/linkedin/profile', { method: 'POST', body: json({ fields }) })),
+  linkedinDisconnect: () => liveOnly(() => request('/integrations/linkedin/account', { method: 'DELETE' })),
+  linkedinPreview: (file) => liveOnly(() => {
     const body = new FormData(); body.append('export', file);
+    return request('/integrations/linkedin/preview', { method: 'POST', body });
+  }),
+  linkedinImport: (file, sections) => liveOnly(() => {
+    const body = new FormData(); body.append('export', file);
+    body.append('confirm', 'true'); body.append('sections', JSON.stringify(sections));
     return request('/integrations/linkedin/import', { method: 'POST', body });
   }),
   linkedinDelete: () => liveOnly(() => request('/integrations/linkedin', { method: 'DELETE' })),

@@ -35,6 +35,17 @@ it('does not exchange a callback from a different browser', async () => {
   expect(exchange).not.toHaveBeenCalled();
 });
 
+it('completes the LinkedIn hash callback once and removes its code and browser proof', async () => {
+  const id = '22222222-2222-4222-8222-222222222222';
+  const exchange = vi.spyOn(api, 'linkedinExchange').mockResolvedValue({});
+  sessionStorage.setItem(`syncspace-oauth:linkedin:${id}`, JSON.stringify({ verifier: 'linkedin-proof', expiresAt: Date.now() + 60000 }));
+  show(`/integrations/linkedin/callback?code=linkedin-code&state=fixture-state&requestId=${id}`);
+  await waitFor(() => expect(exchange).toHaveBeenCalledExactlyOnceWith('linkedin-code', 'fixture-state', 'linkedin-proof'));
+  expect(await screen.findByRole('heading', { level: 1, name: 'Your profile' })).toBeVisible();
+  expect(sessionStorage.getItem(`syncspace-oauth:linkedin:${id}`)).toBeNull();
+  expect(window.location.href).not.toContain('linkedin-code');
+});
+
 it('keeps ordinary app routes and unrelated external-looking paths unchanged', () => {
   for (const pathname of ['/profile', '/', '/integrations/evil/callback', '//attacker.test']) expect(oauthCallbackRoute({ pathname, search: '?anything=1' })).toBeNull();
 });

@@ -34,7 +34,7 @@ export function MemberProfile() {
   return <AppShell>
     <Link className="back-link app-back" to="/teams"><ArrowLeft />Back to teams</Link>
     <section className="member-profile">
-      <span className="avatar avatar--mint">{initials}</span>
+      {student.avatarUrl ? <img className="avatar avatar--mint" src={student.avatarUrl} alt={`${student.name}'s profile photo`} referrerPolicy="no-referrer" /> : <span className="avatar avatar--mint">{initials}</span>}
       <span className="eyebrow">SyncSpace teammate</span>
       <h1>{student.name}</h1>
       {student.email

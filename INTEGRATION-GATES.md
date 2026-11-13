@@ -35,31 +35,31 @@ Scope: fix the three reviewed defects, audit and test the rumani release, merge 
 - [x] A7: independent audit pass finds no unresolved issue in the changes
   EVIDENCE: Audit re-read callback origins, one-time claims, PKCE, secret logging, SQL audience rules, connection identity checks, revoked disconnect, RLS and startup migrations; the targeted regressions and complete suites passed, with no unresolved defect found in these changes. Real provider consent still requires app configuration.
 
-- [ ] A8: CI succeeds for the pushed fix revision and PR 7 is merged into main
-  EVIDENCE: pending
+- [x] A8: CI succeeds for the pushed fix revision and PR 7 is merged into main
+  EVIDENCE: PR 7 merged as 8844b37f7e08fe8dde38f48bd7102de4d96987f9 after exact-head CI and both Appwrite checks succeeded (run 43413200437).
 
-- [ ] B1: LinkedIn basic connection validates signed identity, browser binding and one-time authorization
+- [x] B1: LinkedIn basic connection validates signed identity, browser binding and one-time authorization
   CHECK: node --test server/test/linkedinOAuth.integration.test.js
   EXPECT: fail 0
-  EVIDENCE: pending
+  EVIDENCE: 135 server tests passed with RUN_DB_TESTS=true against isolated PostgreSQL; OIDC signature/issuer/audience/nonce/expiry, browser binding, replay, duplicate account and paused-disconnect tests passed.
 
-- [ ] B2: LinkedIn ZIP and CSV imports are previewed before storing selected sections
+- [x] B2: LinkedIn ZIP and CSV imports are previewed before storing selected sections
   CHECK: node --test server/test/linkedinImport.integration.test.js
   EXPECT: fail 0
-  EVIDENCE: pending
+  EVIDENCE: Real HTTP ZIP and CSV tests passed: no preview writes, confirmation required, section validation, private evidence, replacement and deletion. CSV limits passed.
 
-- [ ] B3: both provider interfaces and import review work in the browser and client tests
+- [x] B3: both provider interfaces and import review work in the browser and client tests
   CHECK: pnpm.cmd --filter ./client test
   EXPECT: Test Files
-  EVIDENCE: pending
+  EVIDENCE: 36 client tests passed; local real-API browser login, Skills.csv preview and confirmation showed Docker/Python suggestions requiring proficiency and private React evidence.
 
-- [ ] B4: the final combined release passes regressions and a production build
+- [x] B4: the final combined release passes regressions and a production build
   CHECK: pnpm.cmd test
   EXPECT: Test Files
-  EVIDENCE: pending
+  EVIDENCE: pnpm test: 135 server, 36 client, zero failed/skipped. pnpm build, validate:config, verify:course and git diff --check passed.
 
-- [ ] B5: exact developer-app setup, deployment and real-consent verification are documented
-  EVIDENCE: pending
+- [x] B5: exact developer-app setup, deployment and real-consent verification are documented
+  EVIDENCE: docs/phases/phase-20-linkedin-connected-imports.md contains exact app registrations, private environment variables, rollout/rollback and real-consent checks. Owner configuration is required for live consent.
 
 - [ ] B6: final source is pushed and local testing uses the fixed implementation
   EVIDENCE: pending

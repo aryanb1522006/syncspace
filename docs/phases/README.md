@@ -22,3 +22,5 @@
 | 18 | GitHub and LinkedIn profile intelligence | Implemented in repository | 117 server and 30 client tests pass; production build; PostgreSQL test runs in CI only; real OAuth needs a registered GitHub OAuth App |
 
 Each phase has a separate document containing its decisions, delivered scope, verification evidence, and known constraints.
+
+Phase 19 repairs callback routing, recommendation visibility and sync/disconnect races. See [the repair and OAuth setup](phase-19-integration-repair.md).

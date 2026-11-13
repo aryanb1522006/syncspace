@@ -1,6 +1,6 @@
 import { query } from '../config/db.js';
 import { getProjectById } from './projectModel.js';
-import { getStudentByUserId } from './studentModel.js';
+import { contactAudienceSql, getStudentByUserId } from './studentModel.js';
 
 export async function getStudentRecommendationContext(userId, collegeId) {
   const profile = await getStudentByUserId(userId);
@@ -76,7 +76,9 @@ export async function getTeammateRecommendationContext(projectId, collegeId) {
         COALESCE((SELECT json_agg(json_build_object('skillId', s.id, 'name', s.name,
           'proficiency', ss.proficiency,
           'evidenceSources', ARRAY(SELECT DISTINCT se.source::text FROM skill_evidence se
-            WHERE se.student_id = sp.id AND se.skill_id = s.id ORDER BY 1)))
+            WHERE se.student_id = sp.id AND se.skill_id = s.id
+              AND (se.visibility = 'college' OR (se.visibility = 'team' AND ${contactAudienceSql('sp', '$3', '$2')}))
+            ORDER BY 1)))
           FROM student_skills ss JOIN skills s ON s.id = ss.skill_id
           WHERE ss.student_id = sp.id), '[]') AS skills,
         EXISTS (SELECT 1 FROM applications a WHERE a.student_id = sp.id AND a.project_id = $1) AS "hasApplication",

@@ -45,8 +45,8 @@ export const api = {
   // GitHub / LinkedIn profile intelligence needs real OAuth and real
   // uploads, so demo mode reports it as unavailable instead of faking data.
   integrations: () => use(() => Promise.resolve({ demo: true }), () => request('/integrations')),
-  githubAuthorizeUrl: () => liveOnly(() => request('/integrations/github/authorize')),
-  githubExchange: (code, state) => liveOnly(() => request('/integrations/github/exchange', { method: 'POST', body: json({ code, state }) })),
+  githubAuthorizeUrl: (browserChallenge) => liveOnly(() => request(`/integrations/github/authorize?browserChallenge=${encodeURIComponent(browserChallenge)}`)),
+  githubExchange: (code, state, verifier) => liveOnly(() => request('/integrations/github/exchange', { method: 'POST', body: json({ code, state, verifier }) })),
   githubSync: () => liveOnly(() => request('/integrations/github/sync', { method: 'POST' })),
   githubDisconnect: (deleteEvidence) => liveOnly(() => request(`/integrations/github?deleteEvidence=${deleteEvidence ? 'true' : 'false'}`, { method: 'DELETE' })),
   linkedinImport: (file) => liveOnly(() => {

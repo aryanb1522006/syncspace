@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { pool, query } from '../src/config/db.js';
 import {
   deleteConnection,
+  getConnection,
   listEvidence,
   listVisibleEvidence,
   replaceSourceEvidence,
@@ -48,6 +49,7 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
     await replaceSourceEvidence({
       studentId: student.id,
       source: 'github',
+      expectedConnection: await getConnection(student.id, 'github'),
       evidence: [item(skill.React, 'React', 'isha/web', 'manifest_dependency'), item(skill.Docker, 'Docker', 'isha/web', 'config_file', 0.5)],
       profileText: 'web: Campus energy dashboard.'
     });
@@ -62,6 +64,7 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
     await replaceSourceEvidence({
       studentId: student.id,
       source: 'github',
+      expectedConnection: await getConnection(student.id, 'github'),
       evidence: [item(skill.React, 'React', 'isha/web', 'manifest_dependency', 0.55), item(skill.Kubernetes, 'Kubernetes', 'isha/web', 'config_file', 0.5)],
       profileText: 'web: Campus energy dashboard.'
     });

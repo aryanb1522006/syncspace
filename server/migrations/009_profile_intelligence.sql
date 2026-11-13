@@ -19,7 +19,7 @@ CREATE TYPE profile_source AS ENUM ('github', 'linkedin_export');
 CREATE TYPE evidence_visibility AS ENUM ('private', 'team', 'college');
 CREATE TYPE skill_decision AS ENUM ('approved', 'rejected');
 
-ALTER TABLE student_profiles ADD COLUMN linkedin_url TEXT
+ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS linkedin_url TEXT
   CHECK (linkedin_url IS NULL OR linkedin_url ~ '^https://(www\.)?linkedin\.com/in/[A-Za-z0-9_-]{3,100}/?$');
 
 CREATE TABLE profile_connections (

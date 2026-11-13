@@ -1,6 +1,7 @@
 import { Check, FileArchive, Github, Linkedin, RefreshCw, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/resources.js';
+import { startProviderConnection } from '../api/providerConnection.js';
 import { Button } from './Button.jsx';
 
 const proficiencyLevels = [1, 2, 3, 4, 5];
@@ -104,8 +105,7 @@ export function ConnectedProfiles({ onSkillsChanged, initialMessage = '' }) {
   const connectGitHub = async () => {
     setBusy(true); setError('');
     try {
-      const { url } = await api.githubAuthorizeUrl();
-      window.location.assign(url);
+      await startProviderConnection('github', api.githubAuthorizeUrl);
     } catch (reason) {
       setError(reason.message);
       setBusy(false);
@@ -147,7 +147,7 @@ export function ConnectedProfiles({ onSkillsChanged, initialMessage = '' }) {
                 : <div className="source-card__confirm">
                   <label><input type="checkbox" checked={deleteGitHubEvidence} onChange={(event) => setDeleteGitHubEvidence(event.target.checked)} />Also delete all GitHub evidence</label>
                   <p>Skills you already approved stay on your profile.</p>
-                  <Button type="button" disabled={busy} onClick={() => run(() => api.githubDisconnect(deleteGitHubEvidence), 'GitHub disconnected and SyncSpace access revoked.').then(() => setConfirmDisconnect(false))}>Confirm disconnect</Button>
+                  <Button type="button" disabled={busy} onClick={() => run(() => api.githubDisconnect(deleteGitHubEvidence), 'GitHub disconnected. Stored authorization was removed; you can also revoke SyncSpace in GitHub settings.').then(() => setConfirmDisconnect(false))}>Confirm disconnect</Button>
                   <Button type="button" variant="secondary" onClick={() => setConfirmDisconnect(false)}>Cancel</Button>
                 </div>}
             </div>

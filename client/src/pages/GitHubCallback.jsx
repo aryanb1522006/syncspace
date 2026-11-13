@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api/resources.js';
+import { oauthCompletion } from '../api/providerConnection.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 
@@ -8,7 +9,7 @@ import { Button } from '../components/Button.jsx';
 // forwards code + state to the API with the signed-in user's own token;
 // the API checks the state was issued to this same user.
 export function GitHubCallback() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   // A GitHub code can be exchanged only once; StrictMode runs effects twice.
@@ -17,22 +18,15 @@ export function GitHubCallback() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    if (params.get('error')) {
-      setError(params.get('error') === 'access_denied'
-        ? 'GitHub connection was cancelled. Nothing was shared.'
-        : 'GitHub did not complete the connection.');
-      return;
-    }
-    const code = params.get('code');
-    const state = params.get('state');
-    if (!code || !state) {
-      setError('This GitHub connection link is incomplete.');
-      return;
-    }
-    api.githubExchange(code, state)
+    let completion;
+    try { completion = oauthCompletion('github', params); }
+    catch (reason) { setError(reason.message); setParams({}, { replace: true }); return; }
+    setParams({}, { replace: true });
+    api.githubExchange(completion.code, completion.state, completion.verifier)
       .then(() => navigate('/profile', { replace: true, state: { message: 'GitHub connected. Review the suggested skills below.' } }))
-      .catch((reason) => setError(reason.message));
-  }, [navigate, params]);
+      .catch((reason) => setError(reason.message))
+      .finally(completion.clear);
+  }, [navigate, params, setParams]);
 
   return <AppShell>
     {error

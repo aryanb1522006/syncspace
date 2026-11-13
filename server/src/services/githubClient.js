@@ -10,6 +10,7 @@
 // `fetchImpl` is injectable so tests never touch the network.
 
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
 import { AppError } from '../utils/AppError.js';
 import { MANIFEST_FILES } from './githubAnalyzer.js';
 
@@ -44,6 +45,8 @@ const encodePath = (path) => path.split('/').map(encodeURIComponent).join('/');
 export function createGitHubClient({ token, fetchImpl = fetch }) {
   async function call(path, { raw = false, allowMissing = false } = {}) {
     const response = await fetchImpl(`${API}${path}`, {
+      signal: AbortSignal.timeout(15000),
+      redirect: 'error',
       headers: {
         Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json',
         Authorization: `Bearer ${token}`,
@@ -102,7 +105,11 @@ export function createGitHubClient({ token, fetchImpl = fetch }) {
   }
 
   return {
-    getAuthenticatedUser: () => call('/user'),
+    async getAuthenticatedUser() {
+      const user = await call('/user');
+      if (!Number.isSafeInteger(user.id) || user.id <= 0 || !/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(user.login ?? '')) throw new AppError(502, 'GitHub returned an invalid account identity');
+      return { ...user, html_url: `https://github.com/${user.login}` };
+    },
 
     /** Public repositories the user owns, most recently pushed first. */
     async listPublicRepositories(login, maxRepos) {
@@ -124,8 +131,8 @@ export function createGitHubClient({ token, fetchImpl = fetch }) {
 const STATE_PURPOSE = 'github-connect';
 
 /** Short-lived signed OAuth `state`, bound to the SyncSpace user who started the connection. */
-export function createConnectState(userId, secret) {
-  return jwt.sign({ purpose: STATE_PURPOSE }, secret, { subject: String(userId), expiresIn: '10m' });
+export function createConnectState(userId, secret, requestId = randomUUID()) {
+  return jwt.sign({ purpose: STATE_PURPOSE }, secret, { subject: String(userId), jwtid: requestId, expiresIn: '10m', algorithm: 'HS256' });
 }
 
 /**
@@ -136,25 +143,29 @@ export function createConnectState(userId, secret) {
 export function verifyConnectState(state, userId, secret) {
   let payload;
   try {
-    payload = jwt.verify(state, secret);
+    payload = jwt.verify(state, secret, { algorithms: ['HS256'], maxAge: '10m' });
   } catch {
     throw new AppError(400, 'The GitHub connection request expired. Connect GitHub again.');
   }
-  if (payload.purpose !== STATE_PURPOSE || Number(payload.sub) !== Number(userId)) {
+  if (payload.purpose !== STATE_PURPOSE || (userId !== undefined && Number(payload.sub) !== Number(userId)) || !/^[0-9a-f-]{36}$/i.test(payload.jti ?? '')) {
     throw new AppError(403, 'This GitHub connection request belongs to a different SyncSpace session.');
   }
+  return { requestId: payload.jti, userId: Number(payload.sub) };
 }
 
-export function buildAuthorizeUrl({ clientId, redirectUri, state }) {
+export function buildAuthorizeUrl({ clientId, redirectUri, state, codeChallenge }) {
   const params = new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, state, allow_signup: 'false' });
+  if (codeChallenge) { params.set('code_challenge', codeChallenge); params.set('code_challenge_method', 'S256'); }
   return `${OAUTH}/authorize?${params}`;
 }
 
-export async function exchangeOAuthCode({ code, clientId, clientSecret, redirectUri, fetchImpl = fetch }) {
+export async function exchangeOAuthCode({ code, clientId, clientSecret, redirectUri, codeVerifier, fetchImpl = fetch }) {
   const response = await fetchImpl(`${OAUTH}/access_token`, {
     method: 'POST',
+    signal: AbortSignal.timeout(15000),
+    redirect: 'error',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'SyncSpace' },
-    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri })
+    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri, ...(codeVerifier ? { code_verifier: codeVerifier } : {}) })
   });
   if (!response.ok) throw new AppError(502, `GitHub sign-in failed (${response.status})`);
   // GitHub reports OAuth errors with HTTP 200 and an `error` field.
@@ -167,10 +178,12 @@ export async function exchangeOAuthCode({ code, clientId, clientSecret, redirect
   return payload.access_token;
 }
 
-/** Revokes the OAuth grant at GitHub. An already-revoked grant is not an error. */
+/** Revoke this token, so a concurrent new connection's grant stays intact. */
 export async function revokeOAuthGrant({ token, clientId, clientSecret, fetchImpl = fetch }) {
-  const response = await fetchImpl(`${API}/applications/${encodeURIComponent(clientId)}/grant`, {
+  const response = await fetchImpl(`${API}/applications/${encodeURIComponent(clientId)}/token`, {
     method: 'DELETE',
+    signal: AbortSignal.timeout(15000),
+    redirect: 'error',
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,

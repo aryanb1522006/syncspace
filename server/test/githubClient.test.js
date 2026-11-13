@@ -95,7 +95,7 @@ test('disconnect revokes the grant; an already-revoked grant is not an error', a
   const seen = [];
   const fetchImpl = async (url, options) => { seen.push([String(url), options.method]); return new Response(null, { status: 404 }); };
   await revokeOAuthGrant({ token: 't', clientId: 'abc', clientSecret: 'shh', fetchImpl });
-  assert.deepEqual(seen, [['https://api.github.com/applications/abc/grant', 'DELETE']]);
+  assert.deepEqual(seen, [['https://api.github.com/applications/abc/token', 'DELETE']]);
 });
 
 test('OAuth state is bound to the SyncSpace user who started the connection', () => {

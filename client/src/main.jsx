@@ -10,5 +10,9 @@ import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import './styles.css';
+import { oauthCallbackRoute } from './api/providerConnection.js';
+
+const callbackRoute = oauthCallbackRoute(window.location);
+if (callbackRoute) window.history.replaceState(window.history.state, '', callbackRoute);
 
 createRoot(document.getElementById('root')).render(<StrictMode><HashRouter><ThemeProvider><AuthProvider><App /></AuthProvider></ThemeProvider></HashRouter></StrictMode>);

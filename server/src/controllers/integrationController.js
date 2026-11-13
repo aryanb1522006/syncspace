@@ -1,4 +1,6 @@
 import { env } from '../config/env.js';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { claimOAuthRequest, createOAuthRequest, getOAuthReturn, oauthChallenge } from '../models/integrationOAuthModel.js';
 import {
   deleteConnection,
   getConnection,
@@ -62,6 +64,7 @@ async function overview(student) {
 }
 
 async function syncGitHub(student, connection) {
+  if (!connection) throw new AppError(409, 'The GitHub connection changed. Reload your profile.');
   try {
     const token = decryptToken(connection.accessTokenCiphertext, env.tokenEncryptionKey);
     const client = createGitHubClient({ token });
@@ -72,9 +75,9 @@ async function syncGitHub(student, connection) {
     const data = await client.collectRepositoryData(repos);
     const dictionary = await listSkillDictionary();
     const { evidence, profileText } = analyzeRepositories(data, dictionary);
-    await replaceSourceEvidence({ studentId: student.id, source: 'github', evidence, profileText });
+    await replaceSourceEvidence({ studentId: student.id, source: 'github', evidence, profileText, expectedConnection: connection });
   } catch (error) {
-    await recordSyncError(student.id, 'github', error.message, { revoked: error instanceof GitHubRevokedError });
+    await recordSyncError(student.id, 'github', error.message, { revoked: error instanceof GitHubRevokedError, expectedConnection: connection });
     throw error;
   }
 }
@@ -85,20 +88,44 @@ export async function getOverview(req, res) {
 
 export async function getGitHubAuthorizeUrl(req, res) {
   requireGitHubConfigured();
-  const state = createConnectState(req.user.id, env.jwtSecret);
-  res.json({ url: buildAuthorizeUrl({ clientId: env.githubClientId, redirectUri: env.githubRedirectUri, state }) });
+  const challenge = req.query.browserChallenge;
+  if (typeof challenge !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(challenge)) throw new AppError(400, 'Reload your profile and start the connection again.');
+  const student = await currentStudent(req);
+  const returnOrigin = req.headers.origin ?? env.clientOrigins[0];
+  if (!env.clientOrigins.includes(returnOrigin)) throw new AppError(400, 'Start this connection from SyncSpace.');
+  const id = randomUUID();
+  const verifier = randomBytes(32).toString('base64url');
+  await createOAuthRequest({ id, studentId: student.id, provider: 'github', browserChallenge: challenge, returnOrigin, verifierCiphertext: encryptToken(verifier, env.tokenEncryptionKey) });
+  const state = createConnectState(req.user.id, env.jwtSecret, id);
+  res.json({ requestId: id, url: buildAuthorizeUrl({ clientId: env.githubClientId, redirectUri: env.githubRedirectUri, state, codeChallenge: oauthChallenge(verifier) }) });
+}
+
+export async function githubCallbackBridge(req, res) {
+  const { state, code, error } = req.query;
+  if (typeof state !== 'string' || state.length > 2000 || (code && (typeof code !== 'string' || code.length > 2000))) throw new AppError(400, 'Invalid account callback');
+  const { requestId, userId } = verifyConnectState(state, undefined, env.jwtSecret);
+  const origin = await getOAuthReturn(requestId, 'github', userId);
+  if (!env.clientOrigins.includes(origin)) throw new AppError(400, 'This callback origin is no longer allowed');
+  const params = new URLSearchParams({ state, requestId });
+  if (error) params.set('error', 'access_denied');
+  else if (code) params.set('code', code);
+  else throw new AppError(400, 'Missing account callback code');
+  const target = new URL('/', origin);
+  target.hash = `/integrations/github/callback?${params}`;
+  res.set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }).redirect(303, target.href);
 }
 
 export async function exchangeGitHubCode(req, res) {
   requireGitHubConfigured();
-  verifyConnectState(req.body.state, req.user.id, env.jwtSecret);
-
+  const { requestId } = verifyConnectState(req.body.state, req.user.id, env.jwtSecret);
   const student = await currentStudent(req);
+  const transaction = await claimOAuthRequest({ id: requestId, studentId: student.id, provider: 'github', verifier: req.body.verifier });
   const token = await exchangeOAuthCode({
     code: req.body.code,
     clientId: env.githubClientId,
     clientSecret: env.githubClientSecret,
-    redirectUri: env.githubRedirectUri
+    redirectUri: env.githubRedirectUri,
+    codeVerifier: decryptToken(transaction.verifier_ciphertext, env.tokenEncryptionKey)
   });
   const user = await createGitHubClient({ token }).getAuthenticatedUser();
   await saveGitHubConnection({
@@ -106,7 +133,8 @@ export async function exchangeGitHubCode(req, res) {
     providerUserId: String(user.id),
     username: user.login,
     profileUrl: user.html_url,
-    accessTokenCiphertext: encryptToken(token, env.tokenEncryptionKey)
+    accessTokenCiphertext: encryptToken(token, env.tokenEncryptionKey),
+    requestId
   });
   await syncGitHub(student, await getConnection(student.id, 'github'));
   res.json(await overview(student));
@@ -126,6 +154,7 @@ export async function disconnectGitHub(req, res) {
   const student = await currentStudent(req);
   const connection = await getConnection(student.id, 'github');
   if (!connection) throw new AppError(404, 'GitHub is not connected');
+  await deleteConnection(student.id, 'github', { deleteEvidence: req.validatedQuery?.deleteEvidence === 'true', expectedConnection: connection });
   if (env.githubOAuthConfigured && connection.accessTokenCiphertext) {
     try {
       await revokeOAuthGrant({
@@ -139,7 +168,6 @@ export async function disconnectGitHub(req, res) {
       req.log?.warn({ err: error }, 'GitHub grant revocation failed');
     }
   }
-  await deleteConnection(student.id, 'github', { deleteEvidence: req.validatedQuery?.deleteEvidence === 'true' });
   res.json(await overview(student));
 }
 

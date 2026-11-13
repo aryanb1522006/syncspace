@@ -20,6 +20,35 @@ export async function getStudentByUserId(userId) {
   const { rows } = await query('SELECT id FROM student_profiles WHERE user_id = $1', [userId]);
   return rows[0] ? getStudentById(rows[0].id) : null;
 }
+// Internal SQL fragment; arguments are fixed aliases/parameter positions from
+// our models, never request input. Profiles and recommendations share this rule.
+export function contactAudienceSql(target = 'target', viewer = '$1', college = '$3') {
+  return `(
+         ${target}.user_id = ${viewer}
+         OR EXISTS (
+           SELECT 1
+           FROM teams t
+           JOIN projects p ON p.id = t.project_id
+           WHERE p.college_id = ${college}
+             AND (
+               p.owner_id = ${viewer}
+               OR EXISTS (
+                 SELECT 1 FROM team_members viewer_tm
+                 JOIN student_profiles viewer_sp ON viewer_sp.id = viewer_tm.student_id
+                 WHERE viewer_tm.team_id = t.id AND viewer_sp.user_id = ${viewer}
+               )
+             )
+             AND (
+               p.owner_id = ${target}.user_id
+               OR EXISTS (
+                 SELECT 1 FROM team_members target_tm
+                 WHERE target_tm.team_id = t.id AND target_tm.student_id = ${target}.id
+               )
+             )
+         )
+       )`;
+}
+
 export async function canViewStudentContact(viewerUserId, targetStudentId, collegeId) {
   const { rows } = await query(
     `SELECT 1
@@ -27,30 +56,7 @@ export async function canViewStudentContact(viewerUserId, targetStudentId, colle
      JOIN users target_user ON target_user.id = target.user_id
      WHERE target.id = $2
        AND target_user.college_id = $3
-       AND (
-         target.user_id = $1
-         OR EXISTS (
-           SELECT 1
-           FROM teams t
-           JOIN projects p ON p.id = t.project_id
-           WHERE p.college_id = $3
-             AND (
-               p.owner_id = $1
-               OR EXISTS (
-                 SELECT 1 FROM team_members viewer_tm
-                 JOIN student_profiles viewer_sp ON viewer_sp.id = viewer_tm.student_id
-                 WHERE viewer_tm.team_id = t.id AND viewer_sp.user_id = $1
-               )
-             )
-             AND (
-               p.owner_id = target.user_id
-               OR EXISTS (
-                 SELECT 1 FROM team_members target_tm
-                 WHERE target_tm.team_id = t.id AND target_tm.student_id = target.id
-               )
-             )
-         )
-       )
+       AND ${contactAudienceSql()}
      LIMIT 1`,
     [viewerUserId, targetStudentId, collegeId]
   );

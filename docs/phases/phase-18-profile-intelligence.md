@@ -50,7 +50,7 @@ The architecture is unchanged. Approved skills are written to `student_skills`, 
 
 ## Setup
 
-1. GitHub → Settings → Developer settings → OAuth Apps → New. Set the callback URL to `<client origin>/integrations/github/callback`.
+1. GitHub → Settings → Developer settings → OAuth Apps → New. Set the callback URL to `<API origin>/api/integrations/github/callback`. [Phase 19](phase-19-integration-repair.md) adds the callback bridge, PKCE, browser binding and replay protection.
 2. Set `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI` (the same callback URL) and `TOKEN_ENCRYPTION_KEY` (32 random bytes, base64). In production, all four must be set together or not at all.
 3. Run `pnpm db:migrate` to apply `009_profile_intelligence.sql`.
 

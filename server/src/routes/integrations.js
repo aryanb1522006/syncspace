@@ -10,6 +10,7 @@ import {
   exchangeGitHubCode,
   getGitHubAuthorizeUrl,
   getOverview,
+  githubCallbackBridge,
   importLinkedIn,
   syncGitHubNow,
   updateEvidenceVisibility
@@ -20,6 +21,8 @@ import { validate } from '../middleware/validation.js';
 import { AppError } from '../utils/AppError.js';
 
 const router = Router();
+router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+router.get('/github/callback', asyncHandler(githubCallbackBridge));
 router.use(authenticate);
 
 // Sync and import call GitHub or parse uploads, so they get a tighter
@@ -27,6 +30,7 @@ router.use(authenticate);
 const syncLimiter = rateLimit({
   windowMs: env.rateLimitWindowMs,
   limit: 20,
+  keyGenerator: (req) => String(req.user.id),
   standardHeaders: 'draft-8',
   legacyHeaders: false
 });
@@ -43,6 +47,7 @@ const linkedinUpload = multer({
 
 const exchangeSchema = z.object({
   code: z.string().trim().min(1).max(200),
+  verifier: z.string().regex(/^[A-Za-z0-9_-]{43,128}$/),
   state: z.string().trim().min(1).max(2000)
 }).strict();
 const disconnectSchema = z.object({ deleteEvidence: z.enum(['true', 'false']).optional() });

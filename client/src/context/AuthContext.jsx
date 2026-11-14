@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AUTH_EXPIRED_EVENT, clearStoredSession, getTokenExpiry, readStoredSession } from '../api/authSession.js';
 import { api } from '../api/resources.js';
 
@@ -8,6 +8,36 @@ export function AuthProvider({ children }) {
   const [initialSession] = useState(readStoredSession);
   const [user, setUser] = useState(initialSession.user);
   const [sessionExpired, setSessionExpired] = useState(initialSession.expired);
+  const profileRevision = useRef(0);
+  const userId = user?.id;
+
+  // Refresh presentation fields only. College identity, permissions and token
+  // always remain those of the existing SyncSpace session.
+  const syncProfile = useCallback((profile) => {
+    if (!profile?.id) return;
+    profileRevision.current += 1;
+    setUser((current) => {
+      if (!current || (profile.user_id != null && Number(profile.user_id) !== Number(current.id))
+        || (current.profile?.id != null && Number(current.profile.id) !== Number(profile.id))) return current;
+      const avatarUrl = profile.avatar_url ?? null;
+      if (current.profile?.name === profile.name && current.profile?.avatar_url === avatarUrl) return current;
+      return { ...current, profile: { ...current.profile, id: profile.id, name: profile.name, avatar_url: avatarUrl } };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (user) localStorage.setItem('syncspace-user', JSON.stringify(user));
+  }, [user]);
+
+  useEffect(() => {
+    if (!userId) return undefined;
+    let active = true;
+    const revision = profileRevision.current;
+    api.getMe().then(({ student }) => {
+      if (active && revision === profileRevision.current) syncProfile(student);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [userId, syncProfile]);
 
   useEffect(() => {
     const expire = () => {
@@ -43,6 +73,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({
     user,
     sessionExpired,
+    syncProfile,
     login: async (input) => commit(await api.login(input)),
     register: async (input) => commit(await api.register(input)),
     googleLogin: async (credential) => commit(await api.googleLogin(credential)),
@@ -51,7 +82,7 @@ export function AuthProvider({ children }) {
       setSessionExpired(false);
       setUser(null);
     }
-  }), [sessionExpired, user]);
+  }), [sessionExpired, user, syncProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

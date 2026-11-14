@@ -5,6 +5,7 @@ import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { ProfileAvatar } from '../components/ProfileAvatar.jsx';
 
 export function MemberProfile() {
   const { id, userId } = useParams();
@@ -24,7 +25,6 @@ export function MemberProfile() {
   if (error) return <AppShell><div className="empty-panel"><h2>Profile could not be loaded</h2><p>{error}</p><Button to="/dashboard">Back to dashboard</Button></div></AppShell>;
   if (!student) return <AppShell><div className="loading">Loading member profile?</div></AppShell>;
 
-  const initials = student.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
   const ownProfile = Number(student.userId) === Number(user?.id);
   const interests = student.interests ?? [];
   const skills = student.skills ?? [];
@@ -34,7 +34,7 @@ export function MemberProfile() {
   return <AppShell>
     <Link className="back-link app-back" to="/teams"><ArrowLeft />Back to teams</Link>
     <section className="member-profile">
-      {student.avatarUrl ? <img className="avatar avatar--mint" src={student.avatarUrl} alt={`${student.name}'s profile photo`} referrerPolicy="no-referrer" /> : <span className="avatar avatar--mint">{initials}</span>}
+      <ProfileAvatar name={student.name} photoUrl={student.avatarUrl} />
       <span className="eyebrow">SyncSpace teammate</span>
       <h1>{student.name}</h1>
       {student.email

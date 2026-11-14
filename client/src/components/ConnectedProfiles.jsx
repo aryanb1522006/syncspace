@@ -185,14 +185,14 @@ export function ConnectedProfiles({ onSkillsChanged, onProfileUpdated, profileDi
         {account ? <div>
           <p>Connected as <strong>{account.name}</strong></p>
           {account.pictureUrl && <img src={account.pictureUrl} alt="Your LinkedIn account photo" width="64" height="64" referrerPolicy="no-referrer" />}
-          <label><input type="checkbox" checked={detailFields.includes('name')} disabled={busy} onChange={() => setDetailFields((fields) => toggle(fields, 'name'))} />Use name: {account.name}</label>
-          {account.pictureUrl && <label><input type="checkbox" checked={detailFields.includes('photo')} disabled={busy} onChange={() => setDetailFields((fields) => toggle(fields, 'photo'))} />Use photo on my college profile</label>}
+          <label className="source-card__choice"><input type="checkbox" checked={detailFields.includes('name')} disabled={busy} onChange={() => setDetailFields((fields) => toggle(fields, 'name'))} />Use name: {account.name}</label>
+          {account.pictureUrl && <label className="source-card__choice"><input type="checkbox" checked={detailFields.includes('photo')} disabled={busy} onChange={() => setDetailFields((fields) => toggle(fields, 'photo'))} />Use photo on my college profile</label>}
           <div className="source-card__actions">
             <Button type="button" disabled={busy || profileDirty || !detailFields.length} onClick={useDetails}>Use selected details</Button>
             <Button type="button" variant="secondary" disabled={busy} onClick={() => run(async () => {
               const next = await api.linkedinDisconnect();
               const { student } = await api.getMe();
-              onProfileUpdated?.((current) => ({ ...current, avatar_url: student.avatar_url, avatar_source: student.avatar_source }));
+              onProfileUpdated?.(student, { preserveEdits: true });
               setDetailFields([]); return next;
             }, 'LinkedIn disconnected and its profile photo removed. Copied name and export imports stay. You can revoke SyncSpace in LinkedIn settings.')}>Disconnect account</Button>
           </div>

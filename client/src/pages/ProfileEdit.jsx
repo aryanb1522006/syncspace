@@ -5,6 +5,8 @@ import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 import { ConnectedProfiles } from '../components/ConnectedProfiles.jsx';
+import { ProfileAvatar } from '../components/ProfileAvatar.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const proficiencyLevels = [1, 2, 3, 4, 5];
 
@@ -18,13 +20,18 @@ export function ProfileEdit() {
   const [message, setMessage] = useState('');
   const [dirty, setDirty] = useState(false);
   const location = useLocation();
+  const { syncProfile } = useAuth();
+  const applySavedProfile = useCallback((student, { preserveEdits = false } = {}) => {
+    setProfile((current) => preserveEdits ? { ...current, avatar_url: student.avatar_url, avatar_source: student.avatar_source } : student);
+    syncProfile(student);
+  }, [syncProfile]);
 
   useEffect(() => {
     Promise.all([api.getMe(), api.listSkills()]).then(([{ student }, { skills: options }]) => {
-      setProfile(student);
+      applySavedProfile(student);
       setSkills(options);
     });
-  }, []);
+  }, [applySavedProfile]);
   // Approving an evidence-backed suggestion adds a skill server-side.
   const reloadSkills = useCallback(async () => {
     const { student } = await api.getMe();
@@ -46,7 +53,7 @@ export function ProfileEdit() {
         availabilityHoursPerWeek: Number(profile.availability_hours_per_week),
         ...(profile.linkedin_url !== undefined ? { linkedinUrl: profile.linkedin_url ?? '' } : {})
       });
-      setProfile(student);
+      applySavedProfile(student);
       setDirty(false);
       setMessage('Profile saved.');
     } catch (reason) {
@@ -119,6 +126,7 @@ export function ProfileEdit() {
     <form className="profile-form" onSubmit={saveProfile}>
       <section>
         <h2>About you</h2>
+        <div className="profile-photo"><ProfileAvatar name={profile.name} photoUrl={profile.avatar_url} label="Your profile photo" /><div><strong>Profile photo</strong><p>{profile.avatar_url ? 'Visible on your college profile.' : 'Choose your photo in Connected profiles below.'}</p></div></div>
         <div className="form-grid"><label>Full name<input value={profile.name} onChange={update('name')} /></label><label>Department<input value={profile.department ?? ''} onChange={update('department')} /></label><label>Year<select value={profile.year ?? 1} onChange={update('year')}>{[1, 2, 3, 4].map((year) => <option key={year}>{year}</option>)}</select></label><label>Hours available each week<input type="number" min="0" max="168" value={profile.availability_hours_per_week} onChange={update('availability_hours_per_week')} /></label></div>
         <label>Bio<textarea rows="4" value={profile.bio ?? ''} onChange={update('bio')} /></label>
         <label>LinkedIn profile URL <small>(shown only to accepted teammates)</small><input type="url" placeholder="https://www.linkedin.com/in/your-name" value={profile.linkedin_url ?? ''} onChange={update('linkedin_url')} /></label>
@@ -136,6 +144,6 @@ export function ProfileEdit() {
       </section>
       {message && <p className="success-message" role="status">{message}</p>}
     </form>
-    <ConnectedProfiles onSkillsChanged={reloadSkills} profileDirty={dirty} onProfileUpdated={setProfile} initialMessage={location.state?.message ?? ''} />
+    <ConnectedProfiles onSkillsChanged={reloadSkills} profileDirty={dirty} onProfileUpdated={applySavedProfile} initialMessage={location.state?.message ?? ''} />
   </AppShell>;
 }

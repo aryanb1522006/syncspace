@@ -5,15 +5,15 @@ import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { NotificationMenu } from '../components/NotificationMenu.jsx';
 import { ProjectRow } from '../components/ProjectRow.jsx';
+import { ProfileAvatar } from '../components/ProfileAvatar.jsx';
 
 function WeekRail({ profile, applications }) {
   const latest = applications[0];
-  const initials = (profile?.name ?? 'Member').split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
   return <>
-    <div className="rail-top"><NotificationMenu /><span className="avatar avatar--ink">{initials}</span></div>
+    <div className="rail-top"><NotificationMenu /><ProfileAvatar name={profile?.name} photoUrl={profile?.avatar_url} className="avatar avatar--ink" /></div>
     <section><h2>Your week</h2><div className="week-time"><span><Clock3 /></span><strong>{profile?.availability_hours_per_week ?? 0}h<small>available</small></strong></div></section>
     <section><h3>Your applications</h3>{latest ? <Link className="rail-row" to="/applications"><span className="avatar avatar--lavender">{latest.title.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span><span>{latest.title} · <em>{latest.status}</em></span><ChevronRight /></Link> : <p>No applications yet.</p>}</section>
-    <section><h3>Finish your profile</h3><Link className="rail-plain" to="/profile"><span>{profile?.skills?.length ? `${profile.skills.length} skills added` : 'Add your skills'}</span><ChevronRight /></Link><div className="profile-ring">{initials}</div></section>
+    <section><h3>Finish your profile</h3><Link className="rail-plain" to="/profile"><span>{profile?.skills?.length ? `${profile.skills.length} skills added` : 'Add your skills'}</span><ChevronRight /></Link><ProfileAvatar name={profile?.name} photoUrl={profile?.avatar_url} className="profile-ring" /></section>
   </>;
 }
 

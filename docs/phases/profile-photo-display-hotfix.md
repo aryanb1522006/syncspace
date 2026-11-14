@@ -1,0 +1,11 @@
+# Saved LinkedIn photo display repair
+
+LinkedIn account linking and the selected-photo API write worked, but the signed-in sidebar always rendered initials from the cached login response. The profile editor did not render the saved photo, and applying account details updated only its local form state. The account preview therefore displayed the image and a save confirmation while the user's avatar stayed unchanged.
+
+A shared `ProfileAvatar` renders saved photos in the sidebar, own profile, dashboard rail and member profile, with a no-referrer image request, circular crop and initials fallback on load failure. A different image URL can load after a prior failure. The profile editor explicitly shows the current saved profile photo. LinkedIn selection checkboxes are aligned beside their labels with a fixed-size input and clickable label.
+
+The authentication context refreshes presentation fields from the owner-only profile endpoint at session startup and exposes a stable profile-sync operation. Loading/saving profile details and applying/disconnecting LinkedIn details refresh the session's cached display name/photo. This changes neither the session token nor college identity/permissions. A late startup fetch cannot overwrite a newer explicit save. Disconnect clears the photo immediately while preserving unsaved about-you fields.
+
+Regression tests cover already-saved photo hydration, selecting only the photo, immediate sidebar/profile rendering, cache persistence across remount, preserving college identity, disconnect with unsaved bio, broken-image fallback/recovery, and a delayed stale refresh. The original UI failed the first three photo regressions. No server, database, provider scopes or credentials change.
+
+Rollout: deploy the updated frontend from `main` through Appwrite Sites. A Render redeploy is unnecessary for this change. Refresh the deployed profile after the build finishes. If the photo was already applied, it should appear on load. Otherwise select **Use photo on my college profile**, then **Use selected details**. No LinkedIn reconnection is needed while the existing account photo URL remains valid. Expired provider photo URLs fall back to initials and can be refreshed by reconnecting.

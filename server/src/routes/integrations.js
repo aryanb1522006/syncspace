@@ -20,6 +20,7 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
 import { AppError } from '../utils/AppError.js';
+import { MAX_LINKEDIN_AUTHORIZATION_CODE_LENGTH } from '../services/linkedinIdentity.js';
 
 const router = Router();
 router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
@@ -52,6 +53,9 @@ const exchangeSchema = z.object({
   verifier: z.string().regex(/^[A-Za-z0-9_-]{43,128}$/),
   state: z.string().trim().min(1).max(2000)
 }).strict();
+const linkedinExchangeSchema = exchangeSchema.extend({
+  code: z.string().trim().min(1).max(MAX_LINKEDIN_AUTHORIZATION_CODE_LENGTH)
+});
 const disconnectSchema = z.object({ deleteEvidence: z.enum(['true', 'false']).optional() });
 const skillParamsSchema = z.object({ skillId: z.coerce.number().int().positive() });
 const decisionSchema = z.object({
@@ -69,7 +73,7 @@ router.post('/github/exchange', syncLimiter, validate(exchangeSchema), asyncHand
 router.post('/github/sync', syncLimiter, asyncHandler(syncGitHubNow));
 router.delete('/github', validate(disconnectSchema, 'query'), asyncHandler(disconnectGitHub));
 router.get('/linkedin/authorize', asyncHandler(getLinkedinAuthorizeUrl));
-router.post('/linkedin/exchange', syncLimiter, validate(exchangeSchema), asyncHandler(exchangeLinkedinCode));
+router.post('/linkedin/exchange', syncLimiter, validate(linkedinExchangeSchema), asyncHandler(exchangeLinkedinCode));
 router.post('/linkedin/profile', validate(z.object({ fields: z.array(z.enum(['name', 'photo'])).min(1).max(2) }).strict()), asyncHandler(importLinkedinDetails));
 router.delete('/linkedin/account', asyncHandler(disconnectLinkedinAccount));
 router.post('/linkedin/preview', syncLimiter, linkedinUpload.single('export'), asyncHandler(previewLinkedIn));

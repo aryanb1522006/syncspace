@@ -4,13 +4,11 @@ import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 import { Modal } from '../components/Modal.jsx';
-import { NotificationMenu } from '../components/NotificationMenu.jsx';
 
 function OwnerRail({ projects }) {
   const pending = projects.reduce((total, project) => total + Number(project.pendingApplicationCount ?? 0), 0);
   const members = projects.reduce((total, project) => total + Number(project.memberCount ?? 0), 0);
   return <>
-    <div className="rail-top"><NotificationMenu /></div>
     <section><h2>Owner overview</h2><p>Applications refresh automatically while this page is open.</p></section>
     <section className="owner-rail-stats"><div><strong>{projects.length}</strong><span>projects</span></div><div><strong>{pending}</strong><span>pending</span></div><div><strong>{members}</strong><span>members</span></div></section>
   </>;

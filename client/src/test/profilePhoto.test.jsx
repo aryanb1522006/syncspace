@@ -8,7 +8,7 @@ import { api } from '../api/resources.js';
 
 vi.mock('../api/resources.js', () => ({ demoMode: false, api: {
   getMe: vi.fn(), listSkills: vi.fn(), listTeams: vi.fn(), notifications: vi.fn(),
-  integrations: vi.fn(), linkedinUseDetails: vi.fn(), linkedinDisconnect: vi.fn()
+  integrations: vi.fn(), linkedinUseDetails: vi.fn(), linkedinDisconnect: vi.fn(), getMyTeamContacts: vi.fn()
 } }));
 
 const photo = 'https://media.licdn.com/dms/fixture-photo';
@@ -27,6 +27,7 @@ beforeEach(() => {
   api.listSkills.mockResolvedValue({ skills: [] });
   api.listTeams.mockResolvedValue({ teams: [] });
   api.notifications.mockResolvedValue({ notifications: [] });
+  api.getMyTeamContacts.mockResolvedValue({ contacts: {} });
   api.integrations.mockImplementation(async () => overview());
   api.linkedinUseDetails.mockImplementation(async (fields) => {
     student = { ...student, ...(fields.includes('photo') ? { avatar_url: photo, avatar_source: 'linkedin' } : {}), ...(fields.includes('name') ? { name: 'LinkedIn Name' } : {}) };

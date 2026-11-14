@@ -45,6 +45,7 @@ export function AppShell({ children, rightRail, className = '' }) {
       <nav aria-label="Application navigation">{renderNavItems()}</nav>
       <NavLink className="sidebar__post" to="/projects/new"><PlusCircle /><span>Post a project</span></NavLink>
       <div className="sidebar__account">
+        <div className="sidebar__notifications"><NotificationMenu /></div>
         <NavLink className="person" to="/profile">
           <ProfileAvatar name={name} photoUrl={user?.profile?.avatar_url} />
           <span className="person__copy"><strong>{name}</strong>{email && <small>{email}</small>}</span>

@@ -96,6 +96,15 @@ function save(state) {
 }
 
 const wait = (value) => new Promise((resolve) => setTimeout(() => resolve(clone(value)), 140));
+const signedInUser = () => JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+const emptyContacts = { whatsappNumber: null, discordUsername: null, contactEmail: null };
+
+function demoTeamForUser(state, id, user) {
+  const team = state.teams.find((item) => Number(item.id) === Number(id));
+  if (team && (Number(team.owner_id) === Number(user?.id)
+    || team.members.some((member) => Number(member.userId ?? member.user_id ?? member.id) === Number(user?.id)))) return team;
+  throw Object.assign(new Error('You do not have access to this team'), { status: 403 });
+}
 
 export const demoApi = {
   async login({ email, password }) {
@@ -109,6 +118,29 @@ export const demoApi = {
     return wait({ token: `demo-token-${user.role}`, user });
   },
   async getMe() { return wait({ student: load().profile }); },
+  async getMyTeamContacts() {
+    const state = load();
+    return wait({ contacts: state.teamContactDetails?.[signedInUser()?.id] ?? emptyContacts });
+  },
+  async saveMyTeamContacts(input) {
+    const state = load();
+    const user = signedInUser();
+    if (!user) throw new Error('Sign in to save team contacts.');
+    const contacts = {
+      whatsappNumber: input.whatsappNumber.trim().replace(/[ ()-]/g, '') || null,
+      discordUsername: input.discordUsername.trim().toLowerCase() || null,
+      contactEmail: input.contactEmail.trim() || null
+    };
+    if (contacts.whatsappNumber && !/^\+[1-9]\d{6,14}$/.test(contacts.whatsappNumber)) {
+      throw new Error('Enter a WhatsApp number with its country code.');
+    }
+    if (contacts.discordUsername && !/^(?!.*\.\.)[a-z0-9_.]{2,32}$/.test(contacts.discordUsername)) {
+      throw new Error('Enter a valid Discord username.');
+    }
+    state.teamContactDetails = { ...state.teamContactDetails, [user.id]: contacts };
+    save(state);
+    return wait({ contacts });
+  },
   async getStudent(id) {
     const state = load();
     const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
@@ -332,6 +364,11 @@ export const demoApi = {
         state.teams.push(team);
       }
       application.teamId = team.id;
+      state.notifications.unshift({
+        id: Date.now(), user_id: state.profile.user_id, team_id: team.id,
+        message: `You joined ${project.title}. Your team workspace is ready.`, is_read: false,
+        created_at: new Date().toISOString()
+      });
     }
     save(state);
     return wait({ result: { applicationId: application.id, status, teamId: application.teamId ?? null } });
@@ -339,15 +376,62 @@ export const demoApi = {
   async listTeams() {
     const state = load();
     const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
-    const profileId = user?.profileId ?? user?.profile?.id;
-    const teams = state.teams.filter((team) => Number(team.owner_id) === Number(user?.id) || team.members.some((member) => Number(member.user_id ?? member.id) === Number(profileId)))
+    const teams = state.teams.filter((team) => Number(team.owner_id) === Number(user?.id)
+      || team.members.some((member) => Number(member.userId ?? member.user_id ?? member.id) === Number(user?.id)))
       .map((team) => ({ id: team.id, projectId: team.project_id, projectTitle: team.project_title, projectStatus: team.project_status, teamSize: team.teamSize, memberCount: team.members.length, domain: team.domain }));
     return wait({ teams });
   },
   async getTeam(id) {
-    const team = load().teams.find((item) => Number(item.id) === Number(id));
-    if (!team) throw new Error('Team not found');
-    return wait({ team });
+    const state = load();
+    const user = signedInUser();
+    const team = demoTeamForUser(state, id, user);
+    const people = [{
+      id: team.ownerProfileId, userId: team.owner_id, name: team.ownerName, role_label: 'Creator'
+    }, ...team.members];
+    const contacts = people.flatMap((person) => {
+      const userId = person.userId ?? person.user_id ?? person.id;
+      const details = state.teamContactDetails?.[userId];
+      if (Number(userId) === Number(user.id) || !details || !Object.values(details).some(Boolean)) return [];
+      return [{ ...details, studentId: person.id, name: person.name, role: person.role_label ?? 'Collaborator' }];
+    });
+    return wait({ team: { ...team, contacts } });
+  },
+  async saveGroupInvite(id, link) {
+    const state = load();
+    const user = signedInUser();
+    const team = demoTeamForUser(state, id, user);
+    if (Number(team.owner_id) !== Number(user.id)) throw new Error('Only the project owner can change the group invite');
+    const url = link.trim();
+    if (url && !/^https:\/\/(?:chat\.whatsapp\.com\/|discord\.gg\/|discord\.com\/invite\/)[A-Za-z0-9_-]{2,100}\/?(?:\?[^#\s]*)?$/.test(url)) {
+      throw new Error('Paste a WhatsApp group or Discord server invite link.');
+    }
+    team.groupInviteUrl = url ? url.split('?')[0].replace(/\/$/, '') : null;
+    save(state);
+    return wait({ groupInviteUrl: team.groupInviteUrl });
+  },
+  async removeTeamMember(id, studentId) {
+    const state = load();
+    const user = signedInUser();
+    const team = demoTeamForUser(state, id, user);
+    const member = team.members.find((person) => Number(person.profileId ?? person.id) === Number(studentId));
+    const memberUserId = member?.userId ?? member?.user_id ?? member?.id;
+    if (!member || (Number(team.owner_id) !== Number(user.id) && Number(memberUserId) !== Number(user.id))) {
+      throw new Error('Team member not found or you cannot remove them');
+    }
+    team.members = team.members.filter((person) => person !== member);
+    for (const task of team.tasks) {
+      if (Number(task.assigned_to) === Number(studentId) && task.status !== 'done') {
+        Object.assign(task, { assigned_to: null, assignee_name: null });
+      }
+    }
+    for (const application of state.applications) {
+      if (Number(application.teamId) === Number(id) && Number(application.studentId) === Number(studentId)) application.teamId = null;
+    }
+    for (const notification of state.notifications) {
+      if (Number(notification.team_id) === Number(id) && Number(notification.user_id) === Number(memberUserId)) notification.team_id = null;
+    }
+    save(state);
+    return wait(null);
   },
   async createTask(teamId, input) {
     const state = load();
@@ -368,7 +452,9 @@ export const demoApi = {
     }
     save(state); return wait({ task });
   },
-  async notifications() { return wait({ notifications: load().notifications }); },
+  async notifications() {
+    return wait({ notifications: load().notifications.filter((item) => !item.user_id || Number(item.user_id) === Number(signedInUser()?.id)) });
+  },
   async readNotification(id) {
     const state = load();
     const notification = state.notifications.find((item) => Number(item.id) === Number(id));

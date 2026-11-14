@@ -1,22 +1,36 @@
 import { getTaskById, createTask as createTaskRecord, updateTask as updateTaskRecord } from '../models/taskModel.js';
-import { canAccessTeam, getTeamById, isTeamMember, listAccessibleTeams } from '../models/teamModel.js';
+import { canAccessTeam, getTeamById, isTeamMember, listAccessibleTeams, removeTeamMember } from '../models/teamModel.js';
 import { AppError } from '../utils/AppError.js';
-import { getIO } from '../sockets/index.js';
+import { getIO, revokeWorkspaceAccess } from '../sockets/index.js';
+import { getTeamContacts } from '../models/teamContactModel.js';
 
 async function requireTeamAccess(teamId, userId, collegeId) {
   if (!(await canAccessTeam(teamId, userId, collegeId))) throw new AppError(403, 'You do not have access to this team');
 }
 
 export async function getTeam(req, res) {
+  res.set('Cache-Control', 'no-store');
   const id = Number(req.params.id);
   await requireTeamAccess(id, req.user.id, req.user.collegeId);
   const team = await getTeamById(id, req.user.collegeId);
   if (!team) throw new AppError(404, 'Team not found');
-  res.json({ team });
+  const contactDetails = await getTeamContacts(id, req.user.id, req.user.collegeId);
+  if (!contactDetails) throw new AppError(403, 'You do not have access to this team');
+  res.json({ team: { ...team, ...contactDetails } });
 }
 
 export async function listTeams(req, res) {
   res.json({ teams: await listAccessibleTeams(req.user.id, req.user.collegeId) });
+}
+
+export async function deleteTeamMember(req, res) {
+  const { id, studentId } = req.params;
+  const removedUserId = await removeTeamMember(id, studentId, req.user.id, req.user.collegeId);
+  if (!removedUserId) {
+    throw new AppError(404, 'Team member not found or you cannot remove them');
+  }
+  revokeWorkspaceAccess(id, removedUserId);
+  res.status(204).end();
 }
 
 export async function createTask(req, res) {

@@ -5,6 +5,8 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { validate } from '../middleware/validation.js';
 import { AppError } from '../utils/AppError.js';
+import { getMyTeamContacts, updateMyTeamContacts } from '../controllers/teamContactController.js';
+import { teamContactSchema } from '../utils/teamContactValidation.js';
 
 const router = Router();
 router.use(authenticate);
@@ -33,6 +35,8 @@ const skillsSchema = z.object({
 const skillParams = z.object({ id: z.coerce.number().int().positive(), skillId: z.coerce.number().int().positive() });
 
 router.get('/me', asyncHandler(getMe));
+router.get('/me/team-contacts', asyncHandler(getMyTeamContacts));
+router.put('/me/team-contacts', validate(teamContactSchema), asyncHandler(updateMyTeamContacts));
 router.get('/skills/dictionary', asyncHandler(listSkills));
 router.get('/by-user/:userId', asyncHandler(getStudentByUser));
 router.get('/:id/resume', asyncHandler(downloadResume));

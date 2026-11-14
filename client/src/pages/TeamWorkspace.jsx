@@ -1,11 +1,12 @@
 import { ArrowLeft, Check, Circle, ExternalLink, Plus, RefreshCw, UserRound, UsersRound } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, demoMode } from '../api/resources.js';
 import { getSocket } from '../api/socket.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 import { Modal } from '../components/Modal.jsx';
+import { TeamContacts } from '../components/TeamContacts.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 
@@ -25,23 +26,36 @@ function TeamRail({ team, isOwner }) {
 export function TeamWorkspace() {
   const { id } = useParams();
   const { user } = useAuth();
+  return <Workspace key={`${user?.id}:${id}`} id={id} user={user} />;
+}
+
+function Workspace({ id, user }) {
+  const navigate = useNavigate();
+  const { hash } = useLocation();
   const [team, setTeam] = useState(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: '', assignedTo: '', dueDate: '' });
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [memberAction, setMemberAction] = useState(null);
+  const [membershipBusy, setMembershipBusy] = useState(false);
+  const [membershipError, setMembershipError] = useState('');
   const refreshInFlight = useRef(false);
+  const dataRevision = useRef(0);
   const refresh = useCallback(async ({ silent = false } = {}) => {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
+    const revision = dataRevision.current;
     if (!silent) setSyncing(true);
     try {
       const { team: value } = await api.getTeam(id);
+      if (revision !== dataRevision.current) return;
       setTeam(value);
       setLastUpdated(new Date());
       setError('');
     } catch (reason) {
+      if ([401, 403, 404].includes(reason.status)) setTeam(null);
       setError(reason.message);
     } finally {
       refreshInFlight.current = false;
@@ -63,6 +77,12 @@ export function TeamWorkspace() {
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [refresh]);
+  const teamLoaded = Boolean(team);
+  useEffect(() => {
+    if (teamLoaded && hash === '#team-contacts-title') {
+      document.getElementById('team-contacts-title')?.scrollIntoView?.({ block: 'start' });
+    }
+  }, [teamLoaded, hash]);
   useEffect(() => {
     if (demoMode || !id) return undefined;
     const socket = getSocket();
@@ -75,9 +95,16 @@ export function TeamWorkspace() {
       refresh({ silent: true });
     };
     const onTaskEvent = () => refresh();
+    const revoke = (revokedId) => {
+      if (Number(revokedId) !== teamId) return;
+      dataRevision.current += 1;
+      setTeam(null);
+      setError('You no longer have access to this team.');
+    };
     socket.on('connect', join);
     socket.on('task:created', onTaskEvent);
     socket.on('task:updated', onTaskEvent);
+    socket.on('workspace:access-revoked', revoke);
     if (socket.connected) join();
     else socket.connect();
     return () => {
@@ -85,6 +112,7 @@ export function TeamWorkspace() {
       socket.off('connect', join);
       socket.off('task:created', onTaskEvent);
       socket.off('task:updated', onTaskEvent);
+      socket.off('workspace:access-revoked', revoke);
       // Disconnect so the next workspace visit re-authenticates with the
       // current token instead of reusing a previous user's session.
       socket.disconnect();
@@ -96,6 +124,31 @@ export function TeamWorkspace() {
     event.preventDefault(); setError('');
     const input = { title: draft.title, assignedTo: draft.assignedTo ? Number(draft.assignedTo) : null, ...(draft.dueDate ? { dueDate: draft.dueDate } : {}) };
     try { await api.createTask(id, input); setAdding(false); setDraft({ title: '', assignedTo: '', dueDate: '' }); await refresh(); } catch (reason) { setError(reason.message); }
+  };
+  const changeMembership = async () => {
+    setMembershipBusy(true);
+    setMembershipError('');
+    try {
+      await api.removeTeamMember(id, memberAction.id);
+      dataRevision.current += 1;
+      if (memberAction.leave) {
+        navigate('/teams', { replace: true });
+        return;
+      }
+      setTeam((current) => current && ({
+        ...current,
+        members: current.members.filter((member) => Number(member.id) !== Number(memberAction.id)),
+        contacts: (current.contacts ?? []).filter((contact) => Number(contact.studentId) !== Number(memberAction.id)),
+        tasks: current.tasks.map((task) => Number(task.assigned_to) === Number(memberAction.id) && task.status !== 'done'
+          ? { ...task, assigned_to: null, assignee_name: null } : task)
+      }));
+      setMemberAction(null);
+      await refresh();
+    } catch (reason) {
+      setMembershipError(reason.message);
+    } finally {
+      setMembershipBusy(false);
+    }
   };
 
   if (error && !team) return <AppShell><div className="empty-panel"><h2>Workspace could not be opened</h2><p>{error}</p><Button to="/teams">Back to teams</Button></div></AppShell>;
@@ -113,6 +166,11 @@ export function TeamWorkspace() {
   const memberProfilePath = (member) => (member.userId ?? member.user_id)
     ? `/profiles/users/${member.userId ?? member.user_id}`
     : `/profiles/${member.profileId ?? member.id}`;
+  const currentMember = team.members.find((member) => Number(member.userId ?? member.user_id) === Number(user?.id));
+  const confirmMemberChange = (member, leave = false) => {
+    setMembershipError('');
+    setMemberAction({ id: member.profileId ?? member.id, name: member.name, leave });
+  };
 
   return <AppShell className="workspace-shell" rightRail={<TeamRail team={team} isOwner={isOwner} />}>
     <Link className="back-link app-back" to="/teams"><ArrowLeft />My teams</Link>
@@ -123,8 +181,30 @@ export function TeamWorkspace() {
       {(ownerUserId || ownerProfileId) && <Link to={ownerUserId ? `/profiles/users/${ownerUserId}` : `/profiles/${ownerProfileId}`}><ExternalLink />View {ownerName}'s profile</Link>}
       {team.members.map((member) => <Link key={member.profileId ?? member.id} to={memberProfilePath(member)}><ExternalLink />View {member.name}'s profile</Link>)}
     </div>
+    <TeamContacts team={team} isOwner={isOwner} onInviteChanged={(groupInviteUrl) => {
+      dataRevision.current += 1;
+      setTeam((current) => current && ({ ...current, groupInviteUrl }));
+    }} />
     <div className="board-title"><div><h2>This week</h2><p className="workspace-sync" aria-live="polite"><i />{syncing ? 'Syncing workspace…' : lastUpdated ? `Live updates · checked ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(lastUpdated)}` : 'Connecting live updates…'}</p></div><div className="board-title__actions"><Button variant="secondary" onClick={() => refresh()} disabled={syncing}><RefreshCw className={syncing ? 'is-spinning' : ''} />Refresh</Button><Button variant="secondary" onClick={() => setAdding(true)}><Plus />Add task</Button></div></div>
     <div className="task-board">{columns.map(([status, label]) => <section className={`task-column task-column--${status}`} key={status}><h3>{label} · {grouped[status].length}</h3>{grouped[status].map((task) => <article className="task" key={task.id}><button onClick={() => move(task)} aria-label={`Move ${task.title} to ${nextStatus[task.status]}`}>{task.status === 'done' ? <Check /> : <Circle />}</button><div><h4>{task.title}</h4><div><span className={`mini-avatar ${task.assigned_to ? '' : 'unassigned'}`}>{task.assigned_to ? task.assignee_name.split(' ').map((part) => part[0]).join('') : <UserRound />}</span><span>{task.assignee_name ?? 'Unassigned'}</span><time>{task.due_date ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(task.due_date)) : '—'}</time></div></div></article>)}</section>)}</div>
     {adding && <Modal title="Add a task" onClose={() => setAdding(false)}><form className="modal-form" onSubmit={add}><label>Task title<input autoFocus value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} minLength="2" required /></label><label>Assign to<select value={draft.assignedTo} onChange={(event) => setDraft((current) => ({ ...current, assignedTo: event.target.value }))}><option value="">Unassigned</option>{team.members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select></label><label>Due date<input type="date" value={draft.dueDate} onChange={(event) => setDraft((current) => ({ ...current, dueDate: event.target.value }))} /></label><div><Button type="button" variant="secondary" onClick={() => setAdding(false)}>Cancel</Button><Button type="submit">Add task</Button></div></form></Modal>}
+    <div className="workspace-membership">
+      {isOwner && team.members.length > 0 && <details><summary>Manage members</summary>
+        <ul className="team-contacts__list">{team.members.map((member) =>
+          <li key={member.id}><strong>{member.name}</strong>
+            <Button variant="secondary" onClick={() => confirmMemberChange(member)} aria-label={`Remove ${member.name}`}>Remove</Button>
+          </li>)}</ul>
+      </details>}
+      {!isOwner && currentMember && <Button variant="secondary" onClick={() => confirmMemberChange(currentMember, true)}>Leave team</Button>}
+    </div>
+    {memberAction && <Modal title={memberAction.leave ? 'Leave this team?' : `Remove ${memberAction.name}?`}
+      onClose={() => { if (!membershipBusy) setMemberAction(null); }}>
+      <div className="modal-form">
+        <p>{memberAction.leave ? 'You’ll lose access to the workspace and team contacts.' : 'This member will lose access to the workspace and team contacts.'} Manage external group membership separately.</p>
+        {membershipError && <p className="form-error" role="alert">{membershipError}</p>}
+        <div><Button variant="secondary" disabled={membershipBusy} onClick={() => setMemberAction(null)}>Cancel</Button>
+          <Button disabled={membershipBusy} onClick={changeMembership}>{membershipBusy ? 'Updating…' : memberAction.leave ? 'Leave team' : 'Remove member'}</Button></div>
+      </div>
+    </Modal>}
   </AppShell>;
 }

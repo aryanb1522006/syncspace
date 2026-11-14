@@ -123,7 +123,7 @@ describe('Connected profiles', () => {
     await waitFor(() => expect(api.linkedinUseDetails).toHaveBeenCalledWith(['name']));
     expect(updated).toHaveBeenCalledWith({ name: 'Account Name' });
   });
-  it('shows evidence and requires a student-chosen level before approving', async () => {
+  it('approves reviewed evidence with an internal default and no level selection', async () => {
     api.integrations.mockResolvedValue(overview([fastapi, react, elixir]));
     api.decideSkill.mockResolvedValue(overview([{ ...fastapi, status: 'on_profile' }, react, elixir]));
     const onSkillsChanged = vi.fn();
@@ -135,8 +135,8 @@ describe('Connected profiles', () => {
     expect(screen.getByText(/not in SyncSpace's skill list yet: Elixir/)).toBeVisible();
 
     const approve = screen.getByRole('button', { name: 'Approve' });
-    expect(approve).toBeDisabled();
-    fireEvent.change(screen.getByRole('combobox', { name: 'FastAPI proficiency' }), { target: { value: '3' } });
+    expect(approve).toBeEnabled();
+    expect(screen.queryByRole('combobox', { name: /proficiency/i })).not.toBeInTheDocument();
     fireEvent.click(approve);
     await waitFor(() => expect(api.decideSkill).toHaveBeenCalledWith(14, 'approved', 3));
     expect(await screen.findByText('FastAPI added to your skills.')).toBeVisible();

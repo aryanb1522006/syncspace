@@ -48,7 +48,7 @@ export function MemberProfile() {
           {student.availabilityHoursPerWeek !== undefined && <div><dt>Availability</dt><dd>{student.availabilityHoursPerWeek}h / week</dd></div>}
         </dl>}
         {student.bio && <section><h2>About</h2><p>{student.bio}</p></section>}
-        {skills.length > 0 && <section><h2>Skills</h2><div className="member-profile__tags">{skills.map((skill) => <span key={skill.id}>{skill.name}<small>{skill.proficiency}/5</small></span>)}</div></section>}
+        {skills.length > 0 && <section><h2>Skills</h2><div className="member-profile__tags">{skills.map((skill) => <span key={skill.id}>{skill.name}</span>)}</div></section>}
         {evidence.length > 0 && <section><h2>Skill evidence</h2><ul className="member-profile__evidence">{evidence.map((group) => <li key={group.skillId}>
           <strong>{group.name}</strong> <small>{group.sources.map((source) => sourceNames[source] ?? source).join(' + ')}</small>
           <span>{group.items.slice(0, 3).map((item) => `${item.sourceRef}: ${item.evidence}`).join(' · ')}</span>

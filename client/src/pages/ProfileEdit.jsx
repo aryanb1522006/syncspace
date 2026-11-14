@@ -8,7 +8,8 @@ import { ConnectedProfiles } from '../components/ConnectedProfiles.jsx';
 import { ProfileAvatar } from '../components/ProfileAvatar.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const proficiencyLevels = [1, 2, 3, 4, 5];
+// Retain the API's required rating internally without asking students to rank skills.
+const defaultProficiency = 3;
 
 export function ProfileEdit() {
   const [profile, setProfile] = useState(null);
@@ -16,7 +17,6 @@ export function ProfileEdit() {
   const [skills, setSkills] = useState([]);
   const [proposed, setProposed] = useState([]);
   const [manualSkillId, setManualSkillId] = useState('');
-  const [manualProficiency, setManualProficiency] = useState(3);
   const [skillBusy, setSkillBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [dirty, setDirty] = useState(false);
@@ -67,8 +67,8 @@ export function ProfileEdit() {
     const file = event.target.files[0];
     if (!file) return;
     const result = await api.uploadResume(profile.id, file);
-    setProposed(result.proposedSkills.map((skill) => ({ ...skill, proficiency: 3 })));
-    setMessage('Resume read. Review the proposed skills and proficiency levels below.');
+    setProposed(result.proposedSkills);
+    setMessage('Resume read. Review the proposed skills below.');
   };
 
   const persistSkills = async (next, successMessage) => {
@@ -90,7 +90,7 @@ export function ProfileEdit() {
     const existing = profile.skills.map((skill) => ({ skillId: skill.id, proficiency: skill.proficiency }));
     const additions = proposed
       .filter((item) => !existing.some((skill) => Number(skill.skillId) === Number(item.skillId)))
-      .map((item) => ({ skillId: item.skillId, proficiency: Number(item.proficiency) }));
+      .map((item) => ({ skillId: item.skillId, proficiency: defaultProficiency }));
     if (await persistSkills([...existing, ...additions], 'Reviewed resume skills saved.')) setProposed([]);
   };
 
@@ -101,23 +101,14 @@ export function ProfileEdit() {
     await persistSkills(next, 'Skill removed.');
   };
 
-  const updateProficiency = async (skillId, proficiency) => {
-    const next = profile.skills.map((skill) => ({
-      skillId: skill.id,
-      proficiency: Number(skill.id) === Number(skillId) ? Number(proficiency) : skill.proficiency
-    }));
-    await persistSkills(next, 'Skill proficiency updated.');
-  };
-
   const addManualSkill = async () => {
     if (!manualSkillId) return;
     const next = [
       ...profile.skills.map((skill) => ({ skillId: skill.id, proficiency: skill.proficiency })),
-      { skillId: Number(manualSkillId), proficiency: Number(manualProficiency) }
+      { skillId: Number(manualSkillId), proficiency: defaultProficiency }
     ];
     if (await persistSkills(next, 'Skill added manually.')) {
       setManualSkillId('');
-      setManualProficiency(3);
     }
   };
 
@@ -135,14 +126,13 @@ export function ProfileEdit() {
         <Button type="submit">Save profile</Button>
       </section>
       <section>
-        <div className="section-title"><div><h2>Skills</h2><p>Add skills manually or use your resume as a starting point. Set an honest proficiency from 1 to 5.</p></div><label className="button button--secondary upload-button"><FileUp />Read resume<input type="file" accept="application/pdf" onChange={upload} /></label></div>
+        <div className="section-title"><div><h2>Skills</h2><p>Add skills you can contribute to a project, or start with your resume.</p></div><label className="button button--secondary upload-button"><FileUp />Read resume<input type="file" accept="application/pdf" onChange={upload} /></label></div>
         <div className="manual-skill" aria-label="Add a skill manually">
           <label>Skill<select value={manualSkillId} onChange={(event) => setManualSkillId(event.target.value)}><option value="">Choose a skill</option>{availableSkills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name} — {skill.category}</option>)}</select></label>
-          <label>Proficiency<select value={manualProficiency} onChange={(event) => setManualProficiency(Number(event.target.value))}>{proficiencyLevels.map((level) => <option key={level} value={level}>{level}/5</option>)}</select></label>
           <Button type="button" disabled={!manualSkillId || skillBusy} onClick={addManualSkill}><Plus />Add skill</Button>
         </div>
-        <div className="skill-list">{profile.skills.map((skill) => <span className="skill-chip" key={skill.id}><strong>{skill.name}</strong><label className="skill-chip__level"><span>{skill.name} proficiency</span><select aria-label={`${skill.name} proficiency`} value={skill.proficiency} disabled={skillBusy} onChange={(event) => updateProficiency(skill.id, event.target.value)}>{proficiencyLevels.map((level) => <option key={level} value={level}>{level}/5</option>)}</select></label><button type="button" aria-label={`Remove ${skill.name}`} disabled={skillBusy} onClick={() => removeSkill(skill.id)}><X /></button></span>)}</div>
-        {proposed.length > 0 && <div className="proposed"><h3>Proposed from your resume</h3><p>Review each detected skill and choose a proficiency before saving.</p><div>{proposed.map((skill) => <span key={skill.skillId}><Plus />{skill.name}<small>matched “{skill.matchedAlias}”</small><select aria-label={`${skill.name} proposed proficiency`} value={skill.proficiency} onChange={(event) => setProposed((current) => current.map((item) => item.skillId === skill.skillId ? { ...item, proficiency: Number(event.target.value) } : item))}>{proficiencyLevels.map((level) => <option key={level} value={level}>{level}/5</option>)}</select></span>)}</div><Button type="button" disabled={skillBusy} onClick={acceptProposed}>Save reviewed skills</Button></div>}
+        <div className="skill-list">{profile.skills.map((skill) => <span className="skill-chip" key={skill.id}><strong>{skill.name}</strong><button type="button" aria-label={`Remove ${skill.name}`} disabled={skillBusy} onClick={() => removeSkill(skill.id)}><X /></button></span>)}</div>
+        {proposed.length > 0 && <div className="proposed"><h3>Proposed from your resume</h3><p>Review the detected skills before adding them to your profile.</p><div>{proposed.map((skill) => <span key={skill.skillId}><Plus />{skill.name}<small>matched “{skill.matchedAlias}”</small></span>)}</div><Button type="button" disabled={skillBusy} onClick={acceptProposed}>Save reviewed skills</Button></div>}
       </section>
       {message && <p className="success-message" role="status">{message}</p>}
     </form>

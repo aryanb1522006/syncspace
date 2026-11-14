@@ -24,7 +24,7 @@ async function ownProfile(req, studentId) {
 export async function getMe(req, res) {
   const profile = await getStudentByUserId(req.user.id);
   if (!profile) throw new AppError(404, 'Student profile not found');
-  res.json({ student: await getStudentById(profile.id) });
+  res.set('Cache-Control', 'no-store').json({ student: profile });
 }
 
 export async function getStudent(req, res) {
@@ -45,15 +45,13 @@ export async function getApplicantProfile(req, res) {
 
 async function sendVisibleStudent(req, res, student, { applicationReview = false } = {}) {
   if (!student || Number(student.college_id) !== Number(req.user.collegeId)) throw new AppError(404, 'Student profile not found');
-  const contactVisible = await canViewStudentContact(req.user.id, student.id, req.user.collegeId);
-  // Evidence is private unless the student chose 'team' (teammates, the
-  // same relationship that reveals contact details) or 'college'.
+  res.set('Cache-Control', 'no-store');
   const isSelf = Number(student.user_id) === req.user.id;
-  const visibilities = isSelf ? ['private', 'team', 'college'] : contactVisible ? ['team', 'college'] : ['college'];
-  const [evidence, sharedLinks] = await Promise.all([
-    listVisibleEvidence(student.id, visibilities, { onProfileOnly: !isSelf }),
-    applicationReview ? getSharedProfileLinks(student.id) : null
+  const [contactVisible, evidence] = await Promise.all([
+    isSelf || canViewStudentContact(req.user.id, student.id, req.user.collegeId),
+    isSelf ? listVisibleEvidence(student.id, ['private', 'team', 'college']) : []
   ]);
+  const sharedLinks = (contactVisible || applicationReview) ? await getSharedProfileLinks(student.id) : null;
   res.json({
     student: {
       id: student.id,
@@ -66,7 +64,8 @@ async function sendVisibleStudent(req, res, student, { applicationReview = false
       interests: student.interests,
       availabilityHoursPerWeek: student.availability_hours_per_week,
       skills: student.skills,
-      ...(contactVisible ? { email: student.email, linkedinUrl: student.linkedin_url ?? null } : {}),
+      ...(contactVisible ? { email: student.email } : {}),
+      ...(isSelf ? { linkedinUrl: student.linkedin_url ?? null } : {}),
       ...(sharedLinks && { githubUrl: sharedLinks.githubUrl, linkedinUrl: sharedLinks.linkedinUrl }),
       contactVisible,
       skillEvidence: summarizeEvidence(evidence).map(({ skillId, name, confidence, evidenceClass, sources, items }) => ({

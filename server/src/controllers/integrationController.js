@@ -11,7 +11,6 @@ import {
   recordSyncError,
   replaceSourceEvidence,
   saveGitHubConnection,
-  setEvidenceVisibility,
   skillReviewRepository
 } from '../models/profileIntelligenceModel.js';
 import { getStudentByUserId, listSkillDictionary } from '../models/studentModel.js';
@@ -265,13 +264,6 @@ export async function decideSkill(req, res) {
     proficiency: req.body.proficiency
   });
   res.json({ result, ...(await overview(await currentStudent(req))) });
-}
-
-export async function updateEvidenceVisibility(req, res) {
-  const student = await currentStudent(req);
-  const updated = await setEvidenceVisibility(student.id, req.body.evidenceIds, req.body.visibility);
-  if (!updated.length) throw new AppError(404, 'Evidence not found');
-  res.json(await overview(student));
 }
 
 export async function updateReviewedSkills(req, res) {

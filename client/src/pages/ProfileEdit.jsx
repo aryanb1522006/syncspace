@@ -13,6 +13,8 @@ export function ProfileEdit() {
   const [profile, setProfile] = useState(null);
   const [savedProfile, setSavedProfile] = useState(null);
   const [skills, setSkills] = useState([]);
+  const [dictionaryState, setDictionaryState] = useState('loading');
+  const [dictionaryAttempt, setDictionaryAttempt] = useState(0);
   const [manualSkillId, setManualSkillId] = useState('');
   const [skillBusy, setSkillBusy] = useState(false);
   const [integrationBusy, setIntegrationBusy] = useState(false);
@@ -36,13 +38,22 @@ export function ProfileEdit() {
   useEffect(() => {
     let active = true;
     setLoadError('');
-    Promise.all([api.getMe(), api.listSkills()]).then(([{ student }, { skills: options }]) => {
+    api.getMe().then(({ student }) => {
       if (!active) return;
       applySavedProfile(student);
-      setSkills(options);
     }).catch((reason) => { if (active) setLoadError(reason.message); });
     return () => { active = false; };
   }, [applySavedProfile, loadAttempt]);
+  useEffect(() => {
+    let active = true;
+    setDictionaryState('loading');
+    api.listSkills().then(({ skills: options }) => {
+      if (!active) return;
+      setSkills(options);
+      setDictionaryState('ready');
+    }).catch(() => { if (active) setDictionaryState('error'); });
+    return () => { active = false; };
+  }, [dictionaryAttempt]);
   const profileLoaded = Boolean(profile);
   useEffect(() => {
     if (profileLoaded && location.hash === '#team-contact-details') {
@@ -138,7 +149,7 @@ export function ProfileEdit() {
             setProfile((current) => ({ ...current, share_profile_links: event.target.checked }));
           }} />
           <span>Share my GitHub and LinkedIn links
-            <small>Show your links to college members viewing your projects and to project leaders reviewing your applications.</small>
+            <small>Show your links to accepted teammates, college members viewing your projects, and leaders reviewing your applications.</small>
           </span>
         </label>
         <Button type="submit" disabled={profileSaving || integrationBusy}>{profileSaving ? 'Saving…' : 'Save profile'}</Button>
@@ -147,9 +158,10 @@ export function ProfileEdit() {
       <section>
         <div className="section-title"><div><h2>Skills</h2><p>Sync skills from GitHub or edit your list here.</p></div></div>
         <div className="manual-skill" aria-label="Add a skill manually">
-          <label>Skill<select value={manualSkillId} onChange={(event) => setManualSkillId(event.target.value)}><option value="">Choose a skill</option>{availableSkills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name} — {skill.category}</option>)}</select></label>
+          <label>Skill<select disabled={dictionaryState !== 'ready'} value={manualSkillId} onChange={(event) => setManualSkillId(event.target.value)}><option value="">{dictionaryState === 'loading' ? 'Loading skills…' : 'Choose a skill'}</option>{availableSkills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name} — {skill.category}</option>)}</select></label>
           <Button type="button" disabled={!manualSkillId || skillBusy || integrationBusy} onClick={addManualSkill}><Plus />Add skill</Button>
         </div>
+        {dictionaryState === 'error' && <p className="form-error" role="alert">Skill list could not be loaded. <Button type="button" variant="secondary" onClick={() => setDictionaryAttempt((attempt) => attempt + 1)}>Retry skill list</Button></p>}
         <div className="skill-list">{profile.skills.map((skill) => <span className="skill-chip" key={skill.id}><strong>{skill.name}</strong><button type="button" aria-label={`Remove ${skill.name}`} disabled={skillBusy || integrationBusy} onClick={() => removeSkill(skill.id)}><X /></button></span>)}</div>
         {skillMessage && <p className="success-message" role="status">{skillMessage}</p>}
         {skillError && <p className="form-error" role="alert">{skillError}</p>}

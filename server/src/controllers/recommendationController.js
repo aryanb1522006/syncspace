@@ -1,7 +1,7 @@
 import { getStudentRecommendationContext, getTeammateRecommendationContext } from '../models/recommendationModel.js';
 import { computeMatchScore, computeSkillGap, isEligible, rankTeammates } from '../services/matchingEngine.js';
 import { generateEmbedding } from '../services/embeddingService.js';
-import { buildStudentProfileText, computeRecommendationScore } from '../services/recommendationScoring.js';
+import { buildStudentProfileText, computeRecommendationScore, scoreRecommendation } from '../services/recommendationScoring.js';
 import { findSimilarProjectPairs, groupSimilarProjectsByProjectId } from '../services/similarProjectsService.js';
 import { AppError } from '../utils/AppError.js';
 
@@ -10,10 +10,13 @@ const requestedLimit = (value) => Math.min(Math.max(Number(value) || 6, 1), 20);
 export async function recommendProjects(req, res) {
   const context = await getStudentRecommendationContext(req.user.id, req.user.collegeId);
   if (!context) throw new AppError(404, 'Student profile not found');
+  res.set('Cache-Control', 'no-store');
 
   const eligibleProjects = context.projects.filter(
     (project) => Number(project.ownerId) !== req.user.id && isEligible(context.student, project)
   );
+
+  if (!eligibleProjects.length) return res.json({ recommendations: [] });
 
   // Existing behaviour preserved: computeMatchScore is unchanged, so
   // `match` on each recommendation keeps its original shape/meaning.
@@ -37,38 +40,24 @@ export async function recommendProjects(req, res) {
   const studentProfileText = buildStudentProfileText(context.student);
   const studentEmbedding = await generateEmbedding(studentProfileText);
 
-  const withRecommendation = await Promise.all(
-    withExistingMatch.map(async (project) => ({
-      ...project,
-      recommendation: await computeRecommendationScore({
-        student: context.student,
-        studentEmbedding,
-        matchBreakdown: project.match.breakdown,
-        project
-      })
-    }))
-  );
+  const ranked = withExistingMatch
+    .map((project) => ({ project, scores: scoreRecommendation(studentEmbedding, project.match.breakdown, project) }))
+    .sort((a, b) => b.scores.finalScore - a.scores.finalScore || b.project.match.score - a.project.match.score)
+    .slice(0, requestedLimit(req.query.limit));
+  const visibleIds = new Set(ranked.map(({ project }) => project.id));
+  const similarPairs = findSimilarProjectPairs(withExistingMatch, undefined, visibleIds);
+  const similarByProjectId = groupSimilarProjectsByProjectId(withExistingMatch, similarPairs);
 
-  // New: duplicate/highly-similar project detection + differentiation,
-  // computed over the same eligible-project set already fetched for this
-  // request (scoped to the student's college) so no extra queries or
-  // embedding regeneration are required.
-  const similarPairs = findSimilarProjectPairs(withRecommendation);
-  const similarByProjectId = groupSimilarProjectsByProjectId(withRecommendation, similarPairs);
-
-  const recommendations = withRecommendation
-    .sort((a, b) => b.recommendation.finalScore - a.recommendation.finalScore || b.match.score - a.match.score)
-    .slice(0, requestedLimit(req.query.limit))
-    .map(({ descriptionEmbedding: _embedding, ...project }) => {
-      const similar = (similarByProjectId.get(project.id) ?? []).map((entry) => ({
-        projectId: entry.project.id,
-        title: entry.project.title,
-        similarityScore: entry.similarityScore,
-        differences: entry.differences
-      }));
-      // The raw embedding vector is only needed server-side for scoring.
-      return { ...project, similarProjects: similar };
-    });
+  const recommendations = await Promise.all(ranked.map(async ({ project: { descriptionEmbedding: _embedding, ...project }, scores }) => {
+    const similarProjects = (similarByProjectId.get(project.id) ?? []).map((entry) => ({
+      projectId: entry.project.id,
+      title: entry.project.title,
+      similarityScore: entry.similarityScore,
+      differences: entry.differences
+    }));
+    const recommendation = await computeRecommendationScore({ student: context.student, project, scores });
+    return { ...project, recommendation, similarProjects };
+  }));
 
   res.json({ recommendations });
 }
@@ -78,6 +67,7 @@ export async function recommendTeammates(req, res) {
   const context = await getTeammateRecommendationContext(projectId, req.user.collegeId);
   if (!context) throw new AppError(404, 'Project not found');
   if (Number(context.project.owner_id) !== req.user.id) throw new AppError(403, 'Only the project owner can view teammate recommendations');
+  res.set('Cache-Control', 'no-store');
 
   const skillGap = computeSkillGap(context.project.skills, context.currentTeamSkills);
   const candidates = rankTeammates(

@@ -29,6 +29,7 @@ test('inputs are validated before any work is done', async () => {
   await auth(request(app).post('/api/integrations/skills/abc/decision')).send({ decision: 'approved', proficiency: 3 }).expect(400);
   await auth(request(app).post('/api/integrations/skills/3/decision')).send({ decision: 'approved', proficiency: 9 }).expect(400);
   await auth(request(app).put('/api/integrations/evidence/visibility')).send({ evidenceIds: [1], visibility: 'public' }).expect(400);
+  await auth(request(app).put('/api/integrations/evidence/visibility')).send({ evidenceIds: [1], visibility: 'team' }).expect(410);
   await auth(request(app).delete('/api/integrations/github?deleteEvidence=maybe')).expect(400);
 });
 

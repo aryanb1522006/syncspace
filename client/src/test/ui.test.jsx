@@ -222,6 +222,18 @@ describe('SyncSpace UI', () => {
     expect(screen.queryByText('GreenGrid')).not.toBeInTheDocument();
   });
 
+  it('shows Discover results while the profile and applications sidebar requests are pending', async () => {
+    const profile = vi.spyOn(api, 'getMe').mockReturnValue(new Promise(() => {}));
+    const applications = vi.spyOn(api, 'listApplications').mockReturnValue(new Promise(() => {}));
+    try {
+      renderApp('/dashboard', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1 });
+      expect((await screen.findAllByRole('link', { name: 'View project' }))[0]).toBeVisible();
+    } finally {
+      profile.mockRestore();
+      applications.mockRestore();
+    }
+  });
+
   it('lets the project owner publish one response to a query', async () => {
     renderApp('/projects/1', { id: 4, email: 'arjun@northstar.edu', role: 'owner', profileId: 4, profile: { id: 4, name: 'Arjun Rao' } });
     const field = await screen.findByRole('textbox', { name: 'Your response' });

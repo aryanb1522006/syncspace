@@ -7,7 +7,7 @@ import { integrationFixture } from '../test-fixtures/integrationHarness.js';
 import { deleteConnection, getConnection, replaceSourceEvidence, saveGitHubConnection, setEvidenceVisibility } from '../src/models/profileIntelligenceModel.js';
 after(() => pool.end());
 
-test('private, college and team evidence have the same audience in profiles and recommendations', { skip: process.env.RUN_DB_TESTS !== 'true' }, async () => {
+test('evidence stays private to its owner even if previously shared with teammates or the college', { skip: process.env.RUN_DB_TESTS !== 'true' }, async () => {
   const fixture = await integrationFixture();
   const { owner, candidate, stranger, project, skill } = fixture;
   try {
@@ -20,21 +20,21 @@ test('private, college and team evidence have the same audience in profiles and 
       assert.ok(match, 'the control candidate must be present');
       return match.skills.find((item) => Number(item.skillId) === Number(skill.id)).evidenceSources;
     };
-    assert.deepEqual(await sources(), []);
+    assert.equal(await sources(), undefined);
     await setEvidenceVisibility(candidate.profile.id, [id], 'college');
-    assert.deepEqual(await sources(), ['github']);
+    assert.equal(await sources(), undefined);
     await setEvidenceVisibility(candidate.profile.id, [id], 'team');
-    assert.deepEqual(await sources(), []);
+    assert.equal(await sources(), undefined);
     const shared = await fixture.makeProject();
     const team = (await query('INSERT INTO teams (project_id) VALUES ($1) RETURNING id', [shared.id])).rows[0];
     await query('INSERT INTO team_members (team_id, student_id) VALUES ($1, $2)', [team.id, candidate.profile.id]);
-    assert.deepEqual(await sources(), ['github']);
+    assert.equal(await sources(), undefined);
     const visible = await request(app).get(`/api/students/${candidate.profile.id}`).set('Authorization', `Bearer ${owner.token}`).expect(200);
-    assert.equal(visible.body.student.skillEvidence.length, 1);
+    assert.deepEqual(visible.body.student.skillEvidence, []);
     const hidden = await request(app).get(`/api/students/${candidate.profile.id}`).set('Authorization', `Bearer ${stranger.token}`).expect(200);
     assert.deepEqual(hidden.body.student.skillEvidence, []);
     await setEvidenceVisibility(candidate.profile.id, [id], 'private');
-    assert.deepEqual(await sources(), [], 'accepted teammates still cannot see private provenance');
+    assert.equal(await sources(), undefined, 'accepted teammates cannot see private provenance');
     const own = await request(app).get(`/api/students/${candidate.profile.id}`).set('Authorization', `Bearer ${candidate.token}`).expect(200);
     assert.equal(own.body.student.skillEvidence.length, 1);
     await setEvidenceVisibility(candidate.profile.id, [id], 'college');
@@ -99,6 +99,16 @@ test('project links are opt-in and applicant profiles are scoped to the project 
     const wrongProject = await fixture.makeProject();
     await auth(request(app).get(`/api/projects/${wrongProject.id}/applications/${applicationId}/profile`), owner).expect(404);
     await auth(request(app).get(`/api/students/${candidate.profile.id}`), stranger).expect(({ body }) => {
+      assert.equal(body.student.githubUrl, undefined);
+      assert.equal(body.student.linkedinUrl, undefined);
+    });
+    await auth(request(app).put(`/api/applications/${applicationId}`), owner).send({ status: 'accepted' }).expect(200);
+    const teammate = (await auth(request(app).get(`/api/students/by-user/${candidate.id}`), owner).expect(200)).body.student;
+    assert.equal(teammate.githubUrl, 'https://github.com/campus-applicant');
+    assert.equal(teammate.linkedinUrl, 'https://www.linkedin.com/in/campus-member');
+    assert.deepEqual(teammate.skillEvidence, []);
+    await saveLinks(candidate, false);
+    await auth(request(app).get(`/api/students/by-user/${candidate.id}`), owner).expect(({ body }) => {
       assert.equal(body.student.githubUrl, undefined);
       assert.equal(body.student.linkedinUrl, undefined);
     });

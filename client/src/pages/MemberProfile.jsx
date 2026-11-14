@@ -35,8 +35,6 @@ export function MemberProfile() {
   const ownProfile = Number(student.userId) === Number(user?.id);
   const interests = student.interests ?? [];
   const skills = student.skills ?? [];
-  const evidence = student.skillEvidence ?? [];
-  const sourceNames = { github: 'GitHub', linkedin_export: 'LinkedIn' };
 
   return <AppShell>
     <Link className="back-link app-back" to={backTo}><ArrowLeft />{backLabel}</Link>
@@ -56,10 +54,6 @@ export function MemberProfile() {
         </dl>}
         {student.bio && <section><h2>About</h2><p>{student.bio}</p></section>}
         {skills.length > 0 && <section><h2>Skills</h2><div className="member-profile__tags">{skills.map((skill) => <span key={skill.id}>{skill.name}</span>)}</div></section>}
-        {evidence.length > 0 && <section><h2>Skill evidence</h2><ul className="member-profile__evidence">{evidence.map((group) => <li key={group.skillId}>
-          <strong>{group.name}</strong> <small>{group.sources.map((source) => sourceNames[source] ?? source).join(' + ')}</small>
-          <span>{group.items.slice(0, 3).map((item) => `${item.sourceRef}: ${item.evidence}`).join(' · ')}</span>
-        </li>)}</ul></section>}
         {interests.length > 0 && <section><h2>Interests</h2><div className="member-profile__tags">{interests.map((interest) => <span key={interest}>{interest}</span>)}</div></section>}
       </div>
       <p className="member-profile__trust"><ShieldCheck />Email is shared inside accepted project teams.</p>

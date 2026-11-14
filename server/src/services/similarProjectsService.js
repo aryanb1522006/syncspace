@@ -109,14 +109,16 @@ export function differentiateProjects(projectA, projectB, similarityScore) {
  * regeneration - see the backfill script for populating missing
  * embeddings.
  */
-export function findSimilarProjectPairs(projects, threshold = env.duplicateSimilarityThreshold) {
+export function findSimilarProjectPairs(projects, threshold = env.duplicateSimilarityThreshold, focusIds) {
   const withEmbeddings = projects.filter((project) => Array.isArray(project.descriptionEmbedding) && project.descriptionEmbedding.some(Boolean));
   const pairs = [];
 
   for (let i = 0; i < withEmbeddings.length; i += 1) {
-    for (let j = i + 1; j < withEmbeddings.length; j += 1) {
-      const a = withEmbeddings[i];
+    const a = withEmbeddings[i];
+    if (focusIds && !focusIds.has(a.id)) continue;
+    for (let j = focusIds ? 0 : i + 1; j < withEmbeddings.length; j += 1) {
       const b = withEmbeddings[j];
+      if (i === j || (j < i && focusIds?.has(b.id))) continue;
       const similarity = cosineSimilarity(a.descriptionEmbedding, b.descriptionEmbedding);
       if (similarity >= threshold) {
         pairs.push({

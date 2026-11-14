@@ -13,7 +13,6 @@ import {
   githubCallbackBridge,
   importLinkedIn,
   syncGitHubNow,
-  updateEvidenceVisibility,
   updateReviewedSkills
 } from '../controllers/integrationController.js';
 import { getLinkedinAuthorizeUrl, linkedinCallbackBridge, exchangeLinkedinCode, importLinkedinDetails, disconnectLinkedinAccount, previewLinkedIn } from '../controllers/integrationController.js';
@@ -87,6 +86,8 @@ router.post('/linkedin/import', syncLimiter, linkedinUpload.single('export'), as
 router.delete('/linkedin', asyncHandler(deleteLinkedIn));
 router.post('/skills/review', validate(reviewSchema), asyncHandler(updateReviewedSkills));
 router.post('/skills/:skillId/decision', validate(skillParamsSchema, 'params'), validate(decisionSchema), asyncHandler(decideSkill));
-router.put('/evidence/visibility', validate(visibilitySchema), asyncHandler(updateEvidenceVisibility));
+router.put('/evidence/visibility', validate(visibilitySchema), () => {
+  throw new AppError(410, 'Skill evidence is private. Reload your profile to see the current controls.');
+});
 
 export default router;

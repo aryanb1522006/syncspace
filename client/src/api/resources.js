@@ -5,11 +5,20 @@ export const demoMode = (import.meta.env.VITE_DEMO_MODE ?? 'true') !== 'false';
 const use = (demo, real) => demoMode ? demo() : real();
 const json = (value) => JSON.stringify(value);
 
+const pendingProfiles = new Map();
+function getMyProfile() {
+  const token = localStorage.getItem('syncspace-token');
+  if (!pendingProfiles.has(token)) {
+    pendingProfiles.set(token, request('/students/me').finally(() => pendingProfiles.delete(token)));
+  }
+  return pendingProfiles.get(token);
+}
+
 export const api = {
   login: (input) => use(() => demoApi.login(input), () => request('/auth/login', { method: 'POST', body: json(input) })),
   register: (input) => use(() => demoApi.register(input), () => request('/auth/register', { method: 'POST', body: json(input) })),
   googleLogin: (credential) => request('/auth/google', { method: 'POST', body: json({ credential }) }),
-  getMe: () => use(() => demoApi.getMe(), () => request('/students/me')),
+  getMe: () => use(() => demoApi.getMe(), getMyProfile),
   getMyTeamContacts: () => use(() => demoApi.getMyTeamContacts(), () => request('/students/me/team-contacts')),
   saveMyTeamContacts: (input) => use(() => demoApi.saveMyTeamContacts(input), () => request('/students/me/team-contacts', { method: 'PUT', body: json(input) })),
   getStudent: (id) => use(() => demoApi.getStudent(id), () => request(`/students/${id}`)),
@@ -70,8 +79,7 @@ export const api = {
   linkedinDelete: () => liveOnly(() => request('/integrations/linkedin', { method: 'DELETE' })),
   updateReviewedSkills: (reviewIds, skillIds) => liveOnly(() => request('/integrations/skills/review', {
     method: 'POST', body: json({ reviewIds, skillIds })
-  })),
-  setEvidenceVisibility: (evidenceIds, visibility) => liveOnly(() => request('/integrations/evidence/visibility', { method: 'PUT', body: json({ evidenceIds, visibility }) }))
+  }))
 };
 
 function liveOnly(real) {

@@ -16,7 +16,14 @@ export async function request(path, options = {}) {
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     if (response.status === 401 && token) expireStoredSession();
-    const error = new Error(payload.error?.message ?? `Request failed (${response.status})`);
+    const retryAfter = response.headers.get('Retry-After');
+    const seconds = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) : null;
+    const minutes = seconds ? Math.ceil(seconds / 60) : null;
+    const rateLimitMessage = minutes
+      ? `Too many requests. Try again in about ${minutes} minute${minutes === 1 ? '' : 's'}.`
+      : 'Too many requests. Wait a moment and try again.';
+    const error = new Error(response.status === 429 ? rateLimitMessage
+      : payload.error?.message ?? `Request failed (${response.status})`);
     error.details = payload.error?.details;
     error.status = response.status;
     throw error;

@@ -103,15 +103,17 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
   const [sections, setSections] = useState([]);
   const [detailFields, setDetailFields] = useState([]);
   const [pendingAction, setPendingAction] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setError('');
     api.integrations()
       .then((next) => { if (active) setState(next); })
       .catch((reason) => { if (active) setError(reason.message); })
       .finally(() => { if (active) setLoadedRevision(skillRevision); });
     return () => { active = false; };
-  }, [skillRevision]);
+  }, [skillRevision, loadAttempt]);
   useEffect(() => { onBusyChange?.(working); }, [onBusyChange, working]);
   useEffect(() => {
     if (!message) return undefined;
@@ -139,7 +141,10 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
     }
   }, [onSkillsChanged]);
 
-  if (error && !state) return <section className="connected-profiles"><h2>Connected profiles</h2><p className="form-error" role="alert">{error}</p></section>;
+  if (error && !state) return <section className="connected-profiles">
+    <h2>Connected profiles</h2><p className="form-error" role="alert">{error}</p>
+    <Button type="button" variant="secondary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry connected profiles</Button>
+  </section>;
   if (!state) return <section className="connected-profiles"><h2>Connected profiles</h2><p className="loading">Loading connected profiles…</p></section>;
   if (state.demo) {
     return <section className="connected-profiles"><h2>Connected profiles</h2><p className="connected-profiles__note">Account connections and export uploads are unavailable in demo mode.</p></section>;

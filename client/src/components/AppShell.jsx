@@ -4,13 +4,14 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { api } from '../api/resources.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Logo } from './Logo.jsx';
-import { NotificationMenu } from './NotificationMenu.jsx';
+import { NotificationMenu, useNotifications } from './NotificationMenu.jsx';
 import { ProfileAvatar } from './ProfileAvatar.jsx';
 
 export function AppShell({ children, rightRail, className = '' }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [teams, setTeams] = useState([]);
+  const notifications = useNotifications();
 
   useEffect(() => {
     let active = true;
@@ -18,7 +19,7 @@ export function AppShell({ children, rightRail, className = '' }) {
       .then(({ teams: rows }) => { if (active) setTeams(rows); })
       .catch(() => {});
     refresh();
-    const timer = window.setInterval(refresh, 30_000);
+    const timer = window.setInterval(() => { if (!document.hidden) refresh(); }, 60_000);
     return () => { active = false; window.clearInterval(timer); };
   }, []);
 
@@ -45,7 +46,7 @@ export function AppShell({ children, rightRail, className = '' }) {
       <nav aria-label="Application navigation">{renderNavItems()}</nav>
       <NavLink className="sidebar__post" to="/projects/new"><PlusCircle /><span>Post a project</span></NavLink>
       <div className="sidebar__account">
-        <div className="sidebar__notifications"><NotificationMenu /></div>
+        <div className="sidebar__notifications"><NotificationMenu {...notifications} /></div>
         <NavLink className="person" to="/profile">
           <ProfileAvatar name={name} photoUrl={user?.profile?.avatar_url} />
           <span className="person__copy"><strong>{name}</strong>{email && <small>{email}</small>}</span>
@@ -54,7 +55,7 @@ export function AppShell({ children, rightRail, className = '' }) {
       </div>
     </aside>
     <div className="app-area">
-      <div className="mobile-top"><Logo to="/dashboard" /><div className="mobile-top__actions"><NotificationMenu /></div></div>
+      <div className="mobile-top"><Logo to="/dashboard" /><div className="mobile-top__actions"><NotificationMenu {...notifications} /></div></div>
       <div className="app-content">{children}</div>
     </div>
     {rightRail && <aside className="right-rail">{rightRail}</aside>}

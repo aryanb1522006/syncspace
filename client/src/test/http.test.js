@@ -24,4 +24,16 @@ describe('HTTP authentication handling', () => {
     expect(localStorage.getItem('syncspace-user')).toBeNull();
     expect(expired).toHaveBeenCalledOnce();
   });
+
+  it('uses the wait time in a 429 response and preserves the signed-in session', async () => {
+    localStorage.setItem('syncspace-token', 'active-token');
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('Too many requests', {
+      status: 429,
+      headers: { 'Retry-After': '68' }
+    })));
+    await expect(request('/integrations')).rejects.toMatchObject({
+      status: 429, message: 'Too many requests. Try again in about 2 minutes.'
+    });
+    expect(localStorage.getItem('syncspace-token')).toBe('active-token');
+  });
 });

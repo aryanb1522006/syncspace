@@ -1,6 +1,6 @@
 import cors from 'cors';
 import express from 'express';
-import { rateLimit } from 'express-rate-limit';
+import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import { query } from './config/db.js';
 import { env } from './config/env.js';
@@ -16,6 +16,7 @@ import studentRoutes from './routes/students.js';
 import taskRoutes from './routes/tasks.js';
 import teamRoutes from './routes/teams.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
+import { requestIdentity } from './middleware/auth.js';
 import { authorizeMetrics, observeRequests, renderMetrics } from './services/metrics.js';
 import { AppError } from './utils/AppError.js';
 
@@ -31,27 +32,39 @@ app.use(cors({
     if (!origin || env.clientOrigins.includes(origin)) return callback(null, true);
     callback(new AppError(403, 'Origin is not allowed by CORS'));
   },
-  credentials: false
+  credentials: false,
+  exposedHeaders: ['Retry-After']
 }));
-app.use(express.json({ limit: '1mb' }));
 // Resumes are private: they are only served through the owner-checked
 // GET /api/students/:id/resume route, never as public static files.
+
+const rateLimitResponse = (_req, res, _next, options) =>
+  res.status(options.statusCode).json({ error: { message: 'Too many requests. Wait a moment and try again.' } });
 
 const globalLimiter = rateLimit({
   windowMs: env.rateLimitWindowMs,
   limit: env.rateLimitMax,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  skip: (req) => req.path.startsWith('/health')
+  skip: (req) => ['/health', '/health/live', '/health/ready'].includes(req.path),
+  keyGenerator: (req) => {
+    const loginRoute = /^\/auth(?:\/|$)/i.test(req.path);
+    const user = loginRoute ? null : requestIdentity(req).user;
+    return user ? `user:${user.id}` : `ip:${ipKeyGenerator(req.ip ?? req.socket.remoteAddress ?? '')}`;
+  },
+  handler: rateLimitResponse
 });
 const authLimiter = rateLimit({
   windowMs: env.rateLimitWindowMs,
   limit: env.authRateLimitMax,
   standardHeaders: 'draft-8',
-  legacyHeaders: false
+  legacyHeaders: false,
+  handler: rateLimitResponse
 });
 
 app.use('/api', globalLimiter);
+app.use('/api/auth', authLimiter);
+app.use(express.json({ limit: '1mb' }));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'syncspace-api' }));
 app.get('/api/health/live', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/health/ready', async (req, res, next) => {
@@ -64,7 +77,7 @@ app.get('/api/health/ready', async (req, res, next) => {
   }
 });
 app.get('/api/metrics', authorizeMetrics, renderMetrics);
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/projects', projectRoutes);

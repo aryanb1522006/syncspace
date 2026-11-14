@@ -37,6 +37,15 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 
 describe('Connected profiles', () => {
+  it('recovers from a failed load when retried', async () => {
+    api.integrations.mockRejectedValueOnce(new Error('Too many requests. Wait a moment and try again.'))
+      .mockResolvedValueOnce(overview([]));
+    render(<ConnectedProfiles />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many requests');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry connected profiles' }));
+    expect(await screen.findByRole('link', { name: '@asha' })).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
   it('shows only Disconnect for completed LinkedIn details, including a later customized name', async () => {
     api.integrations.mockResolvedValue({ ...overview([]), linkedin: { configured: true, connection: null, account: { name: 'Provider Name', pictureUrl: 'https://media.licdn.com/photo', nameApplied: true, photoApplied: true } } });
     render(<ConnectedProfiles profile={{ name: 'My preferred name', avatar_url: 'https://media.licdn.com/photo' }} />);

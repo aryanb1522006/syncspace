@@ -1,19 +1,39 @@
 import { Bell } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/resources.js';
 
-export function NotificationMenu() {
+export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
+  const inFlight = useRef(false);
+  const refresh = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      const { notifications: rows } = await api.notifications();
+      setNotifications(rows);
+    } catch {
+      // Keep the last successful result when a background refresh fails.
+    } finally {
+      inFlight.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (!document.hidden) refresh();
+    };
+    refreshWhenVisible();
+    const timer = window.setInterval(refreshWhenVisible, 60_000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
+
+  return { notifications, refresh };
+}
+
+export function NotificationMenu({ notifications, refresh }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-
-  const refresh = () => api.notifications().then(({ notifications: rows }) => setNotifications(rows)).catch(() => {});
-  useEffect(() => {
-    refresh();
-    const timer = window.setInterval(refresh, 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   const unread = notifications.filter((item) => !item.is_read).length;
   const openNotification = (item) => {

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Live-mode behaviour with the API mocked; demo mode is covered by the
@@ -34,6 +34,64 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 
 describe('Connected profiles', () => {
+  it('shows only Disconnect for completed LinkedIn details, including a later customized name', async () => {
+    api.integrations.mockResolvedValue({ ...overview([]), linkedin: { configured: true, connection: null, account: { name: 'Provider Name', pictureUrl: 'https://media.licdn.com/photo', nameApplied: true, photoApplied: true } } });
+    render(<ConnectedProfiles profile={{ name: 'My preferred name', avatar_url: 'https://media.licdn.com/photo' }} />);
+    await screen.findByText('Profile details up to date');
+    const card = within(screen.getByRole('heading', { name: 'LinkedIn' }).closest('article'));
+    expect(card.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(card.getAllByRole('button')).toHaveLength(1);
+    expect(card.getByRole('button', { name: 'Disconnect account' })).toBeEnabled();
+    expect(card.queryByText(/Connect for your account name/)).not.toBeInTheDocument();
+    expect(screen.getByText('Import LinkedIn skills and experience').closest('details')).not.toHaveAttribute('open');
+  });
+
+  it('recognizes existing matching name and photo before completion flags are available', async () => {
+    api.integrations.mockResolvedValue({ ...overview([]), linkedin: { configured: true, connection: null, account: { name: 'Account Name', pictureUrl: 'https://media.licdn.com/photo' } } });
+    render(<ConnectedProfiles profile={{ name: 'Account Name', avatar_url: 'https://media.licdn.com/photo' }} />);
+    expect(await screen.findByText('Profile details up to date')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Use selected details' })).not.toBeInTheDocument();
+  });
+
+  it('offers only an unapplied photo and collapses setup after a successful apply', async () => {
+    api.integrations.mockResolvedValue({ ...overview([]), linkedin: { configured: true, connection: null, account: { name: 'Account Name', pictureUrl: 'https://media.licdn.com/photo', nameApplied: true, photoApplied: false } } });
+    api.linkedinUseDetails.mockResolvedValue({ student: { name: 'Account Name', avatar_url: 'https://media.licdn.com/photo' } });
+    render(<ConnectedProfiles />);
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Use photo on my college profile' }));
+    expect(screen.queryByRole('checkbox', { name: 'Use name: Account Name' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Use selected details' }));
+    expect(await screen.findByText('Profile details up to date')).toBeVisible();
+    expect(api.linkedinUseDetails).toHaveBeenCalledWith(['photo']);
+    expect(screen.queryByRole('button', { name: 'Use selected details' })).not.toBeInTheDocument();
+  });
+
+  it('keeps unapplied controls available after a failed save', async () => {
+    api.integrations.mockResolvedValue({ ...overview([]), linkedin: { configured: true, connection: null, account: { name: 'Account Name', pictureUrl: 'https://media.licdn.com/photo', nameApplied: true, photoApplied: false } } });
+    api.linkedinUseDetails.mockRejectedValueOnce(new Error('Could not save the photo.'));
+    render(<ConnectedProfiles />);
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Use photo on my college profile' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use selected details' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the photo.');
+    expect(screen.queryByText('Profile details up to date')).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Use photo on my college profile' })).toBeEnabled();
+  });
+
+  it('does not submit a stale field selection when that field becomes applied', async () => {
+    api.integrations.mockResolvedValue({ ...overview([]), linkedin: { configured: true, connection: null, account: { name: 'Account Name', pictureUrl: 'https://media.licdn.com/photo' } } });
+    const view = render(<ConnectedProfiles profile={{ name: 'Old Name', avatar_url: null }} />);
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Use name: Account Name' }));
+    view.rerender(<ConnectedProfiles profile={{ name: 'Account Name', avatar_url: null }} />);
+    expect(screen.queryByRole('checkbox', { name: 'Use name: Account Name' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use selected details' })).toBeDisabled();
+  });
+
+  it('finishes setup when the account has no photo to offer and the name is already applied', async () => {
+    api.integrations.mockResolvedValue({ ...overview([]), linkedin: { configured: true, connection: null, account: { name: 'Account Name', pictureUrl: null, nameApplied: true } } });
+    render(<ConnectedProfiles />);
+    expect(await screen.findByText('Profile details up to date')).toBeVisible();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
   it('previews without saving and confirms only selected ZIP sections', async () => {
     api.integrations.mockResolvedValue(overview([]));
     api.linkedinPreview.mockResolvedValue({ sections: [
@@ -43,6 +101,7 @@ describe('Connected profiles', () => {
     api.linkedinImport.mockResolvedValue(overview([]));
     render(<ConnectedProfiles />);
     const file = new File(['fixture'], 'linkedin.zip', { type: 'application/zip' });
+    fireEvent.click(await screen.findByText('Import LinkedIn skills and experience'));
     fireEvent.change(await screen.findByLabelText('LinkedIn export file'), { target: { files: [file] } });
     expect(await screen.findByText('Review linkedin.zip')).toBeVisible();
     expect(api.linkedinImport).not.toHaveBeenCalled();
@@ -103,15 +162,16 @@ describe('Connected profiles', () => {
   it('explains what GitHub access means before connecting', async () => {
     api.integrations.mockResolvedValue({ github: { configured: true, connection: null }, linkedin: { connection: null }, skills: [] });
     render(<ConnectedProfiles />);
-    expect(await screen.findByText(/requests no GitHub permissions and never posts anything/)).toBeVisible();
+    expect(await screen.findByText(/Nothing is posted to GitHub/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Connect GitHub' })).toBeEnabled();
+    fireEvent.click(screen.getByText('What does this share?'));
     expect(screen.getByText(/Skills and experience come from an export you review separately/)).toBeVisible();
   });
 
   it('reports an unconfigured server honestly instead of offering a broken button', async () => {
     api.integrations.mockResolvedValue({ github: { configured: false, connection: null }, linkedin: { connection: null }, skills: [] });
     render(<ConnectedProfiles />);
-    expect(await screen.findByText('GitHub connection is not configured on this server yet.')).toBeVisible();
+    expect(await screen.findByText('GitHub connection is unavailable right now.')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Connect GitHub' })).not.toBeInTheDocument();
   });
 });

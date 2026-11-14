@@ -99,6 +99,8 @@ test('LinkedIn callback is browser-bound, single-use and only copies selected pr
     await exchange({ ...flow, verifier: randomBytes(32).toString('base64url') }).expect(403);
     const result = await exchange(flow).expect(200);
     assert.equal(result.body.linkedin.account.name, 'LinkedIn Name');
+    assert.equal(result.body.linkedin.account.nameApplied, false);
+    assert.equal(result.body.linkedin.account.photoApplied, false);
     assert.ok(!JSON.stringify(result.body).includes('never-store-this-token'));
     const before = await auth(request(app).get('/api/students/me')).expect(200);
     assert.equal(before.body.student.name, 'candidate');
@@ -107,9 +109,27 @@ test('LinkedIn callback is browser-bound, single-use and only copies selected pr
     const used = await auth(request(app).post('/api/integrations/linkedin/profile')).send({ fields: ['photo'] }).expect(200);
     assert.equal(used.body.student.name, 'candidate');
     assert.equal(used.body.student.avatar_url, 'https://media.licdn.com/dms/photo');
+    const partial = await auth(request(app).get('/api/integrations')).expect(200);
+    assert.equal(partial.body.linkedin.account.nameApplied, false);
+    assert.equal(partial.body.linkedin.account.photoApplied, true);
+    await auth(request(app).post('/api/integrations/linkedin/profile')).send({ fields: ['name'] }).expect(200);
+    await query('UPDATE student_profiles SET name = $2 WHERE id = $1', [f.candidate.profile.id, 'candidate']);
+    const complete = await auth(request(app).get('/api/integrations')).expect(200);
+    assert.equal(complete.body.linkedin.account.nameApplied, true, 'completion survives later profile customization');
+    assert.equal(complete.body.linkedin.account.photoApplied, true);
+    const same = await start();
+    global.fetch = mockFetch({ issuer: 'https://www.linkedin.com/oauth', nonce: same.nonce, subject: f.suffix });
+    const unchanged = await exchange(same).expect(200);
+    assert.equal(unchanged.body.linkedin.account.nameApplied, true, 'same provider details preserve completion on reconnect');
+    assert.equal(unchanged.body.linkedin.account.photoApplied, true);
     const duplicate = await start(f.owner);
     global.fetch = mockFetch({ issuer: 'https://www.linkedin.com/oauth', nonce: duplicate.nonce, subject: f.suffix });
     await exchange(duplicate, f.owner).expect(409);
+    const changed = await start();
+    global.fetch = mockFetch({ issuer: 'https://www.linkedin.com/oauth', nonce: changed.nonce, subject: f.suffix, info: { name: 'Updated LinkedIn Name', picture: 'https://media.licdn.com/dms/new-photo' } });
+    const refreshed = await exchange(changed).expect(200);
+    assert.equal(refreshed.body.linkedin.account.nameApplied, false, 'changed provider details are reviewed again');
+    assert.equal(refreshed.body.linkedin.account.photoApplied, false);
     const expired = await start();
     await query("UPDATE integration_oauth_requests SET expires_at = NOW() - INTERVAL '1 second' WHERE id = $1", [expired.id]);
     await exchange(expired).expect(400);
@@ -165,4 +185,21 @@ test('LinkedIn accepts callback-length codes unchanged while rejecting oversized
     await auth(request(app).post('/api/integrations/linkedin/exchange')).send({ code, state, verifier }).expect(400);
     assert.equal(exchanges, 1, 'state stays single-use');
   } finally { global.fetch = original; await f.cleanup(); }
+});
+
+test('a name already matching on connection stays completed after a later profile edit', { skip: !enabled }, async () => {
+  const f = await integrationFixture();
+  const { randomUUID } = await import('node:crypto');
+  const { createOAuthRequest, claimOAuthRequest } = await import('../src/models/integrationOAuthModel.js');
+  const { saveLinkedinAccount, linkedinAccount } = await import('../src/models/linkedinIdentityModel.js');
+  const id = randomUUID(), verifier = randomBytes(32).toString('base64url');
+  try {
+    await createOAuthRequest({ id, studentId: f.candidate.profile.id, provider: 'linkedin', browserChallenge: oauthChallenge(verifier), returnOrigin: 'http://localhost:5173' });
+    await claimOAuthRequest({ id, studentId: f.candidate.profile.id, provider: 'linkedin', verifier });
+    await saveLinkedinAccount(f.candidate.profile.id, id, { subject: f.suffix, name: 'candidate', pictureUrl: null });
+    await query('UPDATE student_profiles SET name = $2 WHERE id = $1', [f.candidate.profile.id, 'Preferred name']);
+    const account = await linkedinAccount(f.candidate.profile.id);
+    assert.equal(account.nameApplied, true);
+    assert.equal(account.photoApplied, false);
+  } finally { await f.cleanup(); }
 });

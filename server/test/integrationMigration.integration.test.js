@@ -21,8 +21,17 @@ test('migrations handle an existing LinkedIn column and concurrent startup witho
     for (const file of files.filter((file) => file < '009')) await copyFile(new URL(file, migrationPath), path.join(directory, file));
     await runMigrations(testPool, directory);
     await testPool.query('ALTER TABLE student_profiles ADD COLUMN linkedin_url TEXT');
-    for (const file of files.filter((file) => file >= '009')) await copyFile(new URL(file, migrationPath), path.join(directory, file));
+    for (const file of files.filter((file) => file >= '009' && file < '012')) await copyFile(new URL(file, migrationPath), path.join(directory, file));
+    await runMigrations(testPool, directory);
+    const college = (await testPool.query("INSERT INTO colleges (name, slug) VALUES ('Upgrade fixture', 'upgrade-fixture') RETURNING id")).rows[0];
+    const user = (await testPool.query("INSERT INTO users (college_id, email, password_hash) VALUES ($1, 'upgrade@test.edu', 'fixture') RETURNING id", [college.id])).rows[0];
+    const profile = (await testPool.query("INSERT INTO student_profiles (user_id, name, avatar_url, avatar_source) VALUES ($1, 'Existing member', 'https://media.licdn.com/photo', 'linkedin') RETURNING id", [user.id])).rows[0];
+    await testPool.query("INSERT INTO linkedin_identity_connections (student_id, subject, name, picture_url) VALUES ($1, 'upgrade-subject', 'Existing member', 'https://media.licdn.com/photo')", [profile.id]);
+    for (const file of files.filter((file) => file >= '012')) await copyFile(new URL(file, migrationPath), path.join(directory, file));
     await Promise.all([runMigrations(testPool, directory), runMigrations(testPool, directory)]);
+    const completed = (await testPool.query('SELECT name_applied_at, photo_applied_at FROM linkedin_identity_connections WHERE student_id = $1', [profile.id])).rows[0];
+    assert.ok(completed.name_applied_at, 'upgrade recognizes an existing matching name');
+    assert.ok(completed.photo_applied_at, 'upgrade recognizes an existing saved photo');
     const { rows: [history] } = await testPool.query('SELECT COUNT(*)::int AS count FROM schema_migrations');
     assert.equal(history.count, files.length);
     assert.equal((await testPool.query("SELECT COUNT(*)::int AS count FROM pg_attribute WHERE attrelid = 'student_profiles'::regclass AND attname = 'linkedin_url'")).rows[0].count, 1);

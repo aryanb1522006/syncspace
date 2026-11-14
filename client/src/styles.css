@@ -1040,17 +1040,43 @@ textarea { resize: vertical; line-height: 1.5; }
 .connected-profiles { margin-top: 22px; padding: 28px; border: 1px solid var(--line); border-radius: 14px; }
 .connected-profiles h2 { margin-bottom: 6px; font-size: 20px; }
 .connected-profiles__note { color: var(--muted); font-size: 12px; line-height: 1.5; }
-.source-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
+.source-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px; margin: 18px 0; }
 .source-card { display: grid; align-content: start; gap: 10px; padding: 18px; border: 1px solid var(--line); border-radius: 11px; background: var(--soft); font-size: 12px; line-height: 1.5; }
 .source-card h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .source-card h3 svg { width: 18px; }
+.source-card__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.source-card__header h3 { margin: 0; }
+.source-card__status { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); font-size: 10px; font-weight: 650; white-space: nowrap; }
+.source-card__status svg { width: 12px; height: 12px; color: var(--lime-strong); }
+.source-card__status--attention { color: var(--coral); }
+.source-card__identity { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.source-card__identity > div { min-width: 0; }
+.source-card__identity strong, .source-card__identity a { overflow-wrap: anywhere; font-size: 13px; }
+.source-card__identity small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.source-card__identity .avatar { width: 36px; height: 36px; }
+.source-card .button { min-height: 38px; padding: 0 14px; font-size: 12px; }
+.source-card__review { padding-top: 2px; }
+.source-card__help { color: var(--muted); font-size: 11px; }
+.source-card__help summary { cursor: pointer; }
+.source-card__help p { margin: 8px 0 0; line-height: 1.6; }
 .source-card a { color: inherit; font-weight: 700; }
 .source-card__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .source-card__choice { display: flex; align-items: center; gap: 8px; margin: 10px 0; cursor: pointer; }
-.source-card input[type="checkbox"] { flex: 0 0 auto; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; accent-color: var(--lime-strong); }
+.source-card input[type="checkbox"], .profile-import input[type="checkbox"] { flex: 0 0 auto; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; accent-color: var(--lime-strong); }
 .source-card__confirm { display: grid; gap: 8px; width: 100%; padding: 12px; border: 1px dashed var(--line); border-radius: 9px; }
 .source-card__confirm label { display: flex; gap: 8px; align-items: center; margin: 0; }
 .source-card__confirm p { color: var(--muted); }
+.profile-import { margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; }
+.profile-import > summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px; cursor: pointer; list-style: none; }
+.profile-import > summary::-webkit-details-marker { display: none; }
+.profile-import > summary > span { display: flex; align-items: center; gap: 8px; }
+.profile-import > summary svg { width: 16px; flex: 0 0 auto; }
+.profile-import > summary small { color: var(--muted); font-size: 10px; }
+.profile-import > summary::after { content: '+'; color: var(--muted); font-size: 18px; }
+.profile-import[open] > summary::after { content: '−'; }
+.profile-import__body { display: grid; gap: 14px; padding: 0 16px 16px; line-height: 1.6; }
+.profile-import__body > p { margin: 0; color: var(--muted); }
+.profile-import__body .source-card__confirm p { margin: 0; }
 .evidence-review { display: grid; gap: 10px; margin-top: 18px; }
 .evidence-review h3 { margin-top: 8px; font-size: 15px; }
 .evidence-review__row { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 11px; }
@@ -1073,4 +1099,6 @@ textarea { resize: vertical; line-height: 1.5; }
 @media (max-width: 760px) {
   .connected-profiles { padding: 18px; }
   .source-cards { grid-template-columns: 1fr; }
+  .profile-import > summary { flex-wrap: wrap; }
+  .profile-import > summary > span { flex: 1 1 180px; }
 }

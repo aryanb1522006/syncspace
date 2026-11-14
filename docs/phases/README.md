@@ -26,3 +26,5 @@ Each phase has a separate document containing its decisions, delivered scope, ve
 Phase 19 repairs callback routing, recommendation visibility and sync/disconnect races. See [the repair and OAuth setup](phase-19-integration-repair.md).
 
 Phase 20 adds an optional LinkedIn basic account connection and reviewed ZIP/CSV imports. See [implementation, dashboard setup and rollout checks](phase-20-linkedin-connected-imports.md).
+
+Phase 21 simplifies completed account states and moves export tools into a separate disclosure. See [connected profile settings cleanup](phase-21-connected-profile-settings.md).

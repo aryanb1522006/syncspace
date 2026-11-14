@@ -12,6 +12,7 @@ const proficiencyLevels = [1, 2, 3, 4, 5];
 
 export function ProfileEdit() {
   const [profile, setProfile] = useState(null);
+  const [savedProfile, setSavedProfile] = useState(null);
   const [skills, setSkills] = useState([]);
   const [proposed, setProposed] = useState([]);
   const [manualSkillId, setManualSkillId] = useState('');
@@ -22,6 +23,7 @@ export function ProfileEdit() {
   const location = useLocation();
   const { syncProfile } = useAuth();
   const applySavedProfile = useCallback((student, { preserveEdits = false } = {}) => {
+    setSavedProfile(student);
     setProfile((current) => preserveEdits ? { ...current, avatar_url: student.avatar_url, avatar_source: student.avatar_source } : student);
     syncProfile(student);
   }, [syncProfile]);
@@ -144,6 +146,6 @@ export function ProfileEdit() {
       </section>
       {message && <p className="success-message" role="status">{message}</p>}
     </form>
-    <ConnectedProfiles onSkillsChanged={reloadSkills} profileDirty={dirty} onProfileUpdated={applySavedProfile} initialMessage={location.state?.message ?? ''} />
+    <ConnectedProfiles profile={savedProfile} onSkillsChanged={reloadSkills} profileDirty={dirty} onProfileUpdated={applySavedProfile} initialMessage={location.state?.message ?? ''} />
   </AppShell>;
 }

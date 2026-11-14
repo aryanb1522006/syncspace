@@ -136,23 +136,34 @@ export const demoApi = {
     if (!profile) throw new Error('Student profile not found');
     return this.getStudent(profile.id);
   },
+  async getApplicantProfile(projectId, applicationId) {
+    const state = load();
+    const user = JSON.parse(localStorage.getItem('syncspace-user') ?? 'null');
+    const project = state.projects.find((item) => Number(item.id) === Number(projectId));
+    const application = state.applications.find((item) => Number(item.id) === Number(applicationId) &&
+      Number(item.projectId) === Number(projectId) && item.status !== 'rejected');
+    if (!project || Number(project.ownerId) !== Number(user?.id) || !application) throw new Error('Applicant profile not found');
+    return this.getStudent(application.studentId);
+  },
   async updateProfile(id, input) {
     const state = load();
     state.profile = {
       ...state.profile, ...input,
       availability_hours_per_week: input.availabilityHoursPerWeek ?? state.profile.availability_hours_per_week,
-      ...(input.linkedinUrl !== undefined ? { linkedin_url: input.linkedinUrl || null } : {})
+      ...(input.linkedinUrl !== undefined ? { linkedin_url: input.linkedinUrl || null } : {}),
+      ...(input.shareProfileLinks !== undefined ? { share_profile_links: input.shareProfileLinks } : {})
     };
     save(state);
     return wait({ student: state.profile });
   },
-  async uploadResume() {
-    return wait({ proposedSkills: [{ skillId: 5, name: 'Node.js', matchedAlias: 'node.js' }, { skillId: 6, name: 'PostgreSQL', matchedAlias: 'postgres' }], message: 'Review these skills before saving them.' });
-  },
-  async updateSkills(id, skills) {
+  async editSkill(skillId, remove = false) {
     const state = load();
-    const lookup = new Map(state.skills.map((skill) => [skill.id, skill]));
-    state.profile.skills = skills.map(({ skillId, proficiency }) => ({ ...lookup.get(Number(skillId)), proficiency }));
+    const selected = state.skills.find((skill) => Number(skill.id) === Number(skillId));
+    if (!selected) throw new Error('Skill not found');
+    if (remove) state.profile.skills = state.profile.skills.filter((skill) => Number(skill.id) !== Number(skillId));
+    else if (!state.profile.skills.some((skill) => Number(skill.id) === Number(skillId))) {
+      state.profile.skills.push({ ...selected, proficiency: 3 });
+    }
     save(state);
     return wait({ student: state.profile });
   },

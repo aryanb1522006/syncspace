@@ -14,6 +14,7 @@ import {
 import { getStudentRecommendationContext } from '../src/models/recommendationModel.js';
 import { decideSkillSuggestion } from '../src/services/skillReview.js';
 import { integrationFixture } from '../test-fixtures/integrationHarness.js';
+import { editStudentSkill, getStudentById } from '../src/models/studentModel.js';
 
 const enabled = process.env.RUN_DB_TESTS === 'true';
 
@@ -29,7 +30,7 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
   const fixture = await integrationFixture();
   const student = { ...fixture.candidate.profile, college_id: fixture.college.id };
   const other = fixture.stranger.profile;
-  const { rows: skills } = await query("SELECT id, name FROM skills WHERE name IN ('React', 'Docker', 'Kubernetes')");
+  const { rows: skills } = await query("SELECT id, name FROM skills WHERE name IN ('React', 'Docker', 'Kubernetes', 'Node.js')");
   const skill = Object.fromEntries(skills.map((row) => [row.name, Number(row.id)]));
   const { rows: [react] } = await query('SELECT proficiency FROM student_skills WHERE student_id = $1 AND skill_id = $2', [student.id, skill.React]);
   assert.ok(react, 'isolated fixture has React');
@@ -45,28 +46,47 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
 
     await replaceSourceEvidence({
       studentId: student.id,
+      source: 'linkedin_export',
+      evidence: [item(skill['Node.js'], 'Node.js', 'Skills.csv', 'linkedin_skill', 0.3)],
+      profileText: ''
+    });
+    const addedIds = await replaceSourceEvidence({
+      studentId: student.id,
       source: 'github',
       expectedConnection: await getConnection(student.id, 'github'),
-      evidence: [item(skill.React, 'React', 'isha/web', 'manifest_dependency'), item(skill.Docker, 'Docker', 'isha/web', 'config_file', 0.5)],
+      evidence: [
+        item(skill.React, 'React', 'isha/web', 'manifest_dependency'),
+        item(skill.Docker, 'Docker', 'isha/web', 'config_file', 0.101),
+        item(skill['Node.js'], 'Node.js', 'isha/web', 'readme_mention', 0.1)
+      ],
       profileText: 'web: Campus energy dashboard.'
     });
-    let evidence = await listEvidence(student.id);
-    assert.equal(evidence.length, 2);
+    let evidence = (await listEvidence(student.id)).filter((row) => row.source === 'github');
+    assert.deepEqual(addedIds, [skill.Docker]);
+    assert.equal((await getStudentById(student.id)).skills.find((row) => row.name === 'Docker').proficiency, 3);
+    assert.equal(evidence.length, 3);
     const reactEvidence = evidence.find((row) => row.rawName === 'React');
     assert.equal(reactEvidence.visibility, 'private', 'evidence is private by default');
     assert.deepEqual(await setEvidenceVisibility(student.id, [reactEvidence.id], 'college'), [Number(reactEvidence.id)]);
     assert.deepEqual(await setEvidenceVisibility(other.id, [reactEvidence.id], 'college'), [], 'students cannot change others\' evidence');
 
-    // Re-sync: Docker disappeared from the repository, Kubernetes appeared.
-    await replaceSourceEvidence({
+    // Explicit deletion is durable even if the next sync still finds Docker.
+    await editStudentSkill(student.id, skill.Docker, true);
+    const refreshedIds = await replaceSourceEvidence({
       studentId: student.id,
       source: 'github',
       expectedConnection: await getConnection(student.id, 'github'),
-      evidence: [item(skill.React, 'React', 'isha/web', 'manifest_dependency', 0.55), item(skill.Kubernetes, 'Kubernetes', 'isha/web', 'config_file', 0.5)],
+      evidence: [
+        item(skill.React, 'React', 'isha/web', 'manifest_dependency', 0.55),
+        item(skill.Docker, 'Docker', 'isha/web', 'config_file', 0.5),
+        item(skill.Kubernetes, 'Kubernetes', 'isha/web', 'config_file', 0.5)
+      ],
       profileText: 'web: Campus energy dashboard.'
     });
-    evidence = await listEvidence(student.id);
-    assert.deepEqual(evidence.map((row) => row.rawName).sort(), ['Kubernetes', 'React'], 'outdated evidence is removed');
+    evidence = (await listEvidence(student.id)).filter((row) => row.source === 'github');
+    assert.deepEqual(refreshedIds, [skill.Kubernetes]);
+    assert.deepEqual(evidence.map((row) => row.rawName).sort(), ['Docker', 'Kubernetes', 'React'], 'outdated evidence is removed');
+    assert.ok(!(await getStudentById(student.id)).skills.some((row) => row.name === 'Docker'));
     const refreshed = evidence.find((row) => row.rawName === 'React');
     assert.equal(refreshed.visibility, 'college', 'a re-sync keeps the student\'s visibility choice');
     assert.equal(refreshed.confidence, 0.55);
@@ -77,7 +97,7 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
     const { rows: [unchanged] } = await query('SELECT proficiency FROM student_skills WHERE student_id = $1 AND skill_id = $2', [student.id, skill.React]);
     assert.equal(unchanged.proficiency, react.proficiency, 'manual proficiency is never overwritten');
 
-    const added = await decideSkillSuggestion(skillReviewRepository, { studentId: student.id, skillId: skill.Kubernetes, decision: 'approved', proficiency: 2 });
+    const added = await decideSkillSuggestion(skillReviewRepository, { studentId: student.id, skillId: skill.Docker, decision: 'approved', proficiency: 3 });
     assert.equal(added.addedToProfile, true);
 
     const context = await getStudentRecommendationContext(student.user_id, student.college_id);
@@ -85,7 +105,7 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
     const kubernetes = context.student.skills.find((row) => Number(row.skillId) === skill.Kubernetes);
     assert.deepEqual(kubernetes.evidenceSources, ['github']);
     await deleteConnection(student.id, 'github', { deleteEvidence: true });
-    assert.equal((await listEvidence(student.id)).length, 0, 'disconnecting with deleteEvidence removes the data');
+    assert.deepEqual((await listEvidence(student.id)).map((row) => row.source), ['linkedin_export'], 'disconnect removes only GitHub evidence');
   } finally {
     await fixture.cleanup();
   }

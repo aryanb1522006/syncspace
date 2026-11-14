@@ -11,8 +11,8 @@ function memoryRepository({ evidenceSkillIds = [], profile = new Map() } = {}) {
   return {
     profile,
     decisions,
-    transaction: (work) => work({
-      listEvidenceForSkill: async (studentId, skillId) => (evidenceSkillIds.includes(skillId) ? [{ id: 1 }] : []),
+    transaction: (studentId, work) => work({
+      listEvidenceForSkill: async (studentId, skillId) => (evidenceSkillIds.includes(skillId) ? [{ id: 1, source: 'github' }] : []),
       addSkillIfMissing: async (studentId, skillId, proficiency) => {
         if (profile.has(skillId)) return false;
         profile.set(skillId, proficiency);

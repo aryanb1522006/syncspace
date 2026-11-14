@@ -28,7 +28,10 @@ test('GitHub callback, PKCE, browser binding, one-time state and identity isolat
       return json({ access_token: 'github-fixture-secret', scope: '' });
     }
     if (url === 'https://api.github.com/user') return json({ id: 100000 + Number(f.candidate.id), login: 'fixture', html_url: 'https://github.com/fixture' });
-    if (url.includes('/users/fixture/repos')) return json([]);
+    if (url.includes('/users/fixture/repos')) return json([{ full_name: 'fixture/campus-tools', size: 12 }]);
+    if (url.endsWith('/repos/fixture/campus-tools/languages')) return json({ Python: 1000 });
+    if (url.endsWith('/repos/fixture/campus-tools/contents/')) return json([]);
+    if (url.endsWith('/repos/fixture/campus-tools/readme')) return new Response(null, { status: 404 });
     throw new Error(`Unexpected test request ${url}`);
   };
   const auth = (call, user = f.candidate) => call.set('Authorization', `Bearer ${user.token}`);
@@ -53,6 +56,15 @@ test('GitHub callback, PKCE, browser binding, one-time state and identity isolat
     await exchange({ ...flow, verifier: randomBytes(32).toString('base64url') }).expect(403);
     const success = await exchange(flow).expect(200);
     assert.equal(success.body.github.connection.username, 'fixture');
+    const added = success.body.skills.find((skill) => skill.name === 'Python');
+    assert.equal(added.status, 'on_profile');
+    assert.deepEqual(success.body.addedSkillIds, [Number(added.skillId)]);
+    const repeated = await auth(request(app).post('/api/integrations/github/sync')).expect(200);
+    assert.deepEqual(repeated.body.addedSkillIds, []);
+    await auth(request(app).delete(`/api/students/${f.candidate.profile.id}/skills/${added.skillId}`)).expect(200);
+    const afterRemoval = await auth(request(app).post('/api/integrations/github/sync')).expect(200);
+    assert.deepEqual(afterRemoval.body.addedSkillIds, []);
+    assert.equal(afterRemoval.body.skills.find((skill) => skill.name === 'Python').status, 'rejected');
     assert.ok(!JSON.stringify(success.body).includes('github-fixture-secret'));
     await exchange(flow).expect(400);
     const stored = await getConnection(f.candidate.profile.id, 'github');

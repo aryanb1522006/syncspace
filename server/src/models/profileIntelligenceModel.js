@@ -1,5 +1,8 @@
 import { query, withTransaction } from '../config/db.js';
 import { AppError } from '../utils/AppError.js';
+import { summarizeEvidence } from '../services/evidenceScoring.js';
+
+const githubAutoAddThreshold = 0.1;
 
 const evidenceSelect = `
   SELECT se.id, se.skill_id AS "skillId", s.name AS "skillName", se.raw_name AS "rawName",
@@ -75,7 +78,7 @@ export async function saveGitHubConnection({ studentId, providerUserId, username
  * lock serializes replacement, reconnect and disconnect; GitHub results
  * must still belong to the exact connection that initiated the fetch.
  */
-export function replaceSourceEvidence({ studentId, source, evidence, profileText, expectedConnection }) {
+export function replaceSourceEvidence({ studentId, source, evidence, profileText, expectedConnection, githubUsername }) {
   return withTransaction(async (client) => {
     await lockProfile(client, studentId);
     if (source === 'github') {
@@ -109,12 +112,40 @@ export function replaceSourceEvidence({ studentId, source, evidence, profileText
       'DELETE FROM skill_evidence WHERE student_id = $1 AND source = $2 AND NOT (id = ANY($3::bigint[]))',
       [studentId, source, touched]
     );
+    const addedSkillIds = source === 'github' ? await addDetectedGitHubSkills(client, studentId) : [];
     await client.query(
-      `UPDATE profile_connections SET profile_text = $3, last_synced_at = NOW(), last_sync_error = NULL
+      `UPDATE profile_connections SET profile_text = $3, last_synced_at = NOW(), last_sync_error = NULL,
+         username = COALESCE($4, username), profile_url = COALESCE('https://github.com/' || $4, profile_url)
        WHERE student_id = $1 AND source = $2`,
-      [studentId, source, profileText]
+      [studentId, source, profileText, githubUsername ?? null]
     );
+    return addedSkillIds;
   });
+}
+
+async function addDetectedGitHubSkills(client, studentId) {
+  const { rows } = await client.query(
+    `${evidenceSelect} WHERE se.student_id = $1 AND se.source = 'github' AND se.skill_id IS NOT NULL`,
+    [studentId]
+  );
+  const eligible = summarizeEvidence(rows)
+    .filter((group) => group.confidence > githubAutoAddThreshold)
+    .map((group) => group.skillId);
+  if (!eligible.length) return [];
+  // A decision on an absent skill can represent a dismissal or a removal
+  // after approval in an older version of the profile editor.
+  const { rows: added } = await client.query(
+    `INSERT INTO student_skills (student_id, skill_id, proficiency)
+     SELECT $1, candidate.id, 3
+     FROM unnest($2::bigint[]) AS candidate(id)
+     WHERE NOT EXISTS (
+       SELECT 1 FROM skill_decisions d WHERE d.student_id = $1 AND d.skill_id = candidate.id
+     )
+     ON CONFLICT (student_id, skill_id) DO NOTHING
+     RETURNING skill_id`,
+    [studentId, eligible]
+  );
+  return added.map(({ skill_id }) => Number(skill_id));
 }
 
 export async function recordSyncError(studentId, source, message, { revoked = false, expectedConnection } = {}) {
@@ -149,11 +180,14 @@ export async function listEvidence(studentId) {
   return rows;
 }
 
-export async function listVisibleEvidence(studentId, visibilities) {
+export async function listVisibleEvidence(studentId, visibilities, { onProfileOnly = false } = {}) {
   const { rows } = await query(
     `${evidenceSelect} WHERE se.student_id = $1 AND se.skill_id IS NOT NULL AND se.visibility::text = ANY($2)
+     AND (NOT $3::boolean OR EXISTS (
+       SELECT 1 FROM student_skills ss WHERE ss.student_id = se.student_id AND ss.skill_id = se.skill_id
+     ))
      ORDER BY se.confidence DESC, se.id`,
-    [studentId, visibilities]
+    [studentId, visibilities, onProfileOnly]
   );
   return rows;
 }
@@ -174,26 +208,31 @@ export async function setEvidenceVisibility(studentId, evidenceIds, visibility) 
   return rows.map((row) => Number(row.id));
 }
 
+export async function saveSkillDecision(client, studentId, skillId, decision) {
+  await client.query(
+    `INSERT INTO skill_decisions (student_id, skill_id, decision) VALUES ($1, $2, $3)
+     ON CONFLICT (student_id, skill_id) DO UPDATE SET decision = EXCLUDED.decision, decided_at = NOW()`,
+    [studentId, skillId, decision]
+  );
+}
+
 export const skillReviewRepository = {
-  transaction: (work) => withTransaction(async (client) => work({
-    async listEvidenceForSkill(studentId, skillId) {
-      const { rows } = await client.query('SELECT id FROM skill_evidence WHERE student_id = $1 AND skill_id = $2', [studentId, skillId]);
-      return rows;
-    },
-    async addSkillIfMissing(studentId, skillId, proficiency) {
-      const { rowCount } = await client.query(
-        `INSERT INTO student_skills (student_id, skill_id, proficiency) VALUES ($1, $2, $3)
-         ON CONFLICT (student_id, skill_id) DO NOTHING`,
-        [studentId, skillId, proficiency]
-      );
-      return rowCount > 0;
-    },
-    async saveDecision(studentId, skillId, decision) {
-      await client.query(
-        `INSERT INTO skill_decisions (student_id, skill_id, decision) VALUES ($1, $2, $3)
-         ON CONFLICT (student_id, skill_id) DO UPDATE SET decision = EXCLUDED.decision, decided_at = NOW()`,
-        [studentId, skillId, decision]
-      );
-    }
-  }))
+  transaction: (studentId, work) => withTransaction(async (client) => {
+    await lockProfile(client, studentId);
+    return work({
+      async listEvidenceForSkill(studentId, skillId) {
+        const { rows } = await client.query('SELECT id, source FROM skill_evidence WHERE student_id = $1 AND skill_id = $2', [studentId, skillId]);
+        return rows;
+      },
+      async addSkillIfMissing(studentId, skillId, proficiency) {
+        const { rowCount } = await client.query(
+          `INSERT INTO student_skills (student_id, skill_id, proficiency) VALUES ($1, $2, $3)
+           ON CONFLICT (student_id, skill_id) DO NOTHING`,
+          [studentId, skillId, proficiency]
+        );
+        return rowCount > 0;
+      },
+      saveDecision: (studentId, skillId, decision) => saveSkillDecision(client, studentId, skillId, decision)
+    });
+  })
 };

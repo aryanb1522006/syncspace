@@ -3,8 +3,7 @@
 // Turns individual pieces of skill evidence into an explainable
 // confidence and evidence class. Confidence answers "how strong is the
 // evidence that this student has USED this technology?" - it is NOT a
-// proficiency level. Proficiency is always chosen by the student when they
-// approve a suggestion; SyncSpace never infers it.
+// proficiency level. New skills use the app's default internal rating.
 //
 // Per-item confidence (fixed, documented weights):
 //   manifest_dependency    0.60  declared in package.json / requirements.txt / ...

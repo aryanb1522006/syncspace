@@ -6,6 +6,7 @@ import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 import { MatchBreakdown } from '../components/MatchBreakdown.jsx';
 import { ProjectQueries } from '../components/ProjectQueries.jsx';
+import { ProfileLinks } from '../components/ProfileLinks.jsx';
 import { SimilarProjects } from '../components/SimilarProjects.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -76,6 +77,7 @@ export function ProjectDetail() {
         <ProjectQueries projectId={id} isOwner={isOwner} />
       </div>
       <aside className="project-detail__aside"><div className="project-icon"><Leaf /></div><dl><div><dt><UsersRound />Team</dt><dd>{memberCount} of {teamSize} spots filled</dd></div><div><dt><Clock3 />Commitment</dt><dd>{commitment} hours per week</dd></div><div><dt><CalendarDays />Deadline</dt><dd>{new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium' }).format(new Date(project.deadline))}</dd></div></dl><p>Led by <strong>{project.owner_name}</strong>{ownerId && <Link className="profile-inline-link" to={`/profiles/users/${ownerId}`}>View profile</Link>}</p>
+        <ProfileLinks {...project.ownerLinks} />
         {isOwner ? <Button to={`/projects/${id}/applications`}>Review applications</Button> : application?.status === 'accepted' && application.teamId ? <Button to={`/team/${application.teamId}`}>Open team workspace</Button> : application ? <Button to="/applications" variant="secondary">Application {application.status}</Button> : <Button onClick={apply} disabled={busy}>{busy ? 'Sending…' : 'Apply to join'}</Button>}
         {message && <p className="success-message" role="status">{message}</p>}{error && <p className="form-error" role="alert">{error}</p>}
       </aside>

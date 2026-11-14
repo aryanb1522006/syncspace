@@ -46,6 +46,7 @@ export default function App() {
     <Route path="/projects/new" element={<Protected><CreateProject /></Protected>} />
     <Route path="/projects/:id/edit" element={<Protected><EditProject /></Protected>} />
     <Route path="/projects/:id/applications" element={<Protected><OwnerApplications /></Protected>} />
+    <Route path="/projects/:projectId/applications/:applicationId/profile" element={<Protected><MemberProfile /></Protected>} />
     <Route path="/projects/:id" element={<Protected><ProjectDetail /></Protected>} />
     <Route path="/profile" element={<Protected><ProfileEdit /></Protected>} />
     <Route path="/integrations/github/callback" element={<Protected><GitHubCallback /></Protected>} />

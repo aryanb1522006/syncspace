@@ -1,16 +1,16 @@
-import pdf from 'pdf-parse';
 import {
   canViewStudentContact,
+  editStudentSkill,
+  getSharedProfileLinks,
   getStudentById,
   getStudentByUserId,
   listSkillDictionary,
   replaceStudentSkills,
-  setResumePath,
   updateStudent
 } from '../models/studentModel.js';
 import { listVisibleEvidence } from '../models/profileIntelligenceModel.js';
+import { findApplicantForOwner } from '../models/applicationModel.js';
 import { summarizeEvidence } from '../services/evidenceScoring.js';
-import { extractSkills } from '../services/skillExtraction.js';
 import { storage } from '../services/storage.js';
 import { AppError } from '../utils/AppError.js';
 
@@ -37,14 +37,23 @@ export async function getStudentByUser(req, res) {
   return sendVisibleStudent(req, res, student);
 }
 
-async function sendVisibleStudent(req, res, student) {
+export async function getApplicantProfile(req, res) {
+  res.set('Cache-Control', 'no-store');
+  const studentId = await findApplicantForOwner(req.params.id, req.params.applicationId, req.user.id, req.user.collegeId);
+  return sendVisibleStudent(req, res, await getStudentById(studentId), { applicationReview: true });
+}
+
+async function sendVisibleStudent(req, res, student, { applicationReview = false } = {}) {
   if (!student || Number(student.college_id) !== Number(req.user.collegeId)) throw new AppError(404, 'Student profile not found');
   const contactVisible = await canViewStudentContact(req.user.id, student.id, req.user.collegeId);
   // Evidence is private unless the student chose 'team' (teammates, the
   // same relationship that reveals contact details) or 'college'.
   const isSelf = Number(student.user_id) === req.user.id;
   const visibilities = isSelf ? ['private', 'team', 'college'] : contactVisible ? ['team', 'college'] : ['college'];
-  const evidence = await listVisibleEvidence(student.id, visibilities);
+  const [evidence, sharedLinks] = await Promise.all([
+    listVisibleEvidence(student.id, visibilities, { onProfileOnly: !isSelf }),
+    applicationReview ? getSharedProfileLinks(student.id) : null
+  ]);
   res.json({
     student: {
       id: student.id,
@@ -58,6 +67,7 @@ async function sendVisibleStudent(req, res, student) {
       availabilityHoursPerWeek: student.availability_hours_per_week,
       skills: student.skills,
       ...(contactVisible ? { email: student.email, linkedinUrl: student.linkedin_url ?? null } : {}),
+      ...(sharedLinks && { githubUrl: sharedLinks.githubUrl, linkedinUrl: sharedLinks.linkedinUrl }),
       contactVisible,
       skillEvidence: summarizeEvidence(evidence).map(({ skillId, name, confidence, evidenceClass, sources, items }) => ({
         skillId, name, confidence, evidenceClass, sources,
@@ -77,39 +87,10 @@ export async function updateProfile(req, res) {
     bio: req.body.bio,
     interests: req.body.interests,
     availability_hours_per_week: req.body.availabilityHoursPerWeek,
-    linkedin_url: req.body.linkedinUrl
+    linkedin_url: req.body.linkedinUrl,
+    share_profile_links: req.body.shareProfileLinks
   };
   res.json({ student: await updateStudent(id, changes) });
-}
-
-export async function uploadResume(req, res) {
-  const id = Number(req.params.id);
-  const profile = await ownProfile(req, id);
-  if (!req.file) throw new AppError(400, 'A PDF resume is required');
-
-  let savedReference;
-  try {
-    const buffer = await storage.readUpload(req.file);
-    const parsed = await pdf(buffer);
-    // Skills named with one or two letters ("C", "Go") are ordinary words
-    // in resume prose, so they are suggested from GitHub evidence instead.
-    const dictionary = (await listSkillDictionary()).filter((skill) => skill.name.trim().length >= 3);
-    const proposedSkills = extractSkills(parsed.text, dictionary);
-    savedReference = await storage.saveUpload(req.file);
-    await setResumePath(id, savedReference);
-    if (profile.resume_path && profile.resume_path !== savedReference) {
-      storage.deleteReference(profile.resume_path).catch((error) => {
-        req.log?.warn({ err: error, studentId: id }, 'Could not remove replaced resume object');
-      });
-    }
-    const resumePath = `/api/students/${id}/resume`;
-    res.json({ resumePath, proposedSkills, message: 'Review these skills before saving them.' });
-  } catch (error) {
-    if (savedReference) await storage.deleteReference(savedReference).catch(() => {});
-    await storage.discardUpload(req.file);
-    if (error instanceof AppError) throw error;
-    throw new AppError(400, 'The PDF could not be read');
-  }
 }
 
 export async function downloadResume(req, res) {
@@ -125,6 +106,18 @@ export async function updateSkills(req, res) {
   const id = Number(req.params.id);
   await ownProfile(req, id);
   res.json({ student: await replaceStudentSkills(id, req.body.skills) });
+}
+
+export async function addSkill(req, res) {
+  const { id, skillId } = req.params;
+  await ownProfile(req, id);
+  res.json({ student: await editStudentSkill(id, skillId, false) });
+}
+
+export async function removeSkill(req, res) {
+  const { id, skillId } = req.params;
+  await ownProfile(req, id);
+  res.json({ student: await editStudentSkill(id, skillId, true) });
 }
 
 export async function listSkills(req, res) {

@@ -72,6 +72,19 @@ export async function listProjectApplications(projectId, ownerId, collegeId) {
   return rows;
 }
 
+export async function findApplicantForOwner(projectId, applicationId, ownerId, collegeId) {
+  const { rows: [application] } = await query(
+    `SELECT a.student_id
+     FROM applications a
+     JOIN projects p ON p.id = a.project_id
+     WHERE p.id = $1 AND a.id = $2 AND p.owner_id = $3 AND p.college_id = $4
+       AND a.status IN ('pending', 'accepted')`,
+    [projectId, applicationId, ownerId, collegeId]
+  );
+  if (!application) throw new AppError(404, 'Applicant profile not found');
+  return application.student_id;
+}
+
 export const applicationWorkflowRepository = {
   transaction: (work) => withTransaction(async (client) => work({
     async getApplicationForUpdate(id) {

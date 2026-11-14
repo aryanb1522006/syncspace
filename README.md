@@ -9,7 +9,7 @@ SyncSpace helps college students discover worthwhile campus projects and find te
 - One account for project discovery, applications, project publishing, and applicant review
 - Google Sign-In with server-verified exact-domain restriction support
 - Editable student profiles, skill proficiency, interests, and weekly availability
-- PDF resume upload with a review-before-save skill extraction flow
+- GitHub skill sync with manual add and remove controls and optional LinkedIn evidence
 - GitHub (OAuth, public repositories only) and LinkedIn data-export import that suggest evidence-backed skills for review ([Phase 18](docs/phases/phase-18-profile-intelligence.md))
 - Project creation, filtering, deadlines, required skills, and preferred skills
 - Explainable project recommendations with a weighted score breakdown

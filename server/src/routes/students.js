@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { downloadResume, getMe, getStudent, getStudentByUser, listSkills, updateProfile, updateSkills, uploadResume } from '../controllers/studentController.js';
+import { addSkill, downloadResume, getMe, getStudent, getStudentByUser, listSkills, removeSkill, updateProfile, updateSkills } from '../controllers/studentController.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { validate } from '../middleware/validation.js';
-import { resumeUpload } from '../services/storage.js';
+import { AppError } from '../utils/AppError.js';
 
 const router = Router();
 router.use(authenticate);
@@ -16,6 +16,7 @@ const profileSchema = z.object({
   bio: z.string().trim().max(1000).optional(),
   interests: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
   availabilityHoursPerWeek: z.coerce.number().int().min(0).max(168).optional(),
+  shareProfileLinks: z.boolean().optional(),
   // Matches the student_profiles.linkedin_url CHECK; '' clears the link.
   linkedinUrl: z.union([
     z.literal('').transform(() => null),
@@ -27,8 +28,9 @@ const skillsSchema = z.object({
   skills: z.array(z.object({
     skillId: z.coerce.number().int().positive(),
     proficiency: z.coerce.number().int().min(1).max(5)
-  })).max(50)
+  })).max(200).refine((skills) => new Set(skills.map((skill) => skill.skillId)).size === skills.length, 'Choose each skill only once')
 });
+const skillParams = z.object({ id: z.coerce.number().int().positive(), skillId: z.coerce.number().int().positive() });
 
 router.get('/me', asyncHandler(getMe));
 router.get('/skills/dictionary', asyncHandler(listSkills));
@@ -36,7 +38,9 @@ router.get('/by-user/:userId', asyncHandler(getStudentByUser));
 router.get('/:id/resume', asyncHandler(downloadResume));
 router.get('/:id', asyncHandler(getStudent));
 router.put('/:id', validate(profileSchema), asyncHandler(updateProfile));
-router.post('/:id/resume', resumeUpload.single('resume'), asyncHandler(uploadResume));
+router.post('/:id/resume', () => { throw new AppError(410, 'Add skills from GitHub or edit them on your profile.'); });
 router.put('/:id/skills', validate(skillsSchema), asyncHandler(updateSkills));
+router.put('/:id/skills/:skillId', validate(skillParams, 'params'), asyncHandler(addSkill));
+router.delete('/:id/skills/:skillId', validate(skillParams, 'params'), asyncHandler(removeSkill));
 
 export default router;

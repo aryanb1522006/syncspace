@@ -9,26 +9,11 @@ import {
   S3Client
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import multer from 'multer';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
 
 const uploadRoot = path.resolve(process.cwd(), env.uploadDir);
 if (env.storageDriver === 'local') mkdirSync(uploadRoot, { recursive: true });
-
-const localDiskStorage = multer.diskStorage({
-  destination: (req, file, callback) => callback(null, uploadRoot),
-  filename: (req, file, callback) => callback(null, `${randomUUID()}.pdf`)
-});
-
-export const resumeUpload = multer({
-  storage: env.storageDriver === 's3' ? multer.memoryStorage() : localDiskStorage,
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: (req, file, callback) => {
-    if (file.mimetype !== 'application/pdf') return callback(new AppError(400, 'Only PDF resumes are accepted'));
-    callback(null, true);
-  }
-});
 
 const s3Reference = (bucket, key) => `s3://${bucket}/${key}`;
 

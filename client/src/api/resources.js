@@ -12,12 +12,13 @@ export const api = {
   getMe: () => use(() => demoApi.getMe(), () => request('/students/me')),
   getStudent: (id) => use(() => demoApi.getStudent(id), () => request(`/students/${id}`)),
   getStudentByUserId: (userId) => use(() => demoApi.getStudentByUserId(userId), () => request(`/students/by-user/${userId}`)),
+  getApplicantProfile: (projectId, applicationId) => use(
+    () => demoApi.getApplicantProfile(projectId, applicationId),
+    () => request(`/projects/${projectId}/applications/${applicationId}/profile`)
+  ),
   updateProfile: (id, input) => use(() => demoApi.updateProfile(id, input), () => request(`/students/${id}`, { method: 'PUT', body: json(input) })),
-  uploadResume: (id, file) => use(() => demoApi.uploadResume(file), () => {
-    const body = new FormData(); body.append('resume', file);
-    return request(`/students/${id}/resume`, { method: 'POST', body });
-  }),
-  updateSkills: (id, skills) => use(() => demoApi.updateSkills(id, skills), () => request(`/students/${id}/skills`, { method: 'PUT', body: json({ skills }) })),
+  addSkill: (id, skillId) => use(() => demoApi.editSkill(skillId), () => request(`/students/${id}/skills/${skillId}`, { method: 'PUT' })),
+  removeSkill: (id, skillId) => use(() => demoApi.editSkill(skillId, true), () => request(`/students/${id}/skills/${skillId}`, { method: 'DELETE' })),
   listSkills: () => use(() => demoApi.listSkills(), () => request('/students/skills/dictionary')),
   updateProject: (id, input) => use(() => demoApi.updateProject(id, input), () => request(`/projects/${id}`, { method: 'PUT', body: json(input) })),
   deleteProject: (id) => use(() => demoApi.deleteProject(id), () => request(`/projects/${id}`, { method: 'DELETE' })),

@@ -77,7 +77,7 @@ async function syncGitHub(student, connection) {
     const data = await client.collectRepositoryData(repos);
     const dictionary = await listSkillDictionary();
     const { evidence, profileText } = analyzeRepositories(data, dictionary);
-    await replaceSourceEvidence({ studentId: student.id, source: 'github', evidence, profileText, expectedConnection: connection });
+    return await replaceSourceEvidence({ studentId: student.id, source: 'github', evidence, profileText, expectedConnection: connection, githubUsername: user.login });
   } catch (error) {
     await recordSyncError(student.id, 'github', error.message, { revoked: error instanceof GitHubRevokedError, expectedConnection: connection });
     throw error;
@@ -138,8 +138,8 @@ export async function exchangeGitHubCode(req, res) {
     accessTokenCiphertext: encryptToken(token, env.tokenEncryptionKey),
     requestId
   });
-  await syncGitHub(student, await getConnection(student.id, 'github'));
-  res.json(await overview(student));
+  const addedSkillIds = await syncGitHub(student, await getConnection(student.id, 'github'));
+  res.json({ ...(await overview(await currentStudent(req))), addedSkillIds });
 }
 
 export async function syncGitHubNow(req, res) {
@@ -148,8 +148,8 @@ export async function syncGitHubNow(req, res) {
   const connection = await getConnection(student.id, 'github');
   if (!connection) throw new AppError(404, 'GitHub is not connected');
   if (connection.status !== 'active' || !connection.accessTokenCiphertext) throw new GitHubRevokedError();
-  await syncGitHub(student, connection);
-  res.json(await overview(student));
+  const addedSkillIds = await syncGitHub(student, connection);
+  res.json({ ...(await overview(await currentStudent(req))), addedSkillIds });
 }
 
 export async function disconnectGitHub(req, res) {

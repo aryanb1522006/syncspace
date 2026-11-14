@@ -126,23 +126,7 @@ describe('SyncSpace UI', () => {
     expect(screen.queryByRole('button', { name: 'Remove Node.js' })).not.toBeInTheDocument();
     expect((await api.getMe()).student.skills.find((skill) => skill.name === 'React').proficiency).toBe(5);
     expect(screen.getByRole('textbox', { name: 'Bio' })).toHaveValue('Unsaved project interests');
-    expect(screen.getByText('Read resume')).toBeVisible();
-  });
-
-  it('reviews resume skills before saving them with an internal default and no ratings', async () => {
-    renderApp('/profile', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
-    const upload = await screen.findByLabelText('Read resume');
-    fireEvent.change(upload, { target: { files: [new File(['fixture'], 'resume.pdf', { type: 'application/pdf' })] } });
-    expect(await screen.findByRole('heading', { name: 'Proposed from your resume' })).toBeVisible();
-    expect(screen.queryByRole('combobox', { name: /proficiency/i })).not.toBeInTheDocument();
-    expect((await api.getMe()).student.skills.some((skill) => skill.name === 'Node.js')).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed skills' }));
-    expect(await screen.findByText('Reviewed resume skills saved.')).toBeVisible();
-    const { student } = await api.getMe();
-    expect(student.skills.find((skill) => skill.name === 'Node.js').proficiency).toBe(3);
-    expect(student.skills.find((skill) => skill.name === 'PostgreSQL').proficiency).toBe(3);
-    expect(student.skills.find((skill) => skill.name === 'React').proficiency).toBe(5);
-    expect(screen.queryByRole('heading', { name: 'Proposed from your resume' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Read resume')).not.toBeInTheDocument();
   });
 
   it('explains on the profile page that connected profiles need the live API in demo mode', async () => {
@@ -287,6 +271,11 @@ describe('SyncSpace UI', () => {
     expect(screen.getByText('React')).toBeVisible();
     expect(screen.getByText('TypeScript')).toBeVisible();
     expect(screen.queryByText(/[1-5]\/5/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: "View Isha Mehta's profile" }));
+    expect(await screen.findByRole('heading', { name: 'Isha Mehta', level: 1 })).toBeVisible();
+    expect(screen.getByText('Project applicant')).toBeVisible();
+    fireEvent.click(screen.getByRole('link', { name: 'Back to applications' }));
+    expect(await screen.findByRole('heading', { name: 'Isha Mehta', level: 2 })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Accept and add to team' }));
     expect(await screen.findByRole('link', { name: 'Open team workspace' })).toBeVisible();
     expect(screen.getByText('accepted')).toBeVisible();

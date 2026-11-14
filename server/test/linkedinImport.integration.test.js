@@ -16,7 +16,7 @@ test('import limits reject unsupported CSVs, unknown sections and oversized rows
 test('ZIP/CSV preview writes nothing; confirmation imports only selected sections privately', { skip: process.env.RUN_DB_TESTS !== 'true' }, async () => {
   const f = await integrationFixture();
   const auth = (call) => call.set('Authorization', `Bearer ${f.candidate.token}`);
-  const file = Buffer.from(zipSync({ 'Skills.csv': strToU8('Name\nReact\n'), 'Profile.csv': strToU8('Headline,Summary\nPrivate headline,React developer\n'), 'Connections.csv': strToU8('Secret Contact\n') }));
+  const file = Buffer.from(zipSync({ 'Skills.csv': strToU8('Name\nPython\n'), 'Profile.csv': strToU8('Headline,Summary\nPrivate headline,React developer\n'), 'Connections.csv': strToU8('Secret Contact\n') }));
   try {
     const preview = await auth(request(app).post('/api/integrations/linkedin/preview')).attach('export', file, 'linkedin.zip').expect(200);
     assert.deepEqual(preview.body.sections.map((item) => item.name), ['profile.csv', 'skills.csv']);
@@ -31,6 +31,12 @@ test('ZIP/CSV preview writes nothing; confirmation imports only selected section
     assert.equal(evidence.length, 1);
     assert.equal(evidence[0].visibility, 'private');
     assert.equal(evidence[0].detectionMethod, 'linkedin_skill');
+    const importedSkill = imported.body.skills.find((skill) => skill.name === 'Python');
+    assert.equal(importedSkill.status, 'pending');
+    await auth(request(app).post(`/api/integrations/skills/${importedSkill.skillId}/decision`))
+      .send({ decision: 'approved', proficiency: 3 }).expect(400);
+    const own = await auth(request(app).get('/api/students/me')).expect(200);
+    assert.ok(!own.body.student.skills.some((skill) => skill.name === 'Python'));
     const stored = await getConnection(f.candidate.profile.id, 'linkedin_export');
     assert.equal(stored.accessTokenCiphertext, null);
     const csv = Buffer.from('Title,Company Name,Description\nDeveloper,Acme,React applications\n');

@@ -1,4 +1,6 @@
 import { query, withTransaction } from '../config/db.js';
+import { saveSkillDecision } from './profileIntelligenceModel.js';
+import { AppError } from '../utils/AppError.js';
 
 export async function getStudentById(id) {
   const { rows } = await query(
@@ -63,6 +65,20 @@ export async function canViewStudentContact(viewerUserId, targetStudentId, colle
   return rows.length > 0;
 }
 
+export async function getSharedProfileLinks(studentId) {
+  const { rows: [profile] } = await query(
+    `SELECT CASE WHEN sp.linkedin_url ~ '^https://(www[.])?linkedin[.]com/in/[A-Za-z0-9_-]{3,100}/?$'
+         THEN sp.linkedin_url END AS "linkedinUrl",
+       CASE WHEN pc.username ~ '^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$'
+         THEN 'https://github.com/' || pc.username END AS "githubUrl"
+     FROM student_profiles sp
+     LEFT JOIN profile_connections pc ON pc.student_id = sp.id AND pc.source = 'github' AND pc.status = 'active'
+     WHERE sp.id = $1 AND sp.share_profile_links`,
+    [studentId]
+  );
+  return profile ?? null;
+}
+
 
 export async function updateStudent(id, updates) {
   const fields = Object.entries(updates).filter(([, value]) => value !== undefined);
@@ -76,10 +92,16 @@ export async function updateStudent(id, updates) {
 
 export async function replaceStudentSkills(studentId, skills) {
   await withTransaction(async (client) => {
-    await client.query('DELETE FROM student_skills WHERE student_id = $1', [studentId]);
+    await client.query('SELECT id FROM student_profiles WHERE id = $1 FOR UPDATE', [studentId]);
+    const { rows: removed } = await client.query(
+      'DELETE FROM student_skills WHERE student_id = $1 AND NOT (skill_id = ANY($2::bigint[])) RETURNING skill_id',
+      [studentId, skills.map((skill) => skill.skillId)]
+    );
+    for (const { skill_id } of removed) await saveSkillDecision(client, studentId, skill_id, 'rejected');
     for (const skill of skills) {
       await client.query(
-        'INSERT INTO student_skills (student_id, skill_id, proficiency) VALUES ($1, $2, $3)',
+        `INSERT INTO student_skills (student_id, skill_id, proficiency) VALUES ($1, $2, $3)
+         ON CONFLICT (student_id, skill_id) DO UPDATE SET proficiency = EXCLUDED.proficiency`,
         [studentId, skill.skillId, skill.proficiency]
       );
     }
@@ -87,9 +109,32 @@ export async function replaceStudentSkills(studentId, skills) {
   return getStudentById(studentId);
 }
 
-export const setResumePath = async (studentId, resumePath) => {
-  await query('UPDATE student_profiles SET resume_path = $1 WHERE id = $2', [resumePath, studentId]);
-};
+export async function editStudentSkill(studentId, skillId, remove) {
+  await withTransaction(async (client) => {
+    await client.query('SELECT id FROM student_profiles WHERE id = $1 FOR UPDATE', [studentId]);
+    if (remove) {
+      await client.query(
+        'DELETE FROM student_skills WHERE student_id = $1 AND skill_id = $2',
+        [studentId, skillId]
+      );
+      // An absent skill may currently be waiting for a GitHub sync to finish.
+      const { rowCount } = await client.query('SELECT id FROM skills WHERE id = $1', [skillId]);
+      if (rowCount) await saveSkillDecision(client, studentId, skillId, 'rejected');
+      return;
+    }
+    const { rowCount } = await client.query(
+      `INSERT INTO student_skills (student_id, skill_id, proficiency)
+       SELECT $1, id, 3 FROM skills WHERE id = $2
+       ON CONFLICT (student_id, skill_id) DO NOTHING`,
+      [studentId, skillId]
+    );
+    if (!rowCount) {
+      const { rowCount: exists } = await client.query('SELECT id FROM skills WHERE id = $1', [skillId]);
+      if (!exists) throw new AppError(404, 'Skill not found');
+    }
+  });
+  return getStudentById(studentId);
+}
 
 export const listSkillDictionary = async () => {
   const { rows } = await query('SELECT id, name, category, aliases FROM skills ORDER BY name');

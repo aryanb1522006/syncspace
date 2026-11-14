@@ -20,48 +20,54 @@ const methodLabels = {
 };
 const visibilityLabels = { private: 'Only me', team: 'My teammates', college: 'Students at my college' };
 const formatDate = (value) => (value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value)) : '—');
+const githubSyncMessage = ({ addedSkillIds }) => {
+  const count = addedSkillIds?.length ?? 0;
+  return count ? `GitHub synced. Added ${count} skill${count === 1 ? '' : 's'} to your profile.` : 'GitHub synced.';
+};
 
 function EvidenceList({ group }) {
-  return <details className="evidence-review__details">
-    <summary>{group.items.length} piece{group.items.length === 1 ? '' : 's'} of evidence</summary>
+  return <div className="evidence-review__details">
+    <p>{group.items.length} piece{group.items.length === 1 ? '' : 's'} of evidence</p>
     <ul>{group.items.map((item) => <li key={item.id}>
       <strong>{item.sourceRef}</strong> — {item.evidence}
       <small>{methodLabels[item.detectionMethod] ?? item.detectionMethod} · {Math.round(item.confidence * 100)}% · verified {formatDate(item.lastVerifiedAt)}</small>
     </li>)}</ul>
-  </details>;
+  </div>;
 }
 
 function SkillRow({ group, busy, onDecide, onVisibility }) {
-  const decided = group.status === 'on_profile' || group.status === 'approved';
+  const onProfile = group.status === 'on_profile';
+  const fromGitHub = group.sources.includes('github');
+  const dismissed = group.status === 'rejected' || group.status === 'approved';
   const visibility = group.items.every((item) => item.visibility === group.items[0].visibility) ? group.items[0].visibility : '';
-  return <article className={`evidence-review__row evidence-review__row--${group.status}`}>
-    <div className="evidence-review__head">
+  return <details className="evidence-review__row">
+    <summary className="evidence-review__head">
       <strong>{group.name}</strong>
-      <span className="evidence-review__confidence" title="Strength of the evidence that you have used this skill, not a proficiency level">{Math.round(group.confidence * 100)}% evidence</span>
+      <span className="evidence-review__confidence">{Number(((group.githubConfidence ?? group.confidence) * 100).toFixed(1))}% evidence</span>
       <small>{classLabels[group.evidenceClass]}</small>
-    </div>
-    <EvidenceList group={group} />
-    <div className="evidence-review__actions">
-      {decided
-        ? <>
-          <span className="evidence-review__status"><Check />{group.status === 'on_profile' ? 'On your profile' : 'Approved'}</span>
-          <label>Evidence visible to<select aria-label={`${group.name} evidence visibility`} value={visibility} disabled={busy} onChange={(event) => onVisibility(group, event.target.value)}>
+    </summary>
+    <div className="evidence-review__body">
+      <EvidenceList group={group} />
+      <div className="evidence-review__actions">
+        {onProfile
+          ? <label>Evidence visible to<select aria-label={`${group.name} evidence visibility`} value={visibility} disabled={busy} onChange={(event) => onVisibility(group, event.target.value)}>
             {!visibility && <option value="">Mixed</option>}
             {Object.entries(visibilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select></label>
-        </>
-        : <>
-          {group.status === 'rejected' && <span className="evidence-review__status evidence-review__status--muted"><X />Rejected</span>}
-          <Button type="button" disabled={busy} onClick={() => onDecide(group, 'approved', defaultProficiency)}><Check />{group.status === 'rejected' ? 'Add anyway' : 'Approve'}</Button>
-          {group.status !== 'rejected' && <Button type="button" variant="secondary" disabled={busy} onClick={() => onDecide(group, 'rejected')}><X />Not accurate</Button>}
-        </>}
+          : fromGitHub && <>
+            <Button type="button" disabled={busy} onClick={() => onDecide(group, 'approved', defaultProficiency)}><Check />{dismissed ? 'Add back' : 'Add to skills'}</Button>
+            {!dismissed && <Button type="button" variant="secondary" disabled={busy} onClick={() => onDecide(group, 'rejected')}><X />Dismiss</Button>}
+          </>}
+      </div>
     </div>
-  </article>;
+  </details>;
 }
 
-export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, profileDirty = false, initialMessage = '' }) {
+export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, onBusyChange, skillRevision = 0, skillBusy = false, profileDirty = false, initialMessage = '' }) {
   const [state, setState] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [working, setBusy] = useState(false);
+  const [loadedRevision, setLoadedRevision] = useState(null);
+  const busy = working || skillBusy || loadedRevision !== skillRevision;
   const [message, setMessage] = useState(initialMessage);
   const [error, setError] = useState('');
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
@@ -72,8 +78,14 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
   const [pendingAction, setPendingAction] = useState('');
 
   useEffect(() => {
-    api.integrations().then(setState).catch((reason) => setError(reason.message));
-  }, []);
+    let active = true;
+    api.integrations()
+      .then((next) => { if (active) setState(next); })
+      .catch((reason) => { if (active) setError(reason.message); })
+      .finally(() => { if (active) setLoadedRevision(skillRevision); });
+    return () => { active = false; };
+  }, [skillRevision]);
+  useEffect(() => { onBusyChange?.(working); }, [onBusyChange, working]);
   useEffect(() => {
     if (!message) return undefined;
     const timer = window.setTimeout(() => setMessage(''), 6000);
@@ -113,9 +125,13 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
   const selectedFields = detailFields.filter((field) => availableFields.includes(field));
   const detailsComplete = account && availableFields.length === 0;
   const reviewable = state.skills.filter((group) => group.status !== 'unmatched');
-  const pending = reviewable.filter((group) => group.status === 'pending');
-  const rest = reviewable.filter((group) => group.status !== 'pending');
   const unmatched = state.skills.filter((group) => group.status === 'unmatched');
+  const groups = [
+    { title: 'On your profile', items: reviewable.filter((group) => group.status === 'on_profile') },
+    { title: 'GitHub suggestions', items: reviewable.filter((group) => group.status === 'pending' && group.sources.includes('github')) },
+    { title: 'Dismissed or removed', items: reviewable.filter((group) => ['rejected', 'approved'].includes(group.status) && group.sources.includes('github')) },
+    { title: 'LinkedIn evidence', items: reviewable.filter((group) => group.status !== 'on_profile' && !group.sources.includes('github')) }
+  ];
 
   const connectProvider = async (provider) => {
     setBusy(true); setError('');
@@ -156,7 +172,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
   const toggle = (list, value) => list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
   const decide = (group, decision, proficiency) => run(
     () => api.decideSkill(group.skillId, decision, proficiency),
-    decision === 'approved' ? `${group.name} added to your skills.` : `${group.name} will not be suggested again.`,
+    decision === 'approved' ? `${group.name} added to your skills.` : `${group.name} dismissed.`,
     { skillsChanged: decision === 'approved' }
   );
   const setVisibility = (group, visibility) => run(
@@ -165,7 +181,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
   );
 
   return <section className="connected-profiles">
-    <div className="section-title"><div><h2>Connected profiles</h2><p>Manage your accounts and review skill suggestions. Evidence is private until you share it.</p></div></div>
+    <div className="section-title"><div><h2>Connected profiles</h2><p>Manage your accounts and the evidence behind your skills.</p></div></div>
     {profileDirty && ((!github && state.github.configured) || github?.status === 'revoked' || (!account && state.linkedin.configured) || (account && !detailsComplete)) && <p className="connected-profiles__note">Save your profile edits before connecting an account or copying account details.</p>}
 
     <div className="source-cards">
@@ -175,23 +191,24 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
         {github
           ? <>
             <div className="source-card__identity"><div><a href={github.profileUrl} target="_blank" rel="noreferrer">@{github.username}</a><small>{github.status === 'revoked' ? 'Reconnect to resume syncing.' : `Synced ${formatDate(github.lastSyncedAt)}`}</small></div></div>
+            {github.status === 'active' && <p>Sync adds skills with more than 10% GitHub evidence. Edit your skill list anytime.</p>}
             {github.lastSyncError && <p className="form-error">{github.lastSyncError}</p>}
             <div className="source-card__actions">
               {github.status === 'revoked'
                 ? <Button type="button" disabled={busy || profileDirty || !state.github.configured} onClick={connectGitHub}><Github />Reconnect</Button>
-                : <Button type="button" variant="secondary" disabled={busy} onClick={() => run(() => api.githubSync(), 'GitHub synced. Review any new suggestions below.', { actionName: 'github-sync' })}><RefreshCw className={pendingAction === 'github-sync' ? 'is-spinning' : ''} />{pendingAction === 'github-sync' ? 'Syncing…' : 'Sync now'}</Button>}
+                : <Button type="button" variant="secondary" disabled={busy} onClick={() => run(() => api.githubSync(), githubSyncMessage, { actionName: 'github-sync', skillsChanged: true })}><RefreshCw className={pendingAction === 'github-sync' ? 'is-spinning' : ''} />{pendingAction === 'github-sync' ? 'Syncing…' : 'Sync now'}</Button>}
               {!confirmDisconnect
                 ? <Button type="button" variant="secondary" disabled={busy} onClick={() => setConfirmDisconnect(true)}>Disconnect</Button>
                 : <div className="source-card__confirm">
                   <label><input type="checkbox" checked={deleteGitHubEvidence} onChange={(event) => setDeleteGitHubEvidence(event.target.checked)} />Also delete all GitHub evidence</label>
-                  <p>Skills you already approved stay on your profile.</p>
+                  <p>Skills already on your profile stay until you remove them.</p>
                   <Button type="button" disabled={busy} onClick={() => run(() => api.githubDisconnect(deleteGitHubEvidence), 'GitHub disconnected. Stored authorization was removed; you can also revoke SyncSpace in GitHub settings.').then(() => setConfirmDisconnect(false))}>Confirm disconnect</Button>
                   <Button type="button" variant="secondary" onClick={() => setConfirmDisconnect(false)}>Cancel</Button>
                 </div>}
             </div>
           </>
           : state.github.configured && <>
-            <p>Suggest skills from your public repositories. Nothing is posted to GitHub.</p>
+            <p>Add skills from your public repositories when GitHub evidence exceeds 10%. You can remove any skill from your profile. Nothing is posted to GitHub.</p>
             <Button type="button" disabled={busy || profileDirty} onClick={connectGitHub}><Github />Connect GitHub</Button>
           </>}
       </article>
@@ -218,15 +235,15 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
           {state.linkedin.configured
             ? <Button type="button" disabled={busy || profileDirty} onClick={() => connectProvider('linkedin')}><Linkedin />Connect LinkedIn</Button>
             : <p className="connected-profiles__note">Account linking is unavailable. You can still import an export below.</p>}
-          <details className="source-card__help"><summary>What does this share?</summary><p>Your name and photo only. Your college login stays the same. Skills and experience come from an export you review separately.</p></details>
+          <details className="source-card__help"><summary>What does this share?</summary><p>Choose whether to use your LinkedIn name and photo. Add your LinkedIn profile URL under About you to share a link.</p></details>
         </>}
       </article>
     </div>
 
     <details className="profile-import">
-      <summary><span><FileArchive /><strong>Import LinkedIn skills and experience</strong></span><small>{linkedin ? `Imported ${formatDate(linkedin.lastSyncedAt)}` : 'ZIP or CSV'}</small></summary>
+      <summary><span><FileArchive /><strong>Import LinkedIn evidence</strong></span><small>{linkedin ? `Imported ${formatDate(linkedin.lastSyncedAt)}` : 'ZIP or CSV'}</small></summary>
       <div className="profile-import__body">
-        <p>Upload your LinkedIn export, review the sections, then confirm. Skills are added only when you approve them.</p>
+        <p>Review your LinkedIn export before importing it. It can support skills already on your profile.</p>
         <details className="source-card__help"><summary>How to get your export</summary><p>In LinkedIn, open Settings → Data privacy → Get a copy of your data. Upload the ZIP or a supported CSV. Files are processed in memory; contacts and messages are ignored.</p></details>
         <div className="source-card__actions">
           <label className="button button--secondary upload-button"><FileArchive />{linkedin ? 'Preview a newer export' : 'Preview LinkedIn export'}<input aria-label="LinkedIn export file" type="file" accept=".zip,.csv,application/zip,text/csv" disabled={busy} onChange={importLinkedIn} /></label>
@@ -234,7 +251,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
         </div>
         {upload && <div className="source-card__confirm">
           <h4>Review {upload.file.name}</h4>
-          <p>Nothing has been saved. Confirming replaces all previous LinkedIn export evidence with the selected sections, including when uploading one CSV. Approved skills stay on your profile. New evidence is private; existing evidence keeps its visibility.</p>
+          <p>Confirming replaces the previous LinkedIn import with the selected sections. New evidence is private, and existing evidence keeps its visibility.</p>
           {upload.sections.map((section) => <div key={section.name}>
             <label><input type="checkbox" checked={sections.includes(section.name)} disabled={busy} onChange={() => setSections((list) => toggle(list, section.name))} />{section.name} · {section.evidenceCount} evidence items</label>
             <p>{section.skills.length ? section.skills.join(', ') : 'No recognized skill evidence in this section.'}</p>
@@ -242,7 +259,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
           </div>)}
           <Button type="button" disabled={busy || !sections.length} onClick={() => run(async () => {
             const next = await api.linkedinImport(upload.file, sections); setUpload(null); return next;
-          }, 'Selected LinkedIn sections saved. Review and approve suggested skills below.')}>Confirm selected sections</Button>
+          }, 'Selected LinkedIn evidence imported.')}>Confirm selected sections</Button>
           <Button type="button" variant="secondary" disabled={busy} onClick={() => setUpload(null)}>Cancel import</Button>
         </div>}
       </div>
@@ -251,12 +268,17 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="success-message" role="status">{message}</p>}
 
-    {reviewable.length > 0 && <div className="evidence-review">
-      {pending.length > 0 && <h3>Suggested skills · {pending.length} to review</h3>}
-      {pending.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} onDecide={decide} onVisibility={setVisibility} />)}
-      {rest.length > 0 && <h3>Reviewed evidence</h3>}
-      {rest.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} onDecide={decide} onVisibility={setVisibility} />)}
+    {state.skills.length > 0 && <div className="evidence-review">
+      <h3>Skill evidence</h3>
+      <p className="connected-profiles__note">Evidence scores show how strongly sources support a skill. Sync adds skills with more than 10% GitHub evidence. Open a skill to see its sources and manage sharing.</p>
+      {groups.filter(({ items }) => items.length).map(({ title, items }) => <details className="evidence-review__group" key={title}>
+        <summary>{title} <small>{items.length}</small></summary>
+        <div>{items.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} onDecide={decide} onVisibility={setVisibility} />)}</div>
+      </details>)}
+      {unmatched.length > 0 && <details className="evidence-review__group">
+        <summary>Not in the skill list <small>{unmatched.length}</small></summary>
+        <p>{unmatched.map((group) => group.name).join(', ')}</p>
+      </details>}
     </div>}
-    {unmatched.length > 0 && <p className="connected-profiles__note">Also detected, but not in SyncSpace's skill list yet: {unmatched.map((group) => group.name).join(', ')}.</p>}
   </section>;
 }

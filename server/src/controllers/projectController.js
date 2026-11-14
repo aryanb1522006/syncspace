@@ -8,6 +8,7 @@ import {
   updateProject as updateProjectRecord
 } from '../models/projectModel.js';
 import { env } from '../config/env.js';
+import { getSharedProfileLinks } from '../models/studentModel.js';
 import { AppError } from '../utils/AppError.js';
 
 // The description embedding is an internal ML vector (hundreds of floats,
@@ -52,11 +53,15 @@ export async function searchPublicProjects(req, res) {
 }
 
 export async function getProject(req, res) {
+  res.set('Cache-Control', 'no-store');
   const id = Number(req.params.id);
   const project = await visibleProject(req, id);
-  const teamContacts = await getProjectContactsForViewer(id, req.user.id, req.user.collegeId);
+  const [teamContacts, ownerLinks] = await Promise.all([
+    getProjectContactsForViewer(id, req.user.id, req.user.collegeId),
+    project.ownerProfileId ? getSharedProfileLinks(project.ownerProfileId) : null
+  ]);
   res.json({
-    project: { ...toResponse(project), teamContacts, canViewTeamContacts: teamContacts.length > 0 }
+    project: { ...toResponse(project), ownerLinks, teamContacts, canViewTeamContacts: teamContacts.length > 0 }
   });
 }
 

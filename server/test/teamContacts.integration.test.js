@@ -2,7 +2,7 @@ import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { app } from '../src/app.js';
-import { pool } from '../src/config/db.js';
+import { pool, query } from '../src/config/db.js';
 import { integrationFixture } from '../test-fixtures/integrationHarness.js';
 
 after(() => pool.end());
@@ -15,6 +15,14 @@ test('team contacts and group invites follow live membership and stay out of app
   const otherCollege = await integrationFixture();
   t.after(() => otherCollege.cleanup());
   const { owner, candidate, stranger, project } = fixture;
+  const { rows: privateTables } = await query(
+    `SELECT relname FROM pg_class
+     WHERE oid IN ('student_team_contacts'::regclass, 'team_group_invites'::regclass)
+       AND relrowsecurity
+       AND NOT EXISTS (SELECT 1 FROM pg_policy WHERE polrelid = pg_class.oid)
+     ORDER BY relname`
+  );
+  assert.deepEqual(privateTables.map(({ relname }) => relname), ['student_team_contacts', 'team_group_invites']);
   const api = (method, path, user) => request(app)[method](`/api${path}`).set('Authorization', `Bearer ${user.token}`);
   const settings = '/students/me/team-contacts';
   const empty = { whatsappNumber: '', discordUsername: '', contactEmail: '' };

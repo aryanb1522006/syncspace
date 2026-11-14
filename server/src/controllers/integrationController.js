@@ -25,7 +25,7 @@ import {
   verifyConnectState
 } from '../services/githubClient.js';
 import { parseLinkedInUpload, previewLinkedInUpload } from '../services/linkedinExport.js';
-import { exchangeLinkedin, linkedinAuthorize, linkedinState, verifyLinkedinState } from '../services/linkedinIdentity.js';
+import { exchangeLinkedin, linkedinAuthorize, linkedinState, verifyLinkedinState, MAX_LINKEDIN_AUTHORIZATION_CODE_LENGTH } from '../services/linkedinIdentity.js';
 import { linkedinAccount, removeLinkedinAccount, saveLinkedinAccount, useLinkedinDetails } from '../models/linkedinIdentityModel.js';
 import { buildSkillReview, decideSkillSuggestion } from '../services/skillReview.js';
 import { decryptToken, encryptToken } from '../services/tokenCrypto.js';
@@ -206,7 +206,7 @@ export async function getLinkedinAuthorizeUrl(req, res) {
 }
 export async function linkedinCallbackBridge(req, res) {
   const { state, code, error } = req.query;
-  if (typeof state !== 'string' || state.length > 2000 || (code && (typeof code !== 'string' || code.length > 2000))) throw new AppError(400, 'Invalid account callback');
+  if (typeof state !== 'string' || state.length > 2000 || (code && (typeof code !== 'string' || code.length > MAX_LINKEDIN_AUTHORIZATION_CODE_LENGTH))) throw new AppError(400, 'Invalid account callback');
   const { requestId, userId } = verifyLinkedinState(state, undefined, env.jwtSecret);
   const origin = await getOAuthReturn(requestId, 'linkedin', userId);
   if (!env.clientOrigins.includes(origin)) throw new AppError(400, 'This callback origin is no longer allowed');

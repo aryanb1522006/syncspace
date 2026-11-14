@@ -99,3 +99,39 @@ test('LinkedIn callback is browser-bound, single-use and only copies selected pr
     assert.equal(after.body.student.name, 'candidate');
   } finally { global.fetch = original; await f.cleanup(); }
 });
+
+test('LinkedIn accepts callback-length codes unchanged while rejecting oversized codes before claiming state', { skip: !enabled }, async () => {
+  const f = await integrationFixture();
+  const original = global.fetch;
+  const auth = (call) => call.set('Authorization', `Bearer ${f.candidate.token}`);
+  const verifier = randomBytes(32).toString('base64url');
+  // LinkedIn codes are opaque and can exceed GitHub's 200-character limit.
+  // This synthetic value exercises the full callback boundary, not a live code.
+  const code = 'A'.repeat(1997) + '_-Z';
+  try {
+    const start = await auth(request(app).get('/api/integrations/linkedin/authorize')).query({ browserChallenge: oauthChallenge(verifier) }).expect(200);
+    const url = new URL(start.body.url);
+    const state = url.searchParams.get('state');
+    const callback = await request(app).get('/api/integrations/linkedin/callback').query({ code, state }).expect(303);
+    const params = new URLSearchParams(new URL(callback.headers.location).hash.split('?')[1]);
+    assert.equal(params.get('code'), code);
+    const provider = mockFetch({ nonce: url.searchParams.get('nonce'), subject: f.suffix });
+    let exchanges = 0;
+    global.fetch = async (endpoint, options) => {
+      if (endpoint.endsWith('/accessToken')) {
+        exchanges += 1;
+        assert.equal(new URLSearchParams(options.body).get('code'), code, 'opaque code reaches LinkedIn without truncation');
+      }
+      return provider(endpoint, options);
+    };
+    await request(app).get('/api/integrations/linkedin/callback').query({ code: code + 'X', state }).expect(400);
+    const oversized = await auth(request(app).post('/api/integrations/linkedin/exchange')).send({ code: code + 'X', state, verifier }).expect(400);
+    assert.ok(oversized.body.error.details.fieldErrors.code);
+    assert.equal(exchanges, 0);
+    const success = await auth(request(app).post('/api/integrations/linkedin/exchange')).send({ code, state, verifier }).expect(200);
+    assert.equal(success.body.linkedin.account.name, 'LinkedIn Name');
+    assert.equal(exchanges, 1);
+    await auth(request(app).post('/api/integrations/linkedin/exchange')).send({ code, state, verifier }).expect(400);
+    assert.equal(exchanges, 1, 'state stays single-use');
+  } finally { global.fetch = original; await f.cleanup(); }
+});

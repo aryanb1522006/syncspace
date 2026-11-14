@@ -2,6 +2,9 @@ import jwt from 'jsonwebtoken';
 import { createPublicKey, timingSafeEqual } from 'node:crypto';
 import { AppError } from '../utils/AppError.js';
 
+// Callback and exchange must accept the same bounded, opaque code.
+export const MAX_LINKEDIN_AUTHORIZATION_CODE_LENGTH = 2000;
+
 export function linkedinState(userId, secret, requestId) {
   return jwt.sign({ purpose: 'linkedin-connect' }, secret, { subject: String(userId), jwtid: requestId, expiresIn: '10m', algorithm: 'HS256' });
 }

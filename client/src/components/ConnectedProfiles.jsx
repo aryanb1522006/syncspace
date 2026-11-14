@@ -5,7 +5,7 @@ import { startProviderConnection } from '../api/providerConnection.js';
 import { Button } from './Button.jsx';
 import { ProfileAvatar } from './ProfileAvatar.jsx';
 
-const proficiencyLevels = [1, 2, 3, 4, 5];
+const defaultProficiency = 3;
 const classLabels = {
   repeated_project_evidence: 'Used in 3+ GitHub repositories',
   github_detected: 'Detected on GitHub',
@@ -32,7 +32,6 @@ function EvidenceList({ group }) {
 }
 
 function SkillRow({ group, busy, onDecide, onVisibility }) {
-  const [level, setLevel] = useState('');
   const decided = group.status === 'on_profile' || group.status === 'approved';
   const visibility = group.items.every((item) => item.visibility === group.items[0].visibility) ? group.items[0].visibility : '';
   return <article className={`evidence-review__row evidence-review__row--${group.status}`}>
@@ -53,11 +52,7 @@ function SkillRow({ group, busy, onDecide, onVisibility }) {
         </>
         : <>
           {group.status === 'rejected' && <span className="evidence-review__status evidence-review__status--muted"><X />Rejected</span>}
-          <label>Your level<select aria-label={`${group.name} proficiency`} value={level} disabled={busy} onChange={(event) => setLevel(event.target.value)}>
-            <option value="">Choose</option>
-            {proficiencyLevels.map((value) => <option key={value} value={value}>{value}/5</option>)}
-          </select></label>
-          <Button type="button" disabled={busy || !level} onClick={() => onDecide(group, 'approved', Number(level))}><Check />{group.status === 'rejected' ? 'Add anyway' : 'Approve'}</Button>
+          <Button type="button" disabled={busy} onClick={() => onDecide(group, 'approved', defaultProficiency)}><Check />{group.status === 'rejected' ? 'Add anyway' : 'Approve'}</Button>
           {group.status !== 'rejected' && <Button type="button" variant="secondary" disabled={busy} onClick={() => onDecide(group, 'rejected')}><X />Not accurate</Button>}
         </>}
     </div>

@@ -6,6 +6,7 @@ import { Landing } from '../pages/ImmersiveLanding.jsx';
 import { ProjectRow } from '../components/ProjectRow.jsx';
 import { AuthProvider } from '../context/AuthContext.jsx';
 import { ThemeProvider } from '../context/ThemeContext.jsx';
+import { api } from '../api/resources.js';
 
 const project = {
   id: 1, title: 'GreenGrid', domain: 'Climate Tech', description: 'Turn live campus energy data into actions students can see.',
@@ -107,20 +108,41 @@ describe('SyncSpace UI', () => {
     expect(screen.getByRole('button', { name: 'Delete GreenGrid' })).toBeVisible();
   });
 
-  it('lets students set proficiency and add a skill manually alongside resume import', async () => {
+  it('adds and removes skills without ratings while preserving existing internal values and profile edits', async () => {
     renderApp('/profile', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
-    const reactLevel = await screen.findByRole('combobox', { name: 'React proficiency' });
-    expect(reactLevel).toHaveValue('5');
-    fireEvent.change(reactLevel, { target: { value: '4' } });
-    expect(await screen.findByText('Skill proficiency updated.')).toBeVisible();
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'React proficiency' })).toHaveValue('4'));
-
+    expect(await screen.findByRole('button', { name: 'Remove React' })).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: /proficiency/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/^[1-5]\/5$/)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Bio' }), { target: { value: 'Unsaved project interests' } });
     fireEvent.change(screen.getByRole('combobox', { name: 'Skill' }), { target: { value: '5' } });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Proficiency' }), { target: { value: '2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add skill' }));
     expect(await screen.findByText('Skill added manually.')).toBeVisible();
-    expect(screen.getByRole('combobox', { name: 'Node.js proficiency' })).toHaveValue('2');
+    expect(screen.getByRole('button', { name: 'Remove Node.js' })).toBeVisible();
+    const { student } = await api.getMe();
+    expect(student.skills.find((skill) => skill.name === 'Node.js').proficiency).toBe(3);
+    expect(student.skills.find((skill) => skill.name === 'React').proficiency).toBe(5);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Node.js' }));
+    expect(await screen.findByText('Skill removed.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Remove Node.js' })).not.toBeInTheDocument();
+    expect((await api.getMe()).student.skills.find((skill) => skill.name === 'React').proficiency).toBe(5);
+    expect(screen.getByRole('textbox', { name: 'Bio' })).toHaveValue('Unsaved project interests');
     expect(screen.getByText('Read resume')).toBeVisible();
+  });
+
+  it('reviews resume skills before saving them with an internal default and no ratings', async () => {
+    renderApp('/profile', { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1, profile: { id: 1, name: 'Isha Mehta' } });
+    const upload = await screen.findByLabelText('Read resume');
+    fireEvent.change(upload, { target: { files: [new File(['fixture'], 'resume.pdf', { type: 'application/pdf' })] } });
+    expect(await screen.findByRole('heading', { name: 'Proposed from your resume' })).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: /proficiency/i })).not.toBeInTheDocument();
+    expect((await api.getMe()).student.skills.some((skill) => skill.name === 'Node.js')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed skills' }));
+    expect(await screen.findByText('Reviewed resume skills saved.')).toBeVisible();
+    const { student } = await api.getMe();
+    expect(student.skills.find((skill) => skill.name === 'Node.js').proficiency).toBe(3);
+    expect(student.skills.find((skill) => skill.name === 'PostgreSQL').proficiency).toBe(3);
+    expect(student.skills.find((skill) => skill.name === 'React').proficiency).toBe(5);
+    expect(screen.queryByRole('heading', { name: 'Proposed from your resume' })).not.toBeInTheDocument();
   });
 
   it('explains on the profile page that connected profiles need the live API in demo mode', async () => {
@@ -248,6 +270,7 @@ describe('SyncSpace UI', () => {
     expect(screen.getByRole('link', { name: 'kabir@northstar.edu' })).toHaveAttribute('href', 'mailto:kabir@northstar.edu');
     expect(screen.getByText('ML and data collaborator interested in useful campus systems.')).toBeVisible();
     expect(screen.getAllByText('Machine Learning').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^[1-5]\/5$/)).not.toBeInTheDocument();
     expect(screen.queryByText('Profile could not be loaded')).not.toBeInTheDocument();
   });
 
@@ -256,5 +279,16 @@ describe('SyncSpace UI', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Your applications' })).toBeVisible();
     expect(await screen.findByText('StudyCircle')).toBeVisible();
     expect(screen.getByText('pending')).toBeVisible();
+  });
+
+  it('shows applicant skill names without ratings and keeps the acceptance flow working', async () => {
+    renderApp('/projects/2/applications', { id: 4, email: 'arjun@northstar.edu', role: 'owner', profileId: 4, profile: { id: 4, name: 'Arjun Rao' } });
+    expect(await screen.findByRole('heading', { name: 'Isha Mehta' })).toBeVisible();
+    expect(screen.getByText('React')).toBeVisible();
+    expect(screen.getByText('TypeScript')).toBeVisible();
+    expect(screen.queryByText(/[1-5]\/5/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Accept and add to team' }));
+    expect(await screen.findByRole('link', { name: 'Open team workspace' })).toBeVisible();
+    expect(screen.getByText('accepted')).toBeVisible();
   });
 });

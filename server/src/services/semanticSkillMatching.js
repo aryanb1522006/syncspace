@@ -22,13 +22,16 @@ const skillName = (skill) => String(skill?.name ?? '').trim();
 // dictionary table), so this cache stays small and bounded in practice.
 const skillNameEmbeddingCache = new Map();
 
-async function embedSkillName(name) {
+function embedSkillName(name) {
   const key = name.trim().toLowerCase();
   if (!key) return null;
   if (skillNameEmbeddingCache.has(key)) return skillNameEmbeddingCache.get(key);
-  const embedding = await generateEmbedding(key);
-  skillNameEmbeddingCache.set(key, embedding);
-  return embedding;
+  const pending = generateEmbedding(key).catch((error) => {
+    skillNameEmbeddingCache.delete(key);
+    throw error;
+  });
+  skillNameEmbeddingCache.set(key, pending);
+  return pending;
 }
 
 /**

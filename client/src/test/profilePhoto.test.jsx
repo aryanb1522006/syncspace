@@ -45,6 +45,14 @@ it('shows an already saved photo in the sidebar and own profile when the page lo
   expect(screen.getByRole('img', { name: 'Your profile photo' })).toHaveAttribute('src', photo);
 });
 
+it('shows the saved profile even if the skill picker is unavailable', async () => {
+  api.listSkills.mockRejectedValueOnce(new Error('Unavailable'));
+  show();
+  expect(await screen.findByRole('textbox', { name: 'Full name' })).toHaveValue('Isha Mehta');
+  expect(await screen.findByRole('button', { name: 'Retry skill list' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Save profile' })).toBeEnabled();
+});
+
 it('applies only the selected photo immediately, preserves college identity and keeps it after remount', async () => {
   show();
   fireEvent.click(await screen.findByRole('checkbox', { name: 'Use photo on my college profile' }));

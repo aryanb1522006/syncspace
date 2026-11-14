@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
+import { Button } from '../components/Button.jsx';
 import { ProjectRow } from '../components/ProjectRow.jsx';
 import { ProfileAvatar } from '../components/ProfileAvatar.jsx';
 
@@ -10,8 +11,8 @@ function WeekRail({ profile, applications }) {
   const latest = applications[0];
   return <>
     <div className="rail-top"><ProfileAvatar name={profile?.name} photoUrl={profile?.avatar_url} className="avatar avatar--ink" /></div>
-    <section><h2>Your week</h2><div className="week-time"><span><Clock3 /></span><strong>{profile?.availability_hours_per_week ?? 0}h<small>available</small></strong></div></section>
-    <section><h3>Your applications</h3>{latest ? <Link className="rail-row" to="/applications"><span className="avatar avatar--lavender">{latest.title.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span><span>{latest.title} · <em>{latest.status}</em></span><ChevronRight /></Link> : <p>No applications yet.</p>}</section>
+    {profile && <section><h2>Your week</h2><div className="week-time"><span><Clock3 /></span><strong>{profile.availability_hours_per_week ?? 0}h<small>available</small></strong></div></section>}
+    <section><h3>Your applications</h3>{latest ? <Link className="rail-row" to="/applications"><span className="avatar avatar--lavender">{latest.title.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span><span>{latest.title} · <em>{latest.status}</em></span><ChevronRight /></Link> : <Link className="rail-plain" to="/applications">View applications<ChevronRight /></Link>}</section>
     <section><h3>Finish your profile</h3><Link className="rail-plain" to="/profile"><span>{profile?.skills?.length ? `${profile.skills.length} skills added` : 'Add your skills'}</span><ChevronRight /></Link><ProfileAvatar name={profile?.name} photoUrl={profile?.avatar_url} className="profile-ring" /></section>
   </>;
 }
@@ -27,16 +28,24 @@ function StudentDashboard() {
   const [skill, setSkill] = useState(requestedSkill);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    Promise.all([api.recommendations(), api.getMe(), api.listApplications()])
-      .then(([projectResult, profileResult, applicationResult]) => {
-        setProjects(projectResult.recommendations);
-        setProfile(profileResult.student);
-        setApplications(applicationResult.applications);
-      })
-      .catch((reason) => setError(reason.message))
-      .finally(() => setLoading(false));
+    let active = true;
+    setLoading(true);
+    setError('');
+    api.recommendations()
+      .then(({ recommendations }) => { if (active) setProjects(recommendations); })
+      .catch((reason) => { if (active) setError(reason.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [attempt]);
+
+  useEffect(() => {
+    let active = true;
+    api.getMe().then(({ student }) => { if (active) setProfile(student); }).catch(() => {});
+    api.listApplications().then(({ applications }) => { if (active) setApplications(applications); }).catch(() => {});
+    return () => { active = false; };
   }, []);
 
   const domains = useMemo(() => ['All domains', ...new Set(projects.map((project) => project.domain))], [projects]);
@@ -61,7 +70,7 @@ function StudentDashboard() {
       <label><Sparkles /><input aria-label="Filter by skill" value={skill} onChange={updateSkill} placeholder="Filter by skill" /></label>
       <label><span className="sort-icon">↕</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option>Best match</option><option>Deadline</option></select></label>
     </div>
-    <div className="project-list">{loading ? <div className="loading">Finding your strongest matches…</div> : error ? <div className="empty-panel"><h2>Projects could not be loaded</h2><p>{error}</p></div> : visible.length ? visible.map((project, index) => <ProjectRow key={project.id} project={project} defaultOpen={index === 0} />) : <div className="empty-panel"><h2>{skill ? `No project exists with “${skill}” right now` : 'No new matches right now'}</h2><p>{skill ? 'Try another skill or clear the skill filter.' : 'Projects you already applied to move into Applications.'}</p></div>}</div>
+    <div className="project-list">{loading ? <div className="loading">Finding your strongest matches…</div> : error ? <div className="empty-panel"><h2>Projects could not be loaded</h2><p role="alert">{error}</p><Button onClick={() => setAttempt((current) => current + 1)}>Retry Discover</Button></div> : visible.length ? visible.map((project, index) => <ProjectRow key={project.id} project={project} defaultOpen={index === 0} />) : <div className="empty-panel"><h2>{skill ? `No project exists with “${skill}” right now` : 'No new matches right now'}</h2><p>{skill ? 'Try another skill or clear the skill filter.' : 'Projects you already applied to move into Applications.'}</p></div>}</div>
   </AppShell>;
 }
 

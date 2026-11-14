@@ -8,7 +8,7 @@ export async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
-      ...(isForm ? {} : { 'Content-Type': 'application/json' }),
+      ...(options.body != null && !isForm ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers
     }

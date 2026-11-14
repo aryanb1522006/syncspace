@@ -2,7 +2,7 @@ import { query, withTransaction } from '../config/db.js';
 import { saveSkillDecision } from './profileIntelligenceModel.js';
 import { AppError } from '../utils/AppError.js';
 
-export async function getStudentById(id) {
+async function getStudent(id, { byUser = false } = {}) {
   const { rows } = await query(
     `SELECT sp.*, u.email, u.role, u.college_id,
        COALESCE(json_agg(json_build_object('id', s.id, 'name', s.name, 'category', s.category,
@@ -11,54 +11,45 @@ export async function getStudentById(id) {
      JOIN users u ON u.id = sp.user_id
      LEFT JOIN student_skills ss ON ss.student_id = sp.id
      LEFT JOIN skills s ON s.id = ss.skill_id
-     WHERE sp.id = $1
+     WHERE ${byUser ? 'sp.user_id' : 'sp.id'} = $1
      GROUP BY sp.id, u.id`,
     [id]
   );
   return rows[0] ?? null;
 }
 
-export async function getStudentByUserId(userId) {
-  const { rows } = await query('SELECT id FROM student_profiles WHERE user_id = $1', [userId]);
-  return rows[0] ? getStudentById(rows[0].id) : null;
-}
-// Internal SQL fragment; arguments are fixed aliases/parameter positions from
-// our models, never request input. Profiles and recommendations share this rule.
-export function contactAudienceSql(target = 'target', viewer = '$1', college = '$3') {
-  return `(
-         ${target}.user_id = ${viewer}
-         OR EXISTS (
-           SELECT 1
-           FROM teams t
-           JOIN projects p ON p.id = t.project_id
-           WHERE p.college_id = ${college}
-             AND (
-               p.owner_id = ${viewer}
-               OR EXISTS (
-                 SELECT 1 FROM team_members viewer_tm
-                 JOIN student_profiles viewer_sp ON viewer_sp.id = viewer_tm.student_id
-                 WHERE viewer_tm.team_id = t.id AND viewer_sp.user_id = ${viewer}
-               )
-             )
-             AND (
-               p.owner_id = ${target}.user_id
-               OR EXISTS (
-                 SELECT 1 FROM team_members target_tm
-                 WHERE target_tm.team_id = t.id AND target_tm.student_id = ${target}.id
-               )
-             )
-         )
-       )`;
-}
+export const getStudentById = (id) => getStudent(id);
+export const getStudentByUserId = (userId) => getStudent(userId, { byUser: true });
 
 export async function canViewStudentContact(viewerUserId, targetStudentId, collegeId) {
   const { rows } = await query(
     `SELECT 1
      FROM student_profiles target
      JOIN users target_user ON target_user.id = target.user_id
-     WHERE target.id = $2
-       AND target_user.college_id = $3
-       AND ${contactAudienceSql()}
+     WHERE target.id = $2 AND target_user.college_id = $3 AND (
+         target.user_id = $1
+         OR EXISTS (
+           SELECT 1
+           FROM teams t
+           JOIN projects p ON p.id = t.project_id
+           WHERE p.college_id = $3
+             AND (
+               p.owner_id = $1
+               OR EXISTS (
+                 SELECT 1 FROM team_members viewer_tm
+                 JOIN student_profiles viewer_sp ON viewer_sp.id = viewer_tm.student_id
+                 WHERE viewer_tm.team_id = t.id AND viewer_sp.user_id = $1
+               )
+             )
+             AND (
+               p.owner_id = target.user_id
+               OR EXISTS (
+                 SELECT 1 FROM team_members target_tm
+                 WHERE target_tm.team_id = t.id AND target_tm.student_id = target.id
+               )
+             )
+         )
+       )
      LIMIT 1`,
     [viewerUserId, targetStudentId, collegeId]
   );

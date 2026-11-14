@@ -17,7 +17,6 @@ const methodLabels = {
   linkedin_position: 'LinkedIn position', linkedin_project: 'LinkedIn project',
   linkedin_certification: 'LinkedIn certification', linkedin_summary: 'LinkedIn summary'
 };
-const visibilityLabels = { private: 'Only me', team: 'My teammates', college: 'Students at my college' };
 const formatDate = (value) => (value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value)) : '—');
 const skillUpdateMessage = ({ addedSkillIds }) => {
   const count = addedSkillIds.length;
@@ -34,8 +33,7 @@ function EvidenceList({ group }) {
   </div>;
 }
 
-function SkillRow({ group, busy, selected, onSelect, onVisibility }) {
-  const visibility = group.items.every((item) => item.visibility === group.items[0].visibility) ? group.items[0].visibility : '';
+function SkillRow({ group, busy, selected, onSelect }) {
   return <div className="evidence-review__row">
     <div className="evidence-review__choice">
       {group.status === 'on_profile'
@@ -49,18 +47,12 @@ function SkillRow({ group, busy, selected, onSelect, onVisibility }) {
       <summary>{classLabels[group.evidenceClass]}</summary>
       <div className="evidence-review__body">
         <EvidenceList group={group} />
-        <div className="evidence-review__actions">
-          <label>Evidence visible to<select aria-label={`${group.name} evidence visibility`} value={visibility} disabled={busy} onChange={(event) => onVisibility(group, event.target.value)}>
-            {!visibility && <option value="">Mixed</option>}
-            {Object.entries(visibilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select></label>
-        </div>
       </div>
     </details>
   </div>;
 }
 
-function SkillReview({ skills, busy, saving, onSave, onVisibility }) {
+function SkillReview({ skills, busy, saving, onSave }) {
   const [choices, setChoices] = useState({});
   const candidates = skills.filter((group) => group.status === 'pending' || group.status === 'rejected');
   const existing = skills.filter((group) => group.status === 'on_profile');
@@ -71,11 +63,11 @@ function SkillReview({ skills, busy, saving, onSave, onVisibility }) {
 
   return <section className="evidence-review" aria-labelledby="skill-evidence-title">
     <h3 id="skill-evidence-title">Skill evidence</h3>
-    <p className="connected-profiles__note">Choose which skills to add. New skills with more than 10% evidence from a source are preselected.</p>
-    {candidates.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} selected={isSelected(group)} onSelect={select} onVisibility={onVisibility} />)}
+    <p className="connected-profiles__note">Only you can see this evidence. Choose which skills to add. New skills with more than 10% evidence from a source are preselected.</p>
+    {candidates.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} selected={isSelected(group)} onSelect={select} />)}
     {existing.length > 0 && <details className="evidence-review__group">
       <summary>Already on your profile <small>{existing.length}</small></summary>
-      <div>{existing.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} onVisibility={onVisibility} />)}</div>
+      <div>{existing.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} />)}</div>
     </details>}
     {unmatched.length > 0 && <details className="evidence-review__group">
       <summary>Not in the skill list <small>{unmatched.length}</small></summary>
@@ -204,10 +196,6 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
     skillUpdateMessage,
     { skillsChanged: true, actionName: 'skill-review' }
   );
-  const setVisibility = (group, visibility) => run(
-    () => api.setEvidenceVisibility(group.items.map((item) => item.id), visibility),
-    `${group.name} evidence is now visible to: ${visibilityLabels[visibility].toLowerCase()}.`
-  );
 
   return <section className="connected-profiles">
     <div className="section-title"><div><h2>Connected profiles</h2><p>Manage your accounts and the evidence behind your skills.</p></div></div>
@@ -280,7 +268,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
         </div>
         {upload && <div className="source-card__confirm">
           <h4>Review {upload.file.name}</h4>
-          <p>Confirming replaces the previous LinkedIn import with the selected sections. New evidence is private, and existing evidence keeps its visibility.</p>
+          <p>Confirming replaces the previous LinkedIn import with the selected sections. Only you can see the evidence.</p>
           {upload.sections.map((section) => <div key={section.name}>
             <label><input type="checkbox" checked={sections.includes(section.name)} disabled={busy} onChange={() => setSections((list) => toggle(list, section.name))} />{section.name} · {section.evidenceCount} evidence items</label>
             <p>{section.skills.length ? section.skills.join(', ') : 'No recognized skill evidence in this section.'}</p>
@@ -298,6 +286,6 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
     {message && <p className="success-message" role="status">{message}</p>}
 
     {reviewIds.length > 0 && <SkillReview key={[...reviewIds].sort().join(',')} skills={state.skills}
-      busy={busy} saving={pendingAction === 'skill-review'} onSave={updateSkills} onVisibility={setVisibility} />}
+      busy={busy} saving={pendingAction === 'skill-review'} onSave={updateSkills} />}
   </section>;
 }

@@ -60,6 +60,22 @@ test('unrelated descriptions have low similarity and are not flagged', async () 
   assert.equal(pairs.length, 0);
 });
 
+test('limiting similarity work preserves matches and their direction for returned projects', () => {
+  const projects = [1, 2, 3, 4].map((id) => ({
+    id, title: `Project ${id}`, domain: 'EdTech', skills: [{ name: `Skill ${id}` }], descriptionEmbedding: [1, 0]
+  }));
+  const focus = new Set([2, 4]);
+  const full = groupSimilarProjectsByProjectId(projects, findSimilarProjectPairs(projects, 0.8));
+  const pairs = findSimilarProjectPairs(projects, 0.8, focus);
+  assert.equal(pairs.length, 5);
+  assert.ok(pairs.every((pair) => focus.has(pair.projectId) || focus.has(pair.similarProjectId)));
+  const focused = groupSimilarProjectsByProjectId(projects, pairs);
+  for (const id of focus) {
+    const sorted = (entries) => [...entries].sort((a, b) => a.project.id - b.project.id);
+    assert.deepEqual(sorted(focused.get(id)), sorted(full.get(id)));
+  }
+});
+
 test('projects without a persisted embedding are skipped rather than embedded on demand', async () => {
   const withEmbedding = await project(1, {
     title: 'A',

@@ -15,21 +15,30 @@ export function ProjectDetail() {
   const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [application, setApplication] = useState(null);
+  const [applicationsReady, setApplicationsReady] = useState(false);
+  const [match, setMatch] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
-    const load = Promise.all([api.getProject(id), api.listApplications(), api.recommendations(20).catch(() => ({ recommendations: [] }))]);
-    load.then(([projectResult, applicationResult, recommendationResult]) => {
-      if (!active) return;
-      const matchedEntry = recommendationResult.recommendations.find((item) => Number(item.id) === Number(id));
-      setProject(matchedEntry
-        ? { ...projectResult.project, match: matchedEntry.match, recommendation: matchedEntry.recommendation, similarProjects: matchedEntry.similarProjects }
-        : projectResult.project);
-      setApplication(applicationResult.applications.find((item) => Number(item.projectId) === Number(id)) ?? null);
+    setProject(null);
+    setMatch(null);
+    setApplication(null);
+    setApplicationsReady(false);
+    setError('');
+    api.getProject(id).then(({ project }) => {
+      if (active) setProject(project);
     }).catch((reason) => { if (active) setError(reason.message); });
+    api.listApplications().then(({ applications }) => {
+      if (!active) return;
+      setApplication(applications.find((item) => Number(item.projectId) === Number(id)) ?? null);
+      setApplicationsReady(true);
+    }).catch((reason) => { if (active) setError(reason.message); });
+    api.recommendations(20).then(({ recommendations }) => {
+      if (active) setMatch(recommendations.find((item) => Number(item.id) === Number(id)) ?? null);
+    }).catch(() => {});
     return () => { active = false; };
   }, [id]);
 
@@ -51,10 +60,13 @@ export function ProjectDetail() {
   const ownerId = project.ownerId ?? project.owner_id;
   const isOwner = Number(ownerId) === Number(user.id);
   const teamContacts = project.teamContacts ?? [];
+  const recommendation = match?.recommendation ?? project.recommendation;
+  const matchBreakdown = match?.match ?? project.match;
+  const similarProjects = match?.similarProjects ?? project.similarProjects;
 
   return <AppShell>
     <Link className="back-link app-back" to="/dashboard"><ArrowLeft />Discover</Link>
-    <div className="project-detail__head"><div><span className="tag">{project.domain}</span><h1>{project.title}</h1></div>{project.match && <div className="score-ring score-ring--large" style={{ '--score': `${(project.recommendation?.finalScore ?? project.match.score) * 3.6}deg` }}><strong>{project.recommendation?.finalScore ?? project.match.score}%</strong><span>match</span></div>}</div>
+    <div className="project-detail__head"><div><span className="tag">{project.domain}</span><h1>{project.title}</h1></div>{matchBreakdown && <div className="score-ring score-ring--large" style={{ '--score': `${(recommendation?.finalScore ?? matchBreakdown.score) * 3.6}deg` }}><strong>{recommendation?.finalScore ?? matchBreakdown.score}%</strong><span>match</span></div>}</div>
     <div className="project-detail__layout"><div className="project-detail__main"><section><h2>What the team is building</h2><p>{project.description}</p></section>
         {isOwner && <section className="project-ai-debug">
           <h2><Sparkles size={18} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />AI summary status (owner only)</h2>
@@ -72,13 +84,13 @@ export function ProjectDetail() {
           <span><strong>{contact.name}</strong><small>{contact.roleLabel}</small><a href={`mailto:${contact.email}`}><Mail />{contact.email}</a></span>
           <Link to={contact.userId ? `/profiles/users/${contact.userId}` : `/profiles/${contact.profileId}`}><UserRound />View profile</Link>
         </article>)}</div></section>}
-        {project.match && <MatchBreakdown match={project.match} domain={project.domain} recommendation={project.recommendation} />}
-        {project.similarProjects?.length > 0 && <SimilarProjects similarProjects={project.similarProjects} />}
+        {matchBreakdown && <MatchBreakdown match={matchBreakdown} domain={project.domain} recommendation={recommendation} />}
+        {similarProjects?.length > 0 && <SimilarProjects similarProjects={similarProjects} />}
         <ProjectQueries projectId={id} isOwner={isOwner} />
       </div>
       <aside className="project-detail__aside"><div className="project-icon"><Leaf /></div><dl><div><dt><UsersRound />Team</dt><dd>{memberCount} of {teamSize} spots filled</dd></div><div><dt><Clock3 />Commitment</dt><dd>{commitment} hours per week</dd></div><div><dt><CalendarDays />Deadline</dt><dd>{new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium' }).format(new Date(project.deadline))}</dd></div></dl><p>Led by <strong>{project.owner_name}</strong>{ownerId && <Link className="profile-inline-link" to={`/profiles/users/${ownerId}`}>View profile</Link>}</p>
         <ProfileLinks {...project.ownerLinks} />
-        {isOwner ? <Button to={`/projects/${id}/applications`}>Review applications</Button> : application?.status === 'accepted' && application.teamId ? <Button to={`/team/${application.teamId}`}>Open team workspace</Button> : application ? <Button to="/applications" variant="secondary">Application {application.status}</Button> : <Button onClick={apply} disabled={busy}>{busy ? 'Sending…' : 'Apply to join'}</Button>}
+        {isOwner ? <Button to={`/projects/${id}/applications`}>Review applications</Button> : application?.status === 'accepted' && application.teamId ? <Button to={`/team/${application.teamId}`}>Open team workspace</Button> : application ? <Button to="/applications" variant="secondary">Application {application.status}</Button> : <Button onClick={apply} disabled={busy || !applicationsReady}>{busy ? 'Sending…' : 'Apply to join'}</Button>}
         {message && <p className="success-message" role="status">{message}</p>}{error && <p className="form-error" role="alert">{error}</p>}
       </aside>
     </div>

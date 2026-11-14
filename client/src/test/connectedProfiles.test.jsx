@@ -10,7 +10,6 @@ vi.mock('../api/resources.js', () => ({
     githubAuthorizeUrl: vi.fn(),
     githubSync: vi.fn(),
     updateReviewedSkills: vi.fn(),
-    setEvidenceVisibility: vi.fn(),
     linkedinPreview: vi.fn(), linkedinImport: vi.fn(), linkedinUseDetails: vi.fn(), linkedinAuthorizeUrl: vi.fn()
   }
 }));
@@ -170,20 +169,17 @@ describe('Connected profiles', () => {
     expect(onSkillsChanged).toHaveBeenCalledWith(profileSkills);
   });
 
-  it('keeps skill selections after updating evidence visibility and a failed save', async () => {
+  it('shows private evidence and keeps skill selections after a failed save', async () => {
     api.integrations.mockResolvedValue(overview([fastapi, react]));
-    api.setEvidenceVisibility.mockResolvedValue(overview([{ ...fastapi, items: fastapi.items.map((row) => ({ ...row, visibility: 'team' })) }, react]));
     api.updateReviewedSkills.mockRejectedValueOnce(new Error('Could not update skills.'));
     render(<ConnectedProfiles />);
 
     const choice = await screen.findByRole('checkbox', { name: 'FastAPI' });
     fireEvent.click(choice);
     fireEvent.click(within(choice.closest('.evidence-review__row')).getByText('Detected on GitHub'));
-    const visibility = screen.getByRole('combobox', { name: 'FastAPI evidence visibility' });
-    expect(visibility).toHaveValue('private');
-    fireEvent.change(visibility, { target: { value: 'team' } });
-    await waitFor(() => expect(visibility).toHaveValue('team'));
-    expect(api.setEvidenceVisibility).toHaveBeenCalledWith([1, 2], 'team');
+    expect(screen.getByText(/Only you can see this evidence/)).toBeVisible();
+    expect(within(choice.closest('.evidence-review__row')).getAllByText('asha/campus-api')[0]).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: /evidence visibility/ })).not.toBeInTheDocument();
     expect(choice).not.toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Update skills' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not update skills.');

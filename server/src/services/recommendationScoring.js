@@ -108,20 +108,29 @@ export function computeFinalScore(skillScore, cosineScore, weights = {}) {
  * finalScore trio, all normalized to 0-1 then scaled to 0-100 to match the
  * existing `match.score` presentation.
  */
+export function scoreRecommendation(studentEmbedding, matchBreakdown, project) {
+  const skillScore = computeSkillScore(matchBreakdown);
+  const cosineScore = computeCosineScore(studentEmbedding, project.descriptionEmbedding);
+  return {
+    finalScore: Math.round(computeFinalScore(skillScore, cosineScore) * 100),
+    skillScore: Math.round(skillScore * 100),
+    cosineScore: Math.round(cosineScore * 100),
+    weights: effectiveScoreWeights()
+  };
+}
+
 export async function computeRecommendationScore({
   student,
   studentEmbedding,
   matchBreakdown,
-  project
+  project,
+  scores = scoreRecommendation(studentEmbedding, matchBreakdown, project)
 }) {
   const { exactMatches, semanticMatches, unmatched } = await matchSkillsSemantically(
     student.skills,
     project.skills
   );
 
-  const skillScore = computeSkillScore(matchBreakdown);
-  const cosineScore = computeCosineScore(studentEmbedding, project.descriptionEmbedding);
-  const finalScore = computeFinalScore(skillScore, cosineScore);
   // Where each matched skill is evidenced (GitHub, LinkedIn export); an
   // empty list means the skill is self-declared on SyncSpace.
   const evidenceBySkill = new Map((student.skills ?? []).map((skill) => [
@@ -129,10 +138,7 @@ export async function computeRecommendationScore({
   ]));
 
   return {
-    finalScore: Math.round(finalScore * 100),
-    skillScore: Math.round(skillScore * 100),
-    cosineScore: Math.round(cosineScore * 100),
-    weights: effectiveScoreWeights(),
+    ...scores,
     matchedSkills: exactMatches.map((skill) => ({
       skillId: skill.skillId ?? skill.id,
       name: skill.name,

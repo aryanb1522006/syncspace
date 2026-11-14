@@ -21,7 +21,8 @@ export async function decideApplication(repository, { applicationId, ownerId, de
     await tx.updateApplicationStatus(applicationId, 'accepted');
     const newCount = memberCount + 1;
     if (newCount >= Number(application.team_size)) await tx.updateProjectStatus(application.project_id, 'active');
-    await tx.createNotification(application.student_user_id, `You joined ${application.project_title}. Your team workspace is ready.`);
+    await tx.createNotification(application.student_user_id,
+      `You joined ${application.project_title}. Your team workspace is ready.`, team.id);
 
     return { applicationId, status: 'accepted', teamId: Number(team.id), memberCount: newCount };
   });

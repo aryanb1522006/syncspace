@@ -32,6 +32,7 @@ export function initSocketServer(httpServer) {
   });
 
   io.on('connection', (socket) => {
+    socket.join(`user:${socket.data.user.id}`);
     socket.on('workspace:join', async (teamId) => {
       const id = Number(teamId);
       if (!Number.isSafeInteger(id) || id <= 0) return;
@@ -57,4 +58,11 @@ export function initSocketServer(httpServer) {
 // before the socket server has been initialized (e.g. supertest against app.js).
 export function getIO() {
   return io ?? { to: () => ({ emit: () => {} }) };
+}
+
+export function revokeWorkspaceAccess(teamId, userId) {
+  if (!io) return;
+  const user = io.in(`user:${userId}`);
+  user.socketsLeave(`team:${teamId}`);
+  user.emit('workspace:access-revoked', teamId);
 }

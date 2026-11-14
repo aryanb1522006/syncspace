@@ -17,6 +17,7 @@ export async function request(path, options = {}) {
     const payload = await response.json().catch(() => ({}));
     if (response.status === 401 && token) expireStoredSession();
     const error = new Error(payload.error?.message ?? `Request failed (${response.status})`);
+    error.details = payload.error?.details;
     error.status = response.status;
     throw error;
   }

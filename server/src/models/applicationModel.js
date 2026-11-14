@@ -38,11 +38,12 @@ export async function listStudentApplications(userId, collegeId) {
   const { rows } = await query(
     `SELECT a.id, a.project_id AS "projectId", a.status, a.applied_at AS "appliedAt",
       p.title, p.description, p.domain, p.deadline,
-      CASE WHEN a.status = 'accepted' THEN t.id ELSE NULL END AS "teamId"
+      CASE WHEN a.status = 'accepted' AND tm.student_id IS NOT NULL THEN t.id END AS "teamId"
      FROM applications a
      JOIN student_profiles sp ON sp.id = a.student_id
      JOIN projects p ON p.id = a.project_id
      LEFT JOIN teams t ON t.project_id = p.id
+     LEFT JOIN team_members tm ON tm.team_id = t.id AND tm.student_id = a.student_id
      WHERE sp.user_id = $1 AND p.college_id = $2
      ORDER BY a.applied_at DESC`,
     [userId, collegeId]
@@ -59,7 +60,10 @@ export async function listProjectApplications(projectId, ownerId, collegeId) {
   if (Number(project.owner_id) !== Number(ownerId)) throw new AppError(403, 'Only the project owner can view applications');
   const { rows } = await query(
     `SELECT a.id, a.project_id AS "projectId", a.status, a.applied_at AS "appliedAt",
-      CASE WHEN a.status = 'accepted' THEN (SELECT id FROM teams WHERE project_id = a.project_id) ELSE NULL END AS "teamId",
+      CASE WHEN a.status = 'accepted' THEN (
+        SELECT t.id FROM teams t JOIN team_members tm ON tm.team_id = t.id
+        WHERE t.project_id = a.project_id AND tm.student_id = a.student_id
+      ) END AS "teamId",
       sp.id AS "studentId", sp.name, sp.department, sp.year, sp.bio,
       sp.availability_hours_per_week AS "availabilityHoursPerWeek",
       COALESCE(json_agg(json_build_object('id', s.id, 'name', s.name, 'proficiency', ss.proficiency))
@@ -118,8 +122,8 @@ export const applicationWorkflowRepository = {
     async updateProjectStatus(projectId, status) {
       await client.query('UPDATE projects SET status = $1 WHERE id = $2', [status, projectId]);
     },
-    async createNotification(userId, message) {
-      await client.query('INSERT INTO notifications (user_id, message) VALUES ($1, $2)', [userId, message]);
+    async createNotification(userId, message, teamId = null) {
+      await client.query('INSERT INTO notifications (user_id, message, team_id) VALUES ($1, $2, $3)', [userId, message, teamId]);
     }
   }))
 };

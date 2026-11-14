@@ -4,7 +4,6 @@ import { api } from '../api/resources.js';
 import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 import { Modal } from '../components/Modal.jsx';
-import { NotificationMenu } from '../components/NotificationMenu.jsx';
 
 const formatDate = (value) => new Intl.DateTimeFormat('en-GB', {
   day: 'numeric', month: 'short', year: 'numeric'
@@ -12,7 +11,6 @@ const formatDate = (value) => new Intl.DateTimeFormat('en-GB', {
 
 function AdminActivity({ audit }) {
   return <>
-    <div className="rail-top"><NotificationMenu /></div>
     <section className="admin-activity"><h2>Recent admin activity</h2>
       {audit.length === 0 ? <p>No administrative actions recorded yet.</p> : audit.slice(0, 8).map((entry) => <article key={entry.id}>
         <Trash2 /><div><strong>Deleted project</strong><span>{entry.metadata?.title ?? `Project ${entry.targetId}`}</span><small>{entry.adminEmail ?? 'Administrator'} - {formatDate(entry.createdAt)}</small><small>{entry.reason}</small></div>

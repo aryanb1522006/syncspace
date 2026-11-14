@@ -6,6 +6,7 @@ import { AppShell } from '../components/AppShell.jsx';
 import { Button } from '../components/Button.jsx';
 import { ConnectedProfiles } from '../components/ConnectedProfiles.jsx';
 import { ProfileAvatar } from '../components/ProfileAvatar.jsx';
+import { TeamContactSettings } from '../components/TeamContactSettings.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export function ProfileEdit() {
@@ -36,6 +37,12 @@ export function ProfileEdit() {
       setSkills(options);
     });
   }, [applySavedProfile]);
+  const profileLoaded = Boolean(profile);
+  useEffect(() => {
+    if (profileLoaded && location.hash === '#team-contact-details') {
+      document.getElementById('team-contact-details')?.scrollIntoView?.({ block: 'start' });
+    }
+  }, [profileLoaded, location.hash]);
   // GitHub sync and suggestion actions can change saved skills.
   const updateSavedSkills = useCallback((skills) => {
     setProfile((current) => ({ ...current, skills }));
@@ -141,6 +148,7 @@ export function ProfileEdit() {
       {message && <p className="success-message" role="status">{message}</p>}
       {profileError && <p className="form-error" role="alert">{profileError}</p>}
     </form>
+    <TeamContactSettings />
     <ConnectedProfiles profile={savedProfile} onSkillsChanged={updateSavedSkills} profileDirty={dirty}
       onProfileUpdated={applySavedProfile} initialMessage={location.state?.message ?? ''}
       skillBusy={skillBusy} skillRevision={skillRevision} onBusyChange={setIntegrationBusy} />

@@ -10,6 +10,8 @@ export const api = {
   register: (input) => use(() => demoApi.register(input), () => request('/auth/register', { method: 'POST', body: json(input) })),
   googleLogin: (credential) => request('/auth/google', { method: 'POST', body: json({ credential }) }),
   getMe: () => use(() => demoApi.getMe(), () => request('/students/me')),
+  getMyTeamContacts: () => use(() => demoApi.getMyTeamContacts(), () => request('/students/me/team-contacts')),
+  saveMyTeamContacts: (input) => use(() => demoApi.saveMyTeamContacts(input), () => request('/students/me/team-contacts', { method: 'PUT', body: json(input) })),
   getStudent: (id) => use(() => demoApi.getStudent(id), () => request(`/students/${id}`)),
   getStudentByUserId: (userId) => use(() => demoApi.getStudentByUserId(userId), () => request(`/students/by-user/${userId}`)),
   getApplicantProfile: (projectId, applicationId) => use(
@@ -39,6 +41,8 @@ export const api = {
   decideApplication: (id, status) => use(() => demoApi.decideApplication(id, status), () => request(`/applications/${id}`, { method: 'PUT', body: json({ status }) })),
   listTeams: () => use(() => demoApi.listTeams(), () => request('/teams')),
   getTeam: (id) => use(() => demoApi.getTeam(id), () => request(`/teams/${id}`)),
+  saveGroupInvite: (id, groupInviteUrl) => use(() => demoApi.saveGroupInvite(id, groupInviteUrl), () => request(`/teams/${id}/group-invite`, { method: 'PUT', body: json({ groupInviteUrl }) })),
+  removeTeamMember: (id, studentId) => use(() => demoApi.removeTeamMember(id, studentId), () => request(`/teams/${id}/members/${studentId}`, { method: 'DELETE' })),
   createTask: (id, input) => use(() => demoApi.createTask(id, input), () => request(`/teams/${id}/tasks`, { method: 'POST', body: json(input) })),
   updateTask: (id, input) => use(() => demoApi.updateTask(id, input), () => request(`/tasks/${id}`, { method: 'PUT', body: json(input) })),
   notifications: () => use(() => demoApi.notifications(), () => request('/notifications')),

@@ -148,8 +148,8 @@ textarea { resize: vertical; line-height: 1.5; }
 .sidebar nav a svg { width: 20px; }
 .sidebar nav a.active { background: #eef8d9; font-weight: 750; }
 .sidebar__account { display: grid; gap: 8px; margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); }
-.person, .sidebar__account button { min-height: 46px; display: flex; align-items: center; gap: 11px; border: 0; padding: 0 8px; background: transparent; font-size: 13px; font-weight: 650; }
-.sidebar__account button svg { width: 20px; }
+.person, .sidebar__account > button { min-height: 46px; display: flex; align-items: center; gap: 11px; border: 0; padding: 0 8px; background: transparent; font-size: 13px; font-weight: 650; }
+.sidebar__account > button svg { width: 20px; }
 .avatar { flex: 0 0 auto; width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: 50%; font-size: 12px; font-weight: 800; }
 .avatar--mint { background: var(--mint); }
 .avatar--lavender { background: var(--lavender); }
@@ -470,7 +470,7 @@ textarea { resize: vertical; line-height: 1.5; }
   .hero-card { right: 0; width: 84%; }
   .orbit-person--one, .orbit-person--two { left: 0; }
   .app-shell, .app-shell:not(:has(.right-rail)) { grid-template-columns: 78px minmax(0, 1fr); }
-  .sidebar .logo span, .sidebar nav span, .sidebar__account .person > span:last-child, .sidebar__account button span { display: none; }
+  .sidebar .logo span, .sidebar nav span, .sidebar__account .person > span:last-child, .sidebar__account > button span { display: none; }
   .sidebar > .logo { padding-left: 7px; }
   .sidebar nav a { justify-content: center; padding: 0; }
   .sidebar__account .person, .sidebar__account button { justify-content: center; }
@@ -742,6 +742,57 @@ textarea { resize: vertical; line-height: 1.5; }
 }
 .member-profile-links a:hover { color: var(--ink); border-color: #62b795; }
 .member-profile-links svg { width: 13px; }
+.team-contact-settings { margin: 22px 0; }
+.team-contacts {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  margin: 24px 0;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--app-surface);
+}
+.team-contacts h2 { margin: 0; font-size: 20px; }
+.team-contacts p { margin: 0; color: var(--muted); }
+.team-contacts__head, .team-contacts__actions, .team-contacts__methods {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.team-contacts__head { width: 100%; justify-content: space-between; }
+.team-contacts .modal-form { width: 100%; }
+.team-contacts .modal-form .team-contacts__actions { justify-content: flex-start; margin-top: 14px; }
+.team-contacts__list { width: 100%; padding: 0; margin: 0; list-style: none; }
+.team-contacts__list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.team-contacts__list small { display: block; color: var(--muted); }
+.team-contacts__methods a, .team-contacts__methods span {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 13px;
+}
+.team-contacts__methods a:hover { border-color: currentColor; }
+.workspace-membership { margin-top: 24px; }
+.workspace-membership summary { cursor: pointer; padding: 8px 0; }
+.sidebar__notifications .notification__panel {
+  top: auto;
+  bottom: calc(100% + 8px);
+  right: auto;
+  left: 0;
+  max-height: min(50vh, 430px);
+  overflow-y: auto;
+}
 
 .member-profile {
   width: min(620px, 100%);

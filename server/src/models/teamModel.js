@@ -1,4 +1,4 @@
-import { query } from '../config/db.js';
+import { query, withTransaction } from '../config/db.js';
 
 export async function listAccessibleTeams(userId, collegeId) {
   const { rows } = await query(
@@ -66,4 +66,23 @@ export async function canAccessTeam(teamId, userId, collegeId) {
 export async function isTeamMember(teamId, studentId) {
   const { rows } = await query('SELECT 1 FROM team_members WHERE team_id = $1 AND student_id = $2', [teamId, studentId]);
   return rows.length > 0;
+}
+
+export async function removeTeamMember(teamId, studentId, userId, collegeId) {
+  return withTransaction(async (client) => {
+    const { rows: [member] } = await client.query(
+      `DELETE FROM team_members tm USING teams t, projects p, student_profiles sp
+       WHERE tm.team_id = t.id AND p.id = t.project_id AND tm.student_id = sp.id
+         AND t.id = $1 AND sp.id = $2 AND p.college_id = $4
+         AND (sp.user_id = $3 OR p.owner_id = $3)
+       RETURNING sp.user_id`, [teamId, studentId, userId, collegeId]
+    );
+    if (!member) return null;
+    await client.query('UPDATE notifications SET team_id = NULL WHERE team_id = $1 AND user_id = $2', [teamId, member.user_id]);
+    await client.query(
+      "UPDATE tasks SET assigned_to = NULL WHERE team_id = $1 AND assigned_to = $2 AND status <> 'done'",
+      [teamId, studentId]
+    );
+    return member.user_id;
+  });
 }

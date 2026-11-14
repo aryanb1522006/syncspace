@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.jsx';
@@ -263,6 +263,40 @@ describe('SyncSpace UI', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Your applications' })).toBeVisible();
     expect(await screen.findByText('StudyCircle')).toBeVisible();
     expect(screen.getByText('pending')).toBeVisible();
+  });
+
+  it('lets accepted teammates reach shared contacts from the acceptance notification', async () => {
+    const student = { id: 1, email: 'isha@northstar.edu', role: 'student', profileId: 1 };
+    const owner = { id: 4, email: 'arjun@northstar.edu', role: 'owner', profileId: 4 };
+    renderApp('/profile', student);
+    const number = await screen.findByRole('textbox', { name: 'WhatsApp number' });
+    fireEvent.change(number, { target: { value: '+1 (202) 555-0123' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save contact details' }));
+    expect(await screen.findByText('Team contact details saved.')).toBeVisible();
+    cleanup();
+
+    renderApp('/projects/2/applications', owner);
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept and add to team' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Open team workspace' }));
+    const contacts = within(await screen.findByRole('region', { name: 'Team contacts' }));
+    expect(contacts.getByRole('link', { name: 'WhatsApp Isha Mehta' })).toHaveAttribute('href', 'https://wa.me/12025550123');
+    fireEvent.click(contacts.getByRole('button', { name: 'Add group invite' }));
+    fireEvent.change(contacts.getByRole('textbox', { name: 'Group invite URL' }), { target: { value: 'https://discord.gg/FixtureInvite' } });
+    fireEvent.click(contacts.getByRole('button', { name: 'Save invite' }));
+    expect(await contacts.findByRole('link', { name: /Join team group/ })).toHaveAttribute('href', 'https://discord.gg/FixtureInvite');
+    cleanup();
+
+    renderApp('/applications', student);
+    const sidebar = within(document.querySelector('.sidebar'));
+    fireEvent.click(sidebar.getByRole('button', { name: /Notifications/ }));
+    fireEvent.click(await sidebar.findByRole('button', { name: /You joined StudyCircle/ }));
+    expect(await screen.findByRole('heading', { name: 'StudyCircle workspace' })).toBeVisible();
+    expect(screen.getByRole('link', { name: /Join team group/ })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Edit group invite' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Leave team' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Leave team' }));
+    await waitFor(() => expect(screen.queryByRole('link', { name: /Join team group/ })).not.toBeInTheDocument());
+    expect((await api.listTeams()).teams.map((team) => team.projectTitle)).toEqual(['GreenGrid']);
   });
 
   it('shows applicant skill names without ratings and keeps the acceptance flow working', async () => {

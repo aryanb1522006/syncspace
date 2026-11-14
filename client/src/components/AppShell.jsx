@@ -5,6 +5,7 @@ import { api } from '../api/resources.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Logo } from './Logo.jsx';
 import { NotificationMenu } from './NotificationMenu.jsx';
+import { ProfileAvatar } from './ProfileAvatar.jsx';
 
 export function AppShell({ children, rightRail, className = '' }) {
   const { user, logout } = useAuth();
@@ -31,7 +32,6 @@ export function AppShell({ children, rightRail, className = '' }) {
   ];
   const name = user?.profile?.name ?? user?.name ?? user?.email?.split('@')[0] ?? 'SyncSpace member';
   const email = user?.email ?? '';
-  const initials = name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
   const navClass = (item) => ({ isActive }) => isActive || (item.team && (location.pathname === '/teams' || location.pathname.startsWith('/team/'))) ? 'active' : undefined;
 
   const renderNavItems = () => nav.map((item) => {
@@ -46,7 +46,7 @@ export function AppShell({ children, rightRail, className = '' }) {
       <NavLink className="sidebar__post" to="/projects/new"><PlusCircle /><span>Post a project</span></NavLink>
       <div className="sidebar__account">
         <NavLink className="person" to="/profile">
-          <span className="avatar avatar--mint">{initials}</span>
+          <ProfileAvatar name={name} photoUrl={user?.profile?.avatar_url} />
           <span className="person__copy"><strong>{name}</strong>{email && <small>{email}</small>}</span>
         </NavLink>
         <button className="sidebar__utility" onClick={logout}><LogOut /><span>Sign out</span></button>

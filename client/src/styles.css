@@ -154,6 +154,10 @@ textarea { resize: vertical; line-height: 1.5; }
 .avatar--mint { background: var(--mint); }
 .avatar--lavender { background: var(--lavender); }
 .avatar--ink { background: var(--ink); color: #fff; }
+.profile-avatar { object-fit: cover; }
+.profile-photo { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.profile-photo .avatar { width: 72px; height: 72px; font-size: 20px; }
+.profile-photo p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 .app-area { min-width: 0; }
 .app-content { width: min(100%, 1060px); margin: 0 auto; padding: 78px 28px 60px; }
 .right-rail { min-width: 0; padding: 22px 16px; border-left: 1px solid var(--line); background: #fff; }
@@ -1042,6 +1046,8 @@ textarea { resize: vertical; line-height: 1.5; }
 .source-card h3 svg { width: 18px; }
 .source-card a { color: inherit; font-weight: 700; }
 .source-card__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.source-card__choice { display: flex; align-items: center; gap: 8px; margin: 10px 0; cursor: pointer; }
+.source-card input[type="checkbox"] { flex: 0 0 auto; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; accent-color: var(--lime-strong); }
 .source-card__confirm { display: grid; gap: 8px; width: 100%; padding: 12px; border: 1px dashed var(--line); border-radius: 9px; }
 .source-card__confirm label { display: flex; gap: 8px; align-items: center; margin: 0; }
 .source-card__confirm p { color: var(--muted); }

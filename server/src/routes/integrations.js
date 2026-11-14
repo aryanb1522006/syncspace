@@ -13,7 +13,8 @@ import {
   githubCallbackBridge,
   importLinkedIn,
   syncGitHubNow,
-  updateEvidenceVisibility
+  updateEvidenceVisibility,
+  updateReviewedSkills
 } from '../controllers/integrationController.js';
 import { getLinkedinAuthorizeUrl, linkedinCallbackBridge, exchangeLinkedinCode, importLinkedinDetails, disconnectLinkedinAccount, previewLinkedIn } from '../controllers/integrationController.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
@@ -66,6 +67,11 @@ const visibilitySchema = z.object({
   evidenceIds: z.array(z.coerce.number().int().positive()).min(1).max(200),
   visibility: z.enum(['private', 'team', 'college'])
 }).strict();
+const reviewSchema = z.object({
+  reviewIds: z.array(z.uuid()).min(1).max(2).refine((ids) => new Set(ids).size === ids.length),
+  skillIds: z.array(z.number().int().positive().max(Number.MAX_SAFE_INTEGER)).max(500)
+    .refine((ids) => new Set(ids).size === ids.length)
+}).strict();
 
 router.get('/', asyncHandler(getOverview));
 router.get('/github/authorize', asyncHandler(getGitHubAuthorizeUrl));
@@ -79,6 +85,7 @@ router.delete('/linkedin/account', asyncHandler(disconnectLinkedinAccount));
 router.post('/linkedin/preview', syncLimiter, linkedinUpload.single('export'), asyncHandler(previewLinkedIn));
 router.post('/linkedin/import', syncLimiter, linkedinUpload.single('export'), asyncHandler(importLinkedIn));
 router.delete('/linkedin', asyncHandler(deleteLinkedIn));
+router.post('/skills/review', validate(reviewSchema), asyncHandler(updateReviewedSkills));
 router.post('/skills/:skillId/decision', validate(skillParamsSchema, 'params'), validate(decisionSchema), asyncHandler(decideSkill));
 router.put('/evidence/visibility', validate(visibilitySchema), asyncHandler(updateEvidenceVisibility));
 

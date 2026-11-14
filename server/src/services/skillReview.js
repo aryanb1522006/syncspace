@@ -12,6 +12,8 @@
 import { combineConfidence, summarizeEvidence } from './evidenceScoring.js';
 import { AppError } from '../utils/AppError.js';
 
+const defaultSelectionThreshold = 0.1;
+
 export async function decideSkillSuggestion(repository, { studentId, skillId, decision, proficiency }) {
   return repository.transaction(studentId, async (tx) => {
     const evidence = await tx.listEvidenceForSkill(studentId, skillId);
@@ -50,8 +52,9 @@ export function buildSkillReview(evidenceRows, decisions, profileSkillIds) {
     if (group.skillId) {
       status = onProfile.has(Number(group.skillId)) ? 'on_profile' : decided.has(Number(group.skillId)) ? 'rejected' : 'pending';
     }
-    const githubItems = group.items.filter((item) => item.source === 'github');
-    const githubConfidence = githubItems.length ? combineConfidence(githubItems.map((item) => item.confidence)) : null;
-    return { ...group, status, githubConfidence };
+    const selectedByDefault = status === 'pending' && group.sources.some((source) =>
+      combineConfidence(group.items.filter((item) => item.source === source).map((item) => item.confidence)) > defaultSelectionThreshold
+    );
+    return { ...group, status, selectedByDefault };
   });
 }

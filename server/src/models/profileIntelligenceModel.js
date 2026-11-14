@@ -1,8 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { query, withTransaction } from '../config/db.js';
 import { AppError } from '../utils/AppError.js';
-import { summarizeEvidence } from '../services/evidenceScoring.js';
-
-const githubAutoAddThreshold = 0.1;
 
 const evidenceSelect = `
   SELECT se.id, se.skill_id AS "skillId", s.name AS "skillName", se.raw_name AS "rawName",
@@ -59,7 +57,7 @@ export async function saveGitHubConnection({ studentId, providerUserId, username
        ON CONFLICT (student_id, source) DO UPDATE SET
          provider_user_id = EXCLUDED.provider_user_id, username = EXCLUDED.username,
          profile_url = EXCLUDED.profile_url, access_token_ciphertext = EXCLUDED.access_token_ciphertext,
-         status = 'active', last_sync_error = NULL, connected_at = NOW()
+         status = 'active', last_sync_error = NULL, connected_at = NOW(), pending_skill_review_id = NULL
        RETURNING id`,
       [studentId, providerUserId, username, profileUrl, accessTokenCiphertext]
     );
@@ -112,40 +110,60 @@ export function replaceSourceEvidence({ studentId, source, evidence, profileText
       'DELETE FROM skill_evidence WHERE student_id = $1 AND source = $2 AND NOT (id = ANY($3::bigint[]))',
       [studentId, source, touched]
     );
-    const addedSkillIds = source === 'github' ? await addDetectedGitHubSkills(client, studentId) : [];
     await client.query(
       `UPDATE profile_connections SET profile_text = $3, last_synced_at = NOW(), last_sync_error = NULL,
-         username = COALESCE($4, username), profile_url = COALESCE('https://github.com/' || $4, profile_url)
+         username = COALESCE($4, username), profile_url = COALESCE('https://github.com/' || $4, profile_url),
+         pending_skill_review_id = $5
        WHERE student_id = $1 AND source = $2`,
-      [studentId, source, profileText, githubUsername ?? null]
+      [studentId, source, profileText, githubUsername ?? null, touched.length ? randomUUID() : null]
     );
-    return addedSkillIds;
   });
 }
 
-async function addDetectedGitHubSkills(client, studentId) {
-  const { rows } = await client.query(
-    `${evidenceSelect} WHERE se.student_id = $1 AND se.source = 'github' AND se.skill_id IS NOT NULL`,
+export async function listPendingSkillEvidence(studentId) {
+  const { rows } = await query(
+    `SELECT evidence.*, pc.pending_skill_review_id AS "reviewId"
+     FROM (${evidenceSelect} WHERE se.student_id = $1) evidence
+     JOIN profile_connections pc ON pc.student_id = $1 AND pc.source = evidence.source
+     WHERE pc.pending_skill_review_id IS NOT NULL
+     ORDER BY evidence.confidence DESC, evidence.id`,
     [studentId]
   );
-  const eligible = summarizeEvidence(rows)
-    .filter((group) => group.confidence > githubAutoAddThreshold)
-    .map((group) => group.skillId);
-  if (!eligible.length) return [];
-  // A decision on an absent skill can represent a dismissal or a removal
-  // after approval in an older version of the profile editor.
-  const { rows: added } = await client.query(
-    `INSERT INTO student_skills (student_id, skill_id, proficiency)
-     SELECT $1, candidate.id, 3
-     FROM unnest($2::bigint[]) AS candidate(id)
-     WHERE NOT EXISTS (
-       SELECT 1 FROM skill_decisions d WHERE d.student_id = $1 AND d.skill_id = candidate.id
-     )
-     ON CONFLICT (student_id, skill_id) DO NOTHING
-     RETURNING skill_id`,
-    [studentId, eligible]
-  );
-  return added.map(({ skill_id }) => Number(skill_id));
+  return rows;
+}
+
+export function completeSkillReview(studentId, reviewIds, skillIds) {
+  return withTransaction(async (client) => {
+    await lockProfile(client, studentId);
+    const { rows: reviews } = await client.query(
+      `SELECT source FROM profile_connections
+       WHERE student_id = $1 AND pending_skill_review_id = ANY($2::uuid[])`,
+      [studentId, reviewIds]
+    );
+    if (reviews.length !== reviewIds.length) {
+      throw new AppError(409, 'This review changed. Check the latest suggestions and try again.');
+    }
+    const { rows: eligible } = await client.query(
+      `SELECT DISTINCT skill_id FROM skill_evidence
+       WHERE student_id = $1 AND source = ANY($2::profile_source[]) AND skill_id = ANY($3::bigint[])`,
+      [studentId, reviews.map(({ source }) => source), skillIds]
+    );
+    if (eligible.length !== skillIds.length) {
+      throw new AppError(400, 'Choose skills from the current review.');
+    }
+    const { rows: added } = await client.query(
+      `INSERT INTO student_skills (student_id, skill_id, proficiency)
+       SELECT $1, candidate.id, 3 FROM unnest($2::bigint[]) AS candidate(id)
+       ON CONFLICT (student_id, skill_id) DO NOTHING RETURNING skill_id`,
+      [studentId, skillIds]
+    );
+    await client.query(
+      `UPDATE profile_connections SET pending_skill_review_id = NULL
+       WHERE student_id = $1 AND pending_skill_review_id = ANY($2::uuid[])`,
+      [studentId, reviewIds]
+    );
+    return added.map(({ skill_id }) => Number(skill_id));
+  });
 }
 
 export async function recordSyncError(studentId, source, message, { revoked = false, expectedConnection } = {}) {

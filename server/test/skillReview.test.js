@@ -63,6 +63,19 @@ test('review statuses: on profile, decided, pending and unmatched', () => {
   assert.deepEqual(status, { React: 'on_profile', Docker: 'rejected', Django: 'pending', Elixir: 'unmatched' });
 });
 
+test('review preselects new skills only when one source exceeds ten percent', () => {
+  const piece = (skillId, source, confidence) => ({
+    skillId, rawName: String(skillId), source, confidence, sourceRef: 'fixture', detectionMethod: 'readme_mention'
+  });
+  const review = buildSkillReview([
+    piece(1, 'github', 0.1), piece(1, 'linkedin_export', 0.1),
+    piece(2, 'github', 0.101), piece(3, 'linkedin_export', 0.3), piece(4, 'github', 0.8)
+  ], [{ skillId: 4, decision: 'rejected' }], []);
+  assert.deepEqual(Object.fromEntries(review.map((group) => [group.skillId, group.selectedByDefault])), {
+    1: false, 2: true, 3: true, 4: false
+  });
+});
+
 test('an approved evidence-backed skill improves the existing recommendation score and is explained', async () => {
   const project = {
     skills: [{ skillId: 3, name: 'React', importance: 'required' }, { skillId: 4, name: 'Node.js', importance: 'required' }],

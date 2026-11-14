@@ -64,8 +64,8 @@ export const api = {
     return request('/integrations/linkedin/import', { method: 'POST', body });
   }),
   linkedinDelete: () => liveOnly(() => request('/integrations/linkedin', { method: 'DELETE' })),
-  decideSkill: (skillId, decision, proficiency) => liveOnly(() => request(`/integrations/skills/${skillId}/decision`, {
-    method: 'POST', body: json(proficiency ? { decision, proficiency } : { decision })
+  updateReviewedSkills: (reviewIds, skillIds) => liveOnly(() => request('/integrations/skills/review', {
+    method: 'POST', body: json({ reviewIds, skillIds })
   })),
   setEvidenceVisibility: (evidenceIds, visibility) => liveOnly(() => request('/integrations/evidence/visibility', { method: 'PUT', body: json({ evidenceIds, visibility }) }))
 };

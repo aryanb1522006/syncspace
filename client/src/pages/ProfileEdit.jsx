@@ -37,9 +37,8 @@ export function ProfileEdit() {
     });
   }, [applySavedProfile]);
   // GitHub sync and suggestion actions can change saved skills.
-  const reloadSkills = useCallback(async () => {
-    const { student } = await api.getMe();
-    setProfile((current) => ({ ...current, skills: student.skills }));
+  const updateSavedSkills = useCallback((skills) => {
+    setProfile((current) => ({ ...current, skills }));
   }, []);
 
   if (!profile) return <AppShell><div className="loading">Loading your profile...</div></AppShell>;
@@ -142,7 +141,7 @@ export function ProfileEdit() {
       {message && <p className="success-message" role="status">{message}</p>}
       {profileError && <p className="form-error" role="alert">{profileError}</p>}
     </form>
-    <ConnectedProfiles profile={savedProfile} onSkillsChanged={reloadSkills} profileDirty={dirty}
+    <ConnectedProfiles profile={savedProfile} onSkillsChanged={updateSavedSkills} profileDirty={dirty}
       onProfileUpdated={applySavedProfile} initialMessage={location.state?.message ?? ''}
       skillBusy={skillBusy} skillRevision={skillRevision} onBusyChange={setIntegrationBusy} />
   </AppShell>;

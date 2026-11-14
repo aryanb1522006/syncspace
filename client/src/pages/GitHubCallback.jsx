@@ -23,9 +23,8 @@ export function GitHubCallback() {
     catch (reason) { setError(reason.message); setParams({}, { replace: true }); return; }
     setParams({}, { replace: true });
     api.githubExchange(completion.code, completion.state, completion.verifier)
-      .then(({ addedSkillIds } = {}) => {
-        const count = addedSkillIds?.length ?? 0;
-        const message = count ? `GitHub connected. Added ${count} skill${count === 1 ? '' : 's'} to your profile.` : 'GitHub connected.';
+      .then(({ reviewIds } = {}) => {
+        const message = reviewIds?.length ? 'GitHub connected. Review your detected skills below.' : 'GitHub connected.';
         navigate('/profile', { replace: true, state: { message } });
       })
       .catch((reason) => setError(reason.message))

@@ -1,11 +1,10 @@
-import { Check, FileArchive, Github, Linkedin, RefreshCw, X } from 'lucide-react';
+import { Check, FileArchive, Github, Linkedin, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/resources.js';
 import { startProviderConnection } from '../api/providerConnection.js';
 import { Button } from './Button.jsx';
 import { ProfileAvatar } from './ProfileAvatar.jsx';
 
-const defaultProficiency = 3;
 const classLabels = {
   repeated_project_evidence: 'Used in 3+ GitHub repositories',
   github_detected: 'Detected on GitHub',
@@ -20,9 +19,9 @@ const methodLabels = {
 };
 const visibilityLabels = { private: 'Only me', team: 'My teammates', college: 'Students at my college' };
 const formatDate = (value) => (value ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value)) : '—');
-const githubSyncMessage = ({ addedSkillIds }) => {
-  const count = addedSkillIds?.length ?? 0;
-  return count ? `GitHub synced. Added ${count} skill${count === 1 ? '' : 's'} to your profile.` : 'GitHub synced.';
+const skillUpdateMessage = ({ addedSkillIds }) => {
+  const count = addedSkillIds.length;
+  return count ? `Added ${count} skill${count === 1 ? '' : 's'} to your profile.` : 'Skill review complete.';
 };
 
 function EvidenceList({ group }) {
@@ -35,32 +34,60 @@ function EvidenceList({ group }) {
   </div>;
 }
 
-function SkillRow({ group, busy, onDecide, onVisibility }) {
-  const onProfile = group.status === 'on_profile';
-  const fromGitHub = group.sources.includes('github');
-  const dismissed = group.status === 'rejected' || group.status === 'approved';
+function SkillRow({ group, busy, selected, onSelect, onVisibility }) {
   const visibility = group.items.every((item) => item.visibility === group.items[0].visibility) ? group.items[0].visibility : '';
-  return <details className="evidence-review__row">
-    <summary className="evidence-review__head">
-      <strong>{group.name}</strong>
-      <span className="evidence-review__confidence">{Number(((group.githubConfidence ?? group.confidence) * 100).toFixed(1))}% evidence</span>
-      <small>{classLabels[group.evidenceClass]}</small>
-    </summary>
-    <div className="evidence-review__body">
-      <EvidenceList group={group} />
-      <div className="evidence-review__actions">
-        {onProfile
-          ? <label>Evidence visible to<select aria-label={`${group.name} evidence visibility`} value={visibility} disabled={busy} onChange={(event) => onVisibility(group, event.target.value)}>
+  return <div className="evidence-review__row">
+    <div className="evidence-review__choice">
+      {group.status === 'on_profile'
+        ? <strong>{group.name} <small>On your profile</small></strong>
+        : <label><input type="checkbox" checked={selected} disabled={busy} onChange={(event) => onSelect(group.skillId, event.target.checked)} />{group.name}
+          {group.status === 'rejected' && <small>Previously removed or dismissed</small>}
+        </label>}
+      <span className="evidence-review__confidence">{Number((group.confidence * 100).toFixed(1))}% evidence</span>
+    </div>
+    <details className="evidence-review__details">
+      <summary>{classLabels[group.evidenceClass]}</summary>
+      <div className="evidence-review__body">
+        <EvidenceList group={group} />
+        <div className="evidence-review__actions">
+          <label>Evidence visible to<select aria-label={`${group.name} evidence visibility`} value={visibility} disabled={busy} onChange={(event) => onVisibility(group, event.target.value)}>
             {!visibility && <option value="">Mixed</option>}
             {Object.entries(visibilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select></label>
-          : fromGitHub && <>
-            <Button type="button" disabled={busy} onClick={() => onDecide(group, 'approved', defaultProficiency)}><Check />{dismissed ? 'Add back' : 'Add to skills'}</Button>
-            {!dismissed && <Button type="button" variant="secondary" disabled={busy} onClick={() => onDecide(group, 'rejected')}><X />Dismiss</Button>}
-          </>}
+        </div>
       </div>
+    </details>
+  </div>;
+}
+
+function SkillReview({ skills, busy, saving, onSave, onVisibility }) {
+  const [choices, setChoices] = useState({});
+  const candidates = skills.filter((group) => group.status === 'pending' || group.status === 'rejected');
+  const existing = skills.filter((group) => group.status === 'on_profile');
+  const unmatched = skills.filter((group) => group.status === 'unmatched');
+  const isSelected = (group) => choices[group.skillId] ?? group.selectedByDefault ?? false;
+  const selected = candidates.filter(isSelected);
+  const select = (skillId, checked) => setChoices((current) => ({ ...current, [skillId]: checked }));
+
+  return <section className="evidence-review" aria-labelledby="skill-evidence-title">
+    <h3 id="skill-evidence-title">Skill evidence</h3>
+    <p className="connected-profiles__note">Choose which skills to add. New skills with more than 10% evidence from a source are preselected.</p>
+    {candidates.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} selected={isSelected(group)} onSelect={select} onVisibility={onVisibility} />)}
+    {existing.length > 0 && <details className="evidence-review__group">
+      <summary>Already on your profile <small>{existing.length}</small></summary>
+      <div>{existing.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} onVisibility={onVisibility} />)}</div>
+    </details>}
+    {unmatched.length > 0 && <details className="evidence-review__group">
+      <summary>Not in the skill list <small>{unmatched.length}</small></summary>
+      <p>{unmatched.map((group) => group.name).join(', ')}</p>
+    </details>}
+    <div className="evidence-review__footer">
+      <span className="connected-profiles__note">{selected.length} selected</span>
+      <Button type="button" disabled={busy} onClick={() => onSave(selected.map((group) => Number(group.skillId)))}>
+        <Check />{saving ? 'Updating…' : 'Update skills'}
+      </Button>
     </div>
-  </details>;
+  </section>;
 }
 
 export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, onBusyChange, skillRevision = 0, skillBusy = false, profileDirty = false, initialMessage = '' }) {
@@ -99,9 +126,13 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
       const next = await action();
       setState(next);
       setMessage(typeof success === 'function' ? success(next) : success);
-      if (skillsChanged) await onSkillsChanged?.();
+      if (skillsChanged) await onSkillsChanged?.(next.profileSkills);
     } catch (reason) {
       setError(reason.message);
+      if (reason.status === 409 && actionName === 'skill-review') {
+        const latest = await api.integrations().catch(() => null);
+        if (latest) setState(latest);
+      }
     } finally {
       setBusy(false);
       setPendingAction('');
@@ -124,14 +155,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
   const availableFields = account ? [...(!nameApplied ? ['name'] : []), ...(account.pictureUrl && !photoApplied ? ['photo'] : [])] : [];
   const selectedFields = detailFields.filter((field) => availableFields.includes(field));
   const detailsComplete = account && availableFields.length === 0;
-  const reviewable = state.skills.filter((group) => group.status !== 'unmatched');
-  const unmatched = state.skills.filter((group) => group.status === 'unmatched');
-  const groups = [
-    { title: 'On your profile', items: reviewable.filter((group) => group.status === 'on_profile') },
-    { title: 'GitHub suggestions', items: reviewable.filter((group) => group.status === 'pending' && group.sources.includes('github')) },
-    { title: 'Dismissed or removed', items: reviewable.filter((group) => ['rejected', 'approved'].includes(group.status) && group.sources.includes('github')) },
-    { title: 'LinkedIn evidence', items: reviewable.filter((group) => group.status !== 'on_profile' && !group.sources.includes('github')) }
-  ];
+  const reviewIds = state.reviewIds ?? [];
 
   const connectProvider = async (provider) => {
     setBusy(true); setError('');
@@ -170,10 +194,10 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
     finally { setBusy(false); setPendingAction(''); }
   };
   const toggle = (list, value) => list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
-  const decide = (group, decision, proficiency) => run(
-    () => api.decideSkill(group.skillId, decision, proficiency),
-    decision === 'approved' ? `${group.name} added to your skills.` : `${group.name} dismissed.`,
-    { skillsChanged: decision === 'approved' }
+  const updateSkills = (skillIds) => run(
+    () => api.updateReviewedSkills(reviewIds, skillIds),
+    skillUpdateMessage,
+    { skillsChanged: true, actionName: 'skill-review' }
   );
   const setVisibility = (group, visibility) => run(
     () => api.setEvidenceVisibility(group.items.map((item) => item.id), visibility),
@@ -191,12 +215,12 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
         {github
           ? <>
             <div className="source-card__identity"><div><a href={github.profileUrl} target="_blank" rel="noreferrer">@{github.username}</a><small>{github.status === 'revoked' ? 'Reconnect to resume syncing.' : `Synced ${formatDate(github.lastSyncedAt)}`}</small></div></div>
-            {github.status === 'active' && <p>Sync adds skills with more than 10% GitHub evidence. Edit your skill list anytime.</p>}
+            {github.status === 'active' && <p>Sync your public repositories to review detected skills.</p>}
             {github.lastSyncError && <p className="form-error">{github.lastSyncError}</p>}
             <div className="source-card__actions">
               {github.status === 'revoked'
                 ? <Button type="button" disabled={busy || profileDirty || !state.github.configured} onClick={connectGitHub}><Github />Reconnect</Button>
-                : <Button type="button" variant="secondary" disabled={busy} onClick={() => run(() => api.githubSync(), githubSyncMessage, { actionName: 'github-sync', skillsChanged: true })}><RefreshCw className={pendingAction === 'github-sync' ? 'is-spinning' : ''} />{pendingAction === 'github-sync' ? 'Syncing…' : 'Sync now'}</Button>}
+                : <Button type="button" variant="secondary" disabled={busy} onClick={() => run(() => api.githubSync(), (next) => next.skills.length ? 'GitHub synced. Review your detected skills below.' : 'GitHub synced. No skills were detected.', { actionName: 'github-sync' })}><RefreshCw className={pendingAction === 'github-sync' ? 'is-spinning' : ''} />{pendingAction === 'github-sync' ? 'Syncing…' : 'Sync now'}</Button>}
               {!confirmDisconnect
                 ? <Button type="button" variant="secondary" disabled={busy} onClick={() => setConfirmDisconnect(true)}>Disconnect</Button>
                 : <div className="source-card__confirm">
@@ -208,7 +232,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
             </div>
           </>
           : state.github.configured && <>
-            <p>Add skills from your public repositories when GitHub evidence exceeds 10%. You can remove any skill from your profile. Nothing is posted to GitHub.</p>
+            <p>Find skills in your public repositories and choose which ones to add. Nothing is posted to GitHub.</p>
             <Button type="button" disabled={busy || profileDirty} onClick={connectGitHub}><Github />Connect GitHub</Button>
           </>}
       </article>
@@ -243,7 +267,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
     <details className="profile-import">
       <summary><span><FileArchive /><strong>Import LinkedIn evidence</strong></span><small>{linkedin ? `Imported ${formatDate(linkedin.lastSyncedAt)}` : 'ZIP or CSV'}</small></summary>
       <div className="profile-import__body">
-        <p>Review your LinkedIn export before importing it. It can support skills already on your profile.</p>
+        <p>Import your LinkedIn export to review and add detected skills.</p>
         <details className="source-card__help"><summary>How to get your export</summary><p>In LinkedIn, open Settings → Data privacy → Get a copy of your data. Upload the ZIP or a supported CSV. Files are processed in memory; contacts and messages are ignored.</p></details>
         <div className="source-card__actions">
           <label className="button button--secondary upload-button"><FileArchive />{linkedin ? 'Preview a newer export' : 'Preview LinkedIn export'}<input aria-label="LinkedIn export file" type="file" accept=".zip,.csv,application/zip,text/csv" disabled={busy} onChange={importLinkedIn} /></label>
@@ -259,7 +283,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
           </div>)}
           <Button type="button" disabled={busy || !sections.length} onClick={() => run(async () => {
             const next = await api.linkedinImport(upload.file, sections); setUpload(null); return next;
-          }, 'Selected LinkedIn evidence imported.')}>Confirm selected sections</Button>
+          }, 'LinkedIn evidence imported. Review detected skills below.')}>Confirm selected sections</Button>
           <Button type="button" variant="secondary" disabled={busy} onClick={() => setUpload(null)}>Cancel import</Button>
         </div>}
       </div>
@@ -268,17 +292,7 @@ export function ConnectedProfiles({ profile, onSkillsChanged, onProfileUpdated, 
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="success-message" role="status">{message}</p>}
 
-    {state.skills.length > 0 && <div className="evidence-review">
-      <h3>Skill evidence</h3>
-      <p className="connected-profiles__note">Evidence scores show how strongly sources support a skill. Sync adds skills with more than 10% GitHub evidence. Open a skill to see its sources and manage sharing.</p>
-      {groups.filter(({ items }) => items.length).map(({ title, items }) => <details className="evidence-review__group" key={title}>
-        <summary>{title} <small>{items.length}</small></summary>
-        <div>{items.map((group) => <SkillRow key={group.skillId} group={group} busy={busy} onDecide={decide} onVisibility={setVisibility} />)}</div>
-      </details>)}
-      {unmatched.length > 0 && <details className="evidence-review__group">
-        <summary>Not in the skill list <small>{unmatched.length}</small></summary>
-        <p>{unmatched.map((group) => group.name).join(', ')}</p>
-      </details>}
-    </div>}
+    {reviewIds.length > 0 && <SkillReview key={[...reviewIds].sort().join(',')} skills={state.skills}
+      busy={busy} saving={pendingAction === 'skill-review'} onSave={updateSkills} onVisibility={setVisibility} />}
   </section>;
 }

@@ -9,7 +9,7 @@ vi.mock('../api/resources.js', () => ({
     integrations: vi.fn(),
     githubAuthorizeUrl: vi.fn(),
     githubSync: vi.fn(),
-    decideSkill: vi.fn(),
+    updateReviewedSkills: vi.fn(),
     setEvidenceVisibility: vi.fn(),
     linkedinPreview: vi.fn(), linkedinImport: vi.fn(), linkedinUseDetails: vi.fn(), linkedinAuthorizeUrl: vi.fn()
   }
@@ -22,12 +22,14 @@ const item = (id, overrides = {}) => ({
   id, source: 'github', sourceRef: 'asha/campus-api', evidence: '"fastapi" is a dependency in requirements.txt',
   detectionMethod: 'manifest_dependency', confidence: 0.6, visibility: 'private', lastVerifiedAt: '2026-10-30T00:00:00Z', ...overrides
 });
-const overview = (skills) => ({
+const reviewId = '11111111-1111-4111-8111-111111111111';
+const overview = (skills, id = reviewId) => ({
   github: { configured: true, connection: { username: 'asha', profileUrl: 'https://github.com/asha', status: 'active', lastSyncedAt: '2026-10-30T00:00:00Z' } },
   linkedin: { connection: null },
-  skills
+  skills,
+  reviewIds: skills.length ? [id] : []
 });
-const fastapi = { skillId: 14, name: 'FastAPI', confidence: 0.68, evidenceClass: 'github_detected', sources: ['github'], status: 'pending', items: [item(1), item(2, { detectionMethod: 'readme_mention', evidence: 'Mentioned in the README ("fastapi")', confidence: 0.2 })] };
+const fastapi = { skillId: 14, name: 'FastAPI', confidence: 0.68, evidenceClass: 'github_detected', sources: ['github'], status: 'pending', selectedByDefault: true, items: [item(1), item(2, { detectionMethod: 'readme_mention', evidence: 'Mentioned in the README ("fastapi")', confidence: 0.2 })] };
 const react = { skillId: 3, name: 'React', confidence: 0.6, evidenceClass: 'github_detected', sources: ['github'], status: 'on_profile', items: [item(3, { sourceRef: 'asha/web' })] };
 const elixir = { skillId: null, name: 'Elixir', confidence: 0.5, evidenceClass: 'github_detected', sources: ['github'], status: 'unmatched', items: [item(4)] };
 
@@ -93,22 +95,33 @@ describe('Connected profiles', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
-  it('previews without saving and confirms only selected ZIP sections', async () => {
+  it('previews selected ZIP sections, then shows and clears the LinkedIn skill review', async () => {
     api.integrations.mockResolvedValue(overview([]));
     api.linkedinPreview.mockResolvedValue({ sections: [
-      { name: 'skills.csv', evidenceCount: 1, skills: ['React'], profileText: '' },
+      { name: 'skills.csv', evidenceCount: 1, skills: ['Python'], profileText: '' },
       { name: 'profile.csv', evidenceCount: 0, skills: [], profileText: 'Headline preview' }
     ] });
-    api.linkedinImport.mockResolvedValue(overview([]));
+    const python = {
+      skillId: 12, name: 'Python', confidence: 0.3, evidenceClass: 'self_declared', sources: ['linkedin_export'],
+      status: 'pending', selectedByDefault: true, items: [item(5, { source: 'linkedin_export', sourceRef: 'Skills.csv' })]
+    };
+    api.linkedinImport.mockResolvedValue(overview([python]));
+    api.updateReviewedSkills.mockResolvedValue({ ...overview([]), addedSkillIds: [12], profileSkills: [{ id: 12, name: 'Python' }] });
     render(<ConnectedProfiles />);
     const file = new File(['fixture'], 'linkedin.zip', { type: 'application/zip' });
     fireEvent.click(await screen.findByText('Import LinkedIn evidence'));
     fireEvent.change(await screen.findByLabelText('LinkedIn export file'), { target: { files: [file] } });
     expect(await screen.findByText('Review linkedin.zip')).toBeVisible();
     expect(api.linkedinImport).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: 'Skill evidence' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('checkbox', { name: /profile.csv/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm selected sections' }));
     await waitFor(() => expect(api.linkedinImport).toHaveBeenCalledWith(file, ['skills.csv']));
+    expect(await screen.findByRole('checkbox', { name: 'Python' })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Update skills' }));
+    expect(await screen.findByText('Added 1 skill to your profile.')).toBeVisible();
+    expect(api.updateReviewedSkills).toHaveBeenCalledWith([reviewId], [12]);
+    expect(screen.queryByRole('heading', { name: 'Skill evidence' })).not.toBeInTheDocument();
   });
 
   it('requires selected account details and protects unsaved profile edits', async () => {
@@ -124,45 +137,49 @@ describe('Connected profiles', () => {
     await waitFor(() => expect(api.linkedinUseDetails).toHaveBeenCalledWith(['name']));
     expect(updated).toHaveBeenCalledWith({ name: 'Account Name' });
   });
-  it('adds a GitHub suggestion from the expandable evidence group without a level selector', async () => {
+  it('adds selected skills in one update and hides the completed review', async () => {
     api.integrations.mockResolvedValue(overview([fastapi, react, elixir]));
-    api.decideSkill.mockResolvedValue(overview([{ ...fastapi, status: 'on_profile' }, react, elixir]));
+    const profileSkills = [{ id: 14, name: 'FastAPI' }];
+    api.updateReviewedSkills.mockResolvedValue({ ...overview([]), addedSkillIds: [14], profileSkills });
     const onSkillsChanged = vi.fn();
     render(<ConnectedProfiles onSkillsChanged={onSkillsChanged} />);
 
-    fireEvent.click(await screen.findByText('GitHub suggestions'));
-    fireEvent.click(screen.getByText('FastAPI'));
+    const choice = await screen.findByRole('checkbox', { name: 'FastAPI' });
+    expect(choice).toBeChecked();
+    fireEvent.click(within(choice.closest('.evidence-review__row')).getByText('Detected on GitHub'));
     expect(screen.getByText('68% evidence')).toBeVisible();
     expect(screen.getByText('2 pieces of evidence')).toBeInTheDocument();
     expect(screen.getByText('Not in the skill list')).toBeVisible();
 
-    const approve = screen.getByRole('button', { name: 'Add to skills' });
+    const approve = screen.getByRole('button', { name: 'Update skills' });
     expect(approve).toBeEnabled();
     expect(screen.queryByRole('combobox', { name: /proficiency/i })).not.toBeInTheDocument();
     fireEvent.click(approve);
-    await waitFor(() => expect(api.decideSkill).toHaveBeenCalledWith(14, 'approved', 3));
-    expect(await screen.findByText('FastAPI added to your skills.')).toBeVisible();
-    expect(onSkillsChanged).toHaveBeenCalled();
+    await waitFor(() => expect(api.updateReviewedSkills).toHaveBeenCalledWith([reviewId], [14]));
+    expect(await screen.findByText('Added 1 skill to your profile.')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Skill evidence' })).not.toBeInTheDocument();
+    expect(onSkillsChanged).toHaveBeenCalledWith(profileSkills);
   });
 
-  it('lets students reject inaccurate detections and choose who sees their evidence', async () => {
+  it('keeps skill selections after updating evidence visibility and a failed save', async () => {
     api.integrations.mockResolvedValue(overview([fastapi, react]));
-    api.decideSkill.mockResolvedValue(overview([{ ...fastapi, status: 'rejected' }, react]));
-    api.setEvidenceVisibility.mockResolvedValue(overview([fastapi, { ...react, items: [item(3, { visibility: 'team' })] }]));
+    api.setEvidenceVisibility.mockResolvedValue(overview([{ ...fastapi, items: fastapi.items.map((row) => ({ ...row, visibility: 'team' })) }, react]));
+    api.updateReviewedSkills.mockRejectedValueOnce(new Error('Could not update skills.'));
     render(<ConnectedProfiles />);
 
-    fireEvent.click(await screen.findByText('GitHub suggestions'));
-    fireEvent.click(screen.getByText('FastAPI'));
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
-    await waitFor(() => expect(api.decideSkill).toHaveBeenCalledWith(14, 'rejected', undefined));
-    expect(await screen.findByText('FastAPI dismissed.')).toBeVisible();
-
-    fireEvent.click(screen.getByText('On your profile'));
-    fireEvent.click(screen.getByText('React'));
-    const visibility = screen.getByRole('combobox', { name: 'React evidence visibility' });
+    const choice = await screen.findByRole('checkbox', { name: 'FastAPI' });
+    fireEvent.click(choice);
+    fireEvent.click(within(choice.closest('.evidence-review__row')).getByText('Detected on GitHub'));
+    const visibility = screen.getByRole('combobox', { name: 'FastAPI evidence visibility' });
     expect(visibility).toHaveValue('private');
     fireEvent.change(visibility, { target: { value: 'team' } });
-    await waitFor(() => expect(api.setEvidenceVisibility).toHaveBeenCalledWith([3], 'team'));
+    await waitFor(() => expect(visibility).toHaveValue('team'));
+    expect(api.setEvidenceVisibility).toHaveBeenCalledWith([1, 2], 'team');
+    expect(choice).not.toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Update skills' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not update skills.');
+    expect(api.updateReviewedSkills).toHaveBeenCalledWith([reviewId], []);
+    expect(choice).not.toBeChecked();
   });
 
   it('explains what GitHub access means before connecting', async () => {
@@ -181,16 +198,15 @@ describe('Connected profiles', () => {
     expect(screen.queryByRole('button', { name: 'Connect GitHub' })).not.toBeInTheDocument();
   });
 
-  it('refreshes profile skills after sync and places automatically added skills under On your profile', async () => {
-    api.integrations.mockResolvedValue(overview([fastapi]));
-    api.githubSync.mockResolvedValue({ ...overview([{ ...fastapi, status: 'on_profile' }]), addedSkillIds: [14] });
+  it('shows evidence after syncing and leaves profile skills alone until Update skills', async () => {
+    api.integrations.mockResolvedValue(overview([]));
+    api.githubSync.mockResolvedValue(overview([fastapi]));
     const refresh = vi.fn();
     render(<ConnectedProfiles onSkillsChanged={refresh} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Sync now' }));
-    expect(await screen.findByText('GitHub synced. Added 1 skill to your profile.')).toBeVisible();
-    expect(refresh).toHaveBeenCalledOnce();
-    expect(screen.queryByText('GitHub suggestions')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('On your profile'));
-    expect(screen.getByText('FastAPI')).toBeVisible();
+    const sync = await screen.findByRole('button', { name: 'Sync now' });
+    expect(screen.queryByRole('heading', { name: 'Skill evidence' })).not.toBeInTheDocument();
+    fireEvent.click(sync);
+    expect(await screen.findByRole('heading', { name: 'Skill evidence' })).toBeVisible();
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

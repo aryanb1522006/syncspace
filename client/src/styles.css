@@ -1070,10 +1070,14 @@ textarea { resize: vertical; line-height: 1.5; }
 .evidence-review__group > div { padding: 0 14px; }
 .evidence-review__group > p { padding: 0 14px 12px; color: var(--muted); font-size: 12px; }
 .evidence-review__row { border-top: 1px solid var(--line); }
-.evidence-review__head { cursor: pointer; padding: 10px 0; font-size: 13px; }
-.evidence-review__head > * { margin-right: 8px; }
-.evidence-review__head small { color: var(--muted); }
-.evidence-review__body { display: grid; gap: 10px; padding: 0 0 14px; }
+.evidence-review__row { padding: 10px 0; }
+.evidence-review__choice, .evidence-review__choice label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+.evidence-review__choice label { cursor: pointer; }
+.evidence-review__choice input { width: 17px; height: 17px; min-height: 0; margin: 0; accent-color: var(--lime-strong); }
+.evidence-review__choice small { margin-left: 5px; color: var(--muted); font-weight: 500; }
+.evidence-review__details summary { cursor: pointer; color: var(--muted); font-size: 12px; padding-top: 5px; }
+.evidence-review__body { display: grid; gap: 10px; padding: 8px 0 4px; }
+.evidence-review__footer { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 12px; }
 .evidence-review__confidence { padding: 2px 8px; border-radius: 999px; background: var(--lavender); color: var(--ink); font-size: 11px; font-weight: 700; }
 .evidence-review__details p { color: var(--muted); font-size: 12px; }
 .evidence-review__details ul { display: grid; gap: 6px; margin: 8px 0 0; padding-left: 18px; font-size: 12px; }

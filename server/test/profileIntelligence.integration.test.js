@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { pool, query } from '../src/config/db.js';
 import {
   deleteConnection,
+  completeSkillReview,
   getConnection,
   listEvidence,
+  listPendingSkillEvidence,
   listVisibleEvidence,
   replaceSourceEvidence,
   saveGitHubConnection,
@@ -50,7 +52,7 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
       evidence: [item(skill['Node.js'], 'Node.js', 'Skills.csv', 'linkedin_skill', 0.3)],
       profileText: ''
     });
-    const addedIds = await replaceSourceEvidence({
+    await replaceSourceEvidence({
       studentId: student.id,
       source: 'github',
       expectedConnection: await getConnection(student.id, 'github'),
@@ -62,7 +64,12 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
       profileText: 'web: Campus energy dashboard.'
     });
     let evidence = (await listEvidence(student.id)).filter((row) => row.source === 'github');
-    assert.deepEqual(addedIds, [skill.Docker]);
+    assert.ok(!(await getStudentById(student.id)).skills.some((row) => row.name === 'Docker'));
+    const pending = await listPendingSkillEvidence(student.id);
+    const githubReview = pending.find((row) => row.source === 'github').reviewId;
+    const linkedinReview = pending.find((row) => row.source === 'linkedin_export').reviewId;
+    assert.deepEqual(await completeSkillReview(student.id, [githubReview], [skill.Docker]), [skill.Docker]);
+    assert.deepEqual([...new Set((await listPendingSkillEvidence(student.id)).map((row) => row.reviewId))], [linkedinReview]);
     assert.equal((await getStudentById(student.id)).skills.find((row) => row.name === 'Docker').proficiency, 3);
     assert.equal(evidence.length, 3);
     const reactEvidence = evidence.find((row) => row.rawName === 'React');
@@ -72,7 +79,7 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
 
     // Explicit deletion is durable even if the next sync still finds Docker.
     await editStudentSkill(student.id, skill.Docker, true);
-    const refreshedIds = await replaceSourceEvidence({
+    await replaceSourceEvidence({
       studentId: student.id,
       source: 'github',
       expectedConnection: await getConnection(student.id, 'github'),
@@ -84,7 +91,8 @@ test('GitHub evidence sync, visibility, review decisions and recommendation cont
       profileText: 'web: Campus energy dashboard.'
     });
     evidence = (await listEvidence(student.id)).filter((row) => row.source === 'github');
-    assert.deepEqual(refreshedIds, [skill.Kubernetes]);
+    const refreshedReview = (await listPendingSkillEvidence(student.id)).find((row) => row.source === 'github').reviewId;
+    assert.deepEqual(await completeSkillReview(student.id, [refreshedReview, linkedinReview], [skill.Kubernetes]), [skill.Kubernetes]);
     assert.deepEqual(evidence.map((row) => row.rawName).sort(), ['Docker', 'Kubernetes', 'React'], 'outdated evidence is removed');
     assert.ok(!(await getStudentById(student.id)).skills.some((row) => row.name === 'Docker'));
     const refreshed = evidence.find((row) => row.rawName === 'React');

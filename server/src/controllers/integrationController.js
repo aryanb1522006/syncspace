@@ -2,11 +2,12 @@ import { env } from '../config/env.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { claimOAuthRequest, createOAuthRequest, getOAuthReturn, oauthChallenge } from '../models/integrationOAuthModel.js';
 import {
+  completeSkillReview,
   deleteConnection,
   getConnection,
   listConnections,
   listDecisions,
-  listEvidence,
+  listPendingSkillEvidence,
   recordSyncError,
   replaceSourceEvidence,
   saveGitHubConnection,
@@ -55,13 +56,15 @@ const publicConnection = (connection) => connection && {
 
 async function overview(student) {
   const [connections, evidence, decisions, account] = await Promise.all([
-    listConnections(student.id), listEvidence(student.id), listDecisions(student.id), linkedinAccount(student.id)
+    listConnections(student.id), listPendingSkillEvidence(student.id), listDecisions(student.id), linkedinAccount(student.id)
   ]);
   const bySource = new Map(connections.map((connection) => [connection.source, connection]));
   return {
     github: { configured: env.githubOAuthConfigured, connection: publicConnection(bySource.get('github')) ?? null },
     linkedin: { configured: env.linkedinOAuthConfigured, account, connection: publicConnection(bySource.get('linkedin_export')) ?? null },
+    reviewIds: [...new Set(evidence.map(({ reviewId }) => reviewId))],
     skills: buildSkillReview(evidence, decisions, student.skills.map((skill) => skill.id))
+      .map(({ items, ...group }) => ({ ...group, items: items.map(({ reviewId: _reviewId, ...item }) => item) }))
   };
 }
 
@@ -77,7 +80,7 @@ async function syncGitHub(student, connection) {
     const data = await client.collectRepositoryData(repos);
     const dictionary = await listSkillDictionary();
     const { evidence, profileText } = analyzeRepositories(data, dictionary);
-    return await replaceSourceEvidence({ studentId: student.id, source: 'github', evidence, profileText, expectedConnection: connection, githubUsername: user.login });
+    await replaceSourceEvidence({ studentId: student.id, source: 'github', evidence, profileText, expectedConnection: connection, githubUsername: user.login });
   } catch (error) {
     await recordSyncError(student.id, 'github', error.message, { revoked: error instanceof GitHubRevokedError, expectedConnection: connection });
     throw error;
@@ -138,8 +141,8 @@ export async function exchangeGitHubCode(req, res) {
     accessTokenCiphertext: encryptToken(token, env.tokenEncryptionKey),
     requestId
   });
-  const addedSkillIds = await syncGitHub(student, await getConnection(student.id, 'github'));
-  res.json({ ...(await overview(await currentStudent(req))), addedSkillIds });
+  await syncGitHub(student, await getConnection(student.id, 'github'));
+  res.json(await overview(student));
 }
 
 export async function syncGitHubNow(req, res) {
@@ -148,8 +151,8 @@ export async function syncGitHubNow(req, res) {
   const connection = await getConnection(student.id, 'github');
   if (!connection) throw new AppError(404, 'GitHub is not connected');
   if (connection.status !== 'active' || !connection.accessTokenCiphertext) throw new GitHubRevokedError();
-  const addedSkillIds = await syncGitHub(student, connection);
-  res.json({ ...(await overview(await currentStudent(req))), addedSkillIds });
+  await syncGitHub(student, connection);
+  res.json(await overview(student));
 }
 
 export async function disconnectGitHub(req, res) {
@@ -269,4 +272,12 @@ export async function updateEvidenceVisibility(req, res) {
   const updated = await setEvidenceVisibility(student.id, req.body.evidenceIds, req.body.visibility);
   if (!updated.length) throw new AppError(404, 'Evidence not found');
   res.json(await overview(student));
+}
+
+export async function updateReviewedSkills(req, res) {
+  const student = await currentStudent(req);
+  const { reviewIds, skillIds } = req.body;
+  const addedSkillIds = await completeSkillReview(student.id, reviewIds, skillIds);
+  const saved = await currentStudent(req);
+  res.json({ ...(await overview(saved)), addedSkillIds, profileSkills: saved.skills });
 }

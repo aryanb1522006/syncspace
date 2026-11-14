@@ -33,15 +33,23 @@ test('ZIP/CSV preview writes nothing; confirmation imports only selected section
     assert.equal(evidence[0].detectionMethod, 'linkedin_skill');
     const importedSkill = imported.body.skills.find((skill) => skill.name === 'Python');
     assert.equal(importedSkill.status, 'pending');
-    await auth(request(app).post(`/api/integrations/skills/${importedSkill.skillId}/decision`))
-      .send({ decision: 'approved', proficiency: 3 }).expect(400);
+    assert.equal(importedSkill.selectedByDefault, true);
     const own = await auth(request(app).get('/api/students/me')).expect(200);
     assert.ok(!own.body.student.skills.some((skill) => skill.name === 'Python'));
+    const reopened = await auth(request(app).get('/api/integrations')).expect(200);
+    assert.deepEqual(reopened.body.reviewIds, imported.body.reviewIds);
+    const saved = await auth(request(app).post('/api/integrations/skills/review'))
+      .send({ reviewIds: imported.body.reviewIds, skillIds: [Number(importedSkill.skillId)] }).expect(200);
+    assert.equal(saved.body.profileSkills.find((skill) => skill.name === 'Python').proficiency, 3);
+    assert.deepEqual(saved.body.reviewIds, []);
+    assert.deepEqual(saved.body.skills, []);
     const stored = await getConnection(f.candidate.profile.id, 'linkedin_export');
     assert.equal(stored.accessTokenCiphertext, null);
     const csv = Buffer.from('Title,Company Name,Description\nDeveloper,Acme,React applications\n');
     await auth(request(app).post('/api/integrations/linkedin/preview')).attach('export', csv, 'Positions.csv').expect(200);
-    await auth(request(app).post('/api/integrations/linkedin/import')).field('confirm', 'true').field('sections', '["positions.csv"]').attach('export', csv, 'Positions.csv').expect(200);
+    const reimported = await auth(request(app).post('/api/integrations/linkedin/import')).field('confirm', 'true').field('sections', '["positions.csv"]').attach('export', csv, 'Positions.csv').expect(200);
+    assert.equal(reimported.body.reviewIds.length, 1);
+    assert.notDeepEqual(reimported.body.reviewIds, imported.body.reviewIds);
     assert.ok((await listEvidence(f.candidate.profile.id)).every((item) => item.detectionMethod === 'linkedin_position'));
     await auth(request(app).delete('/api/integrations/linkedin')).expect(200);
     assert.deepEqual(await listEvidence(f.candidate.profile.id), []);

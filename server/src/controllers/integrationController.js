@@ -200,9 +200,11 @@ export async function getLinkedinAuthorizeUrl(req, res) {
   const student = await currentStudent(req);
   const returnOrigin = req.headers.origin ?? env.clientOrigins[0];
   if (!env.clientOrigins.includes(returnOrigin)) throw new AppError(400, 'Start this connection from SyncSpace.');
-  const id = randomUUID(), nonce = randomBytes(32).toString('base64url');
-  await createOAuthRequest({ id, studentId: student.id, provider: 'linkedin', browserChallenge: challenge, nonce, returnOrigin });
-  res.json({ requestId: id, url: linkedinAuthorize({ clientId: env.linkedinClientId, redirectUri: env.linkedinRedirectUri, state: linkedinState(req.user.id, env.jwtSecret, id), nonce }) });
+  const id = randomUUID();
+  // LinkedIn's provider-compatible code flow uses signed, browser-bound,
+  // one-time state; it does not request an optional nonce claim.
+  await createOAuthRequest({ id, studentId: student.id, provider: 'linkedin', browserChallenge: challenge, returnOrigin });
+  res.json({ requestId: id, url: linkedinAuthorize({ clientId: env.linkedinClientId, redirectUri: env.linkedinRedirectUri, state: linkedinState(req.user.id, env.jwtSecret, id) }) });
 }
 export async function linkedinCallbackBridge(req, res) {
   const { state, code, error } = req.query;
@@ -223,7 +225,13 @@ export async function exchangeLinkedinCode(req, res) {
   const { requestId } = verifyLinkedinState(req.body.state, req.user.id, env.jwtSecret);
   const student = await currentStudent(req);
   const flow = await claimOAuthRequest({ id: requestId, studentId: student.id, provider: 'linkedin', verifier: req.body.verifier });
-  const account = await exchangeLinkedin({ code: req.body.code, clientId: env.linkedinClientId, clientSecret: env.linkedinClientSecret, redirectUri: env.linkedinRedirectUri, nonce: flow.nonce });
+  let account;
+  try {
+    account = await exchangeLinkedin({ code: req.body.code, clientId: env.linkedinClientId, clientSecret: env.linkedinClientSecret, redirectUri: env.linkedinRedirectUri, nonce: flow.nonce });
+  } catch (error) {
+    if (error.code === 'linkedin_token_validation') req.log?.warn({ provider: 'linkedin', stage: 'id_token', reason: error.details.reason }, 'LinkedIn identity token rejected');
+    throw error;
+  }
   await saveLinkedinAccount(student.id, requestId, account);
   res.json(await overview(student));
 }

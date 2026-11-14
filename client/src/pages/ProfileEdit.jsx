@@ -23,6 +23,8 @@ export function ProfileEdit() {
   const [profileError, setProfileError] = useState('');
   const [message, setMessage] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const location = useLocation();
   const { syncProfile } = useAuth();
   const applySavedProfile = useCallback((student, { preserveEdits = false } = {}) => {
@@ -32,11 +34,15 @@ export function ProfileEdit() {
   }, [syncProfile]);
 
   useEffect(() => {
+    let active = true;
+    setLoadError('');
     Promise.all([api.getMe(), api.listSkills()]).then(([{ student }, { skills: options }]) => {
+      if (!active) return;
       applySavedProfile(student);
       setSkills(options);
-    });
-  }, [applySavedProfile]);
+    }).catch((reason) => { if (active) setLoadError(reason.message); });
+    return () => { active = false; };
+  }, [applySavedProfile, loadAttempt]);
   const profileLoaded = Boolean(profile);
   useEffect(() => {
     if (profileLoaded && location.hash === '#team-contact-details') {
@@ -48,7 +54,10 @@ export function ProfileEdit() {
     setProfile((current) => ({ ...current, skills }));
   }, []);
 
-  if (!profile) return <AppShell><div className="loading">Loading your profile...</div></AppShell>;
+  if (!profile) return <AppShell>{loadError
+    ? <div className="empty-panel"><h2>Profile could not be loaded</h2><p role="alert">{loadError}</p>
+      <Button onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry profile</Button></div>
+    : <div className="loading">Loading your profile...</div>}</AppShell>;
 
   const update = (field) => (event) => {
     const value = event.target.value;
